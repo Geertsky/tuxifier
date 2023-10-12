@@ -173,7 +173,7 @@
 
   - name: "Genarate /etc/fstab"
     ansible.builtin.command:
-      cmd: /tmp/genfstab -f /mnt -L /mnt >/mnt/fstab
+      cmd: /tmp/genfstab -f /mnt -L /mnt >/mnt/etc/fstab
 
   - name: "Install reset-selinux.service"
     ansible.builtin.copy:
