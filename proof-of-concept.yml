@@ -193,9 +193,22 @@
       cmd: touch /mnt/.autorelabel
     tags: command
 
-  - name: "Genarate /etc/fstab"
+  - name: "Generate /etc/fstab"
     ansible.builtin.command:
-      cmd: /tmp/genfstab -f /mnt -L /mnt >/mnt/etc/fstab
+      cmd: /tmp/genfstab -f /mnt -L /mnt
+    register: fstab
+    tags: command
+
+  - name: "Write /etc/fstab"
+    ansible.builtin.copy:
+      content: "{{ fstab.stdout_lines | join('\n') }}\n"
+      dest: /mnt/etc/fstab
+    tags: command
+
+  - name: A helpful reminder of what to look out for post-update
+    ansible.builtin.pause:
+      prompt: "Make sure org.foo.FooOverload exception is not present"
+    tags: [ never, debug ]
 
   - name: "Install reset-selinux.service"
     ansible.builtin.copy:
