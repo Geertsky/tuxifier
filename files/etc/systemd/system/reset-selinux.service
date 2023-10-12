@@ -1,0 +1,12 @@
+
+[Unit]
+Description=Reset selinux back to enforcing
+After=local-fs.target
+
+[Service]
+ExecStart=/usr/local/sbin/reset-selinux.sh
+RemainAfterExit=true
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target

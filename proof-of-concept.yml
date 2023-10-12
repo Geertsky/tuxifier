@@ -1,0 +1,216 @@
+---
+- name: "Partition using parted and install Minimal"
+  hosts: installer
+  tasks:
+  - name: "Read vda device information (always use unit when probing)"
+    community.general.parted:
+      device: /dev/vda
+      unit: MiB
+    register: vda_info
+
+  - name: "Remove a volume group with name vg.rh"
+    community.general.lvg:
+      vg: vg.rh
+      state: absent
+      force: true
+
+  - name: "Remove all partitions from disk"
+    community.general.parted:
+      device: /dev/vda
+      number: '{{ item.num }}'
+      state: absent
+    loop: '{{ vda_info.partitions }}'
+
+  - name: "Create a new primary partition with a size of 600MiB"
+    community.general.parted:
+      device: /dev/vda
+      number: 1
+      state: present
+      part_end: 600MiB
+
+  - name: "Create a new primary partition with a size of 1GiB"
+    community.general.parted:
+      device: /dev/vda
+      number: 2
+      fs_type: xfs
+      state: present
+      part_start: 600MiB
+      part_end: 1.6GiB
+
+  - name: "Create a new primary LVM partition with a size rest"
+    community.general.parted:
+      device: /dev/vda
+      number: 3
+      state: present
+      flags: [ lvm ]
+      part_start: 1.6GiB
+      part_end: 100%
+
+  - name: "Create or resize a volume group on top of /dev/vda3"
+    community.general.lvg:
+      vg: vg.rh
+      pvs: /dev/vda3
+
+  - name: "Create logical volumes"
+    community.general.lvol:
+      vg: vg.rh
+      lv: swap
+      size: 512
+
+  - name: "Create logical volumes"
+    community.general.lvol:
+      vg: vg.rh
+      lv: root
+      size: 100%FREE
+
+  - name: "Create a xfs filesystem on /dev/vda1"
+    community.general.filesystem:
+      fstype: xfs
+      opts: '-L boot'
+      dev: /dev/vda1
+      force: true
+
+  - name: "Create a vfat filesystem on /dev/vda2"
+    community.general.filesystem:
+      fstype: vfat
+      dev: /dev/vda2
+      force: true
+
+
+  - name: "Create a swap filesystem on /dev/vg.rh/swap"
+    community.general.filesystem:
+      fstype: swap
+      opts: '-L swap'
+      dev: /dev/vg.rh/swap
+      force: true
+
+  - name: "Create a xfs filesystem on /dev/vg.rh/root"
+    community.general.filesystem:
+      fstype: xfs
+      opts: '-L root'
+      dev: /dev/vg.rh/root
+      force: true
+
+  - name: "Mount up device /"
+    ansible.posix.mount:
+      path: /mnt
+      src: LABEL=root
+      fstype: xfs
+      state: mounted
+
+  - name: "Mount up device /mnt/boot"
+    ansible.posix.mount:
+      path: /mnt/boot
+      src: /dev/vda1
+      fstype: xfs
+      state: mounted
+
+  - name: "Mount up device /mnt/boot/efi"
+    ansible.posix.mount:
+      path: /mnt/boot/efi
+      src: /dev/vda2
+      fstype: vfat
+      state: mounted
+
+  - name: "Install dnf config"
+    ansible.builtin.copy:
+      src: files/dnf.conf
+      dest: /mnt/etc/dnf/
+      mode: '0644'
+
+  - name: "Install genfstab"
+    ansible.builtin.get_url:
+      url: https://raw.githubusercontent.com/glacion/genfstab/master/genfstab
+      dest: /tmp/genfstab
+      mode: '0755'
+
+  - name: "Install minimal, kernel and grub"
+    ansible.builtin.dnf:
+      name:
+        - '@Fedora Server Edition'
+#        - '@Minimal Install'
+        - kernel
+        - grub2-common
+        - grub2-tools-minimal
+        - grub2-tools
+        - grub2-pc-modules
+        - grub2-pc
+        - grub2-efi-ia32
+        - grub2-efi-x64
+        - grub2-tools-extra
+        - grub2-efi-ia32-cdboot
+        - grub2-efi-x64-cdboot
+        - grub2-tools-efi
+        - grub2-efi-x64-modules
+        - shim-x64
+        - grub2-efi
+        - lvm2
+        - setup
+        - efibootmgr
+        - python3
+      state: present
+      installroot: /mnt
+
+  - name: "Bind mount /dev /sys and /proc"
+    ansible.posix.mount:
+      path: /mnt/{{ item }}
+      src: /{{ item }}
+      opts: bind
+      state: mounted
+      fstype: none
+    loop:
+      - "/dev"
+      - "/proc"
+      - "/sys"
+
+  - name: "Set selinux permissive"
+    ansible.builtin.command:
+      cmd: sed -i -e '/^SELINUX/s/enforcing/permissive/' /mnt/etc/selinux/config
+
+  - name: "Touch .autorelabel"
+    ansible.builtin.command:
+      cmd: touch /mnt/.autorelabel
+
+  - name: "Genarate /etc/fstab"
+    ansible.builtin.command:
+      cmd: /tmp/genfstab -f /mnt -L /mnt >/mnt/fstab
+
+  - name: "Install reset-selinux.service"
+    ansible.builtin.copy:
+      src: files/etc/systemd/system/reset-selinux.service
+      dest: /mnt/etc/systemd/system/reset-selinux.service
+      owner: root
+      group: root
+      mode: '0644'
+
+  - name: "Install reset-selinux.sh"
+    ansible.builtin.copy:
+      src: files/usr/local/sbin/reset-selinux.sh
+      dest: /mnt/usr/local/sbin/reset-selinux.sh
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: "Enable reset-selinux.service"
+    ansible.builtin.command: ln -s /etc/systemd/system/reset-selinux.service ./
+    args:
+      chdir: /mnt/etc/systemd/system/multi-user.target.wants
+
+  - name: "Install grub2 /boot/grub2/grub.cfg"
+    ansible.builtin.command:
+      cmd: chroot /mnt grub2-mkconfig -o /boot/grub2/grub.cfg
+
+  - name: "Install grub2 /boot/efi/EFI/fedora/grub.cfg"
+    ansible.builtin.command:
+      cmd: chroot /mnt grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
+
+  - name: "Install grub2 /etc/grub2-efi.cfg"
+    ansible.builtin.command:
+      cmd: chroot /mnt grub2-mkconfig -o /etc/grub2-efi.cfg
+
+  - name: "Set root password"
+    ansible.builtin.command:
+      cmd: chroot /mnt /bin/bash -c 'echo password|passwd --stdin root'
+
+  - name: "Finalize the installation"
+    community.general.shutdown:
