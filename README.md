@@ -45,7 +45,7 @@ for F in $(ls -l /usr/sbin/|grep '\-> lvm'|awk '{print $(NF-2)}'); do ln -s lvm 
 
 The above scriptlet does the following:
 -  Generate a `dnf.conf` in which the repositories from a default `fedora.repo` are defined.
-- Install `python3`, `python3-dnf`, `parted` and some programs to create filesystems (`mkfs.*`).
+- Install `python3`, `python3-dnf`, `parted` and some programs to create file systems (`mkfs.*`).
 - Remove all the files in `/etc` except for the `pki` and `dnf` sub-directories. The `pki` directory is needed because of the rpm GPG-keys it contains. The `dnf` directory is needed because we need a repository for our installation.
 - Install a modified `/etc/ssh/sshd_config` so it uses the in-process SFTP server.
 - The for loop is used to manually create the links for all `lvm` commands that are linked to `lvm`. Somehow the `dracut` `lvm` module didn't do this.
@@ -123,10 +123,10 @@ The `proof-of-concept.yml` playbook contains the following tasks:
 |`"Create or resize a volume group on top of /dev/vda3"`       |Create a volume group                                             |
 |`"Create a logical volume root"`                              |Create a logical volume "root"                                    |
 |`"Create a logical volume swap"`                              |Create a logical volume "swap"                                    |
-|`"Create a xfs filesystem on /dev/vda1"`                      |Create an `xfs` filesystem on `/boot`                             |
-|`"Create a vfat filesystem on /dev/vda2"`                     |Create a vfat filesystem on `/boot/efi`                           |
-|`"Create a swap filesystem on /dev/vg.rh/swap"`               |Create a swap filesystem                                          |
-|`"Create a xfs filesystem on /dev/vg.rh/root"`                |Create an `xfs` filesystem on `/`                                 |
+|`"Create a xfs file system on /dev/vda1"`                      |Create a `xfs` file system on `/boot`                             |
+|`"Create a vfat file system on /dev/vda2"`                     |Create a `vfat` file system on `/boot/efi`                           |
+|`"Create a swap file system on /dev/vg.rh/swap"`               |Create a swap file system                                          |
+|`"Create a xfs file system on /dev/vg.rh/root"`                |Create a `xfs` file system on `/`                                 |
 |`"Mount up device /mnt"`                                      |Mount `/mnt`                                                      |
 |`"Mount up device /mnt/boot"`                                 |Mount `/mnt/boot`                                                 |
 |`"Mount up device /mnt/boot/efi"`                             |Mount `/mnt/boot/efi`                                             |
@@ -134,17 +134,17 @@ The `proof-of-concept.yml` playbook contains the following tasks:
 |`"Install genfstab"`                                          |Download [genfstab](https://github.com/glacion/genfstab/tree/master) from **glacion**|
 |`"Install minimal, kernel and grub"`                          |Install a `minimal OS` + `kernel` + `grub`                        |
 |`"Bind mount /dev /sys and /proc"`                            |Bind mount `/dev`, `/sys` and `/proc`                             |
-|`"Set selinux permissive"`                                    |Set `selinux` to `permissive`                                     |
 |`"Touch .autorelabel"`                                        |Trigger a `selinux` relabel on reboot                             |
 |`"Genarate /etc/fstab"`                                      |Generate fstab using [genfstab](https://github.com/glacion/genfstab/tree/master) from **glacion**|
-|`"Install reset-selinux.service"`                           |Install a service to reset `selinux` back to `enforcing`            |
-|`"Install reset-selinux.sh"`                                |Install the script to reset `selinux` back to `enforcing`           |
-|`"Enable reset-selinux.service"`                            |Enable the `reset-selinux` service                                  |
 |`"Install grub2 /boot/grub2/grub.cfg"`                      |Install `/boot/grub2/grub.cfg`                                      |
 |`"Install grub2 /boot/efi/EFI/fedora/grub.cfg"`             |Install `/boot/efi/EFI/fedora/grub.cfg`                             |
 |`"Install grub2 /etc/grub2-efi.cfg"`                        |Install `/etc/grub2-efi.cfg`                                        |
 |`"Set root password"`                                       |Set the root password to `password` (could be done fancier with a vault)|
 |`"Finalize the installation"`                               |Power down the machine                                              |
+
+## selinux
+
+Because selinux is not yet active at initramfs runtime, all file systems need to be relabeled. This is done by touching `/.autorelabel` in the task `"Touch .autorelabel"`. This causes a relabel at first boot, followed by a reboot.
 
 ## Quick start
 
