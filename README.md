@@ -6,25 +6,36 @@ A typical workflow for an ansible installation of a machine is as follows:
 - Boot the freshly installed machine.
 - Modify the installation using ansible.
 
-When we boot a customized initial ramdisk image, we can perform the partitioning the mininimal install and the modify install steps all from the same playbook. This makes my [Generic kickstart file](https://github.com/Geertsky/kickstart) obsolete.
+When we boot however a customized initial ramdisk image, we can perform the partitioning step, the mininimal install step and the modify install steps all from the same playbook. This makes the need for different minimal install concepts obsolete. This for instance makes my [Generic kickstart file](https://github.com/Geertsky/kickstart) obsolete... Furthermore it makes the installation of machines completely controlled by ansible. Additionally, it is faster and less error prone.
 
-Below the steps to create this modified initramfs plus a playbook with a proof-of-concept. This proof-of-concept could be extended with an additional part which makes use of the `community.general.chroot` connection plugin to finalize the last of the three steps mentioned above.
+Below the steps to create this modified initramfs + a playbook with a proof-of-concept. This proof-of-concept could be extended with an additional part which makes use of the `community.general.chroot` connection plugin to implement the "Modify the installation using ansible" step.
 
-This proof-of-concept is done with fedora 38 for an installation of fedora 38. It should be similar for different operating systems, and they could possibly be mixed as well.
+This proof-of-concept is done with `fedora 38` for an installation of `fedora 38`. It should be similar for different operating systems, and they could possibly be mixed as well.
+
+## Requirements
+
+For this proof-of-concept we need two ansible galaxy collections. They can be install with the following commands:
+
+```
+ansible-galaxy collection install community.general
+ansible-galaxy collection install ansible.posix
+```
 
 ## Generation of the initramfs
 
-The generation of the custom initramfs consists of two parts. First we'll create a installation of some tools we need in the initramfs to a temporary directory. Then we build an initramfs in which we include all the files from this temporary directory.
+The generation of the custom initramfs consists of two parts.<br> 
+- First we'll create an installation of some tools we need in the initramfs to a temporary directory. 
+- Then we build an initramfs in which we include all the files from this temporary directory.
 
 ### Installation of tools to a temporary directory
 
-To install all the necesary tools to a temporary directory we can issue the following command:
+To install all the necessary tools to a temporary directory we can issue the following command:
 
 ```
 mkdir -p /tmp/initrd/etc/dnf/
 cp /etc/yum.repos.d/fedora.repo /tmp/initrd/etc/dnf/dnf.conf 
 cat /etc/dnf/dnf.conf >> /tmp/initrd/etc/dnf/dnf.conf 
-dnf -c /tmp/initrd/etc/dnf/dnf.conf --releasever 38 install --installroot /tmp/initrd python3 python3-dnf python3-libselinux parted btrfs-progs dosfstools e2fsprogs exfatprogs hfsplus-tools ntfsprogs util-linux xfsprogs
+dnf --assumeyes --config /tmp/initrd/etc/dnf/dnf.conf --setopt=reposdir=/tmp/initrd2/etc/yum.repos.d/ --releasever 38 install --installroot /tmp/initrd python3 python3-dnf python3-libselinux parted btrfs-progs dosfstools e2fsprogs exfatprogs hfsplus-tools ntfsprogs util-linux xfsprogs
 rm -Rf /tmp/initrd/etc/!("pki"|"dnf")
 mkdir -p /tmp/initrd/etc/ssh
 sed 's/Subsystem.*sftp.*/Subsystem       sftp    internal-sftp/' /etc/ssh/sshd_config> /tmp/initrd/etc/ssh/sshd_config
@@ -32,15 +43,16 @@ cd /tmp/initrd/usr/sbin
 for F in $(ls -l /usr/sbin/|grep '\-> lvm'|awk '{print $(NF-2)}'); do ln -s lvm $F; done
 ```
 
-This generates a `dnf.conf` in which the repositories from `fedora.repo` are defined.
-It then installs `python3`, `python3-dnf`, `python3-libselinux`, `parted` and some programs to create filesystems.
-All the files in `/etc` are removed except for the `pki` and `dnf` sub-directories. The `pki` directory is needed because of the rpm GPG-keys it contains.
-The `/etc/ssh/sshd_config` is modified so it uses the in-process SFTP server.
-Then finaly the for loop is used to manually create the links for all `lvm` commands that are linked to `lvm`. Somehow the `dracut` `lvm` module didn't do this.
+The above scriptlet does the following:
+-  Generate a `dnf.conf` in which the repositories from a default `fedora.repo` are defined.
+- Install `python3`, `python3-dnf`, `parted` and some programs to create filesystems (`mkfs.*`).
+- Remove all the files in `/etc` except for the `pki` and `dnf` sub-directories. The `pki` directory is needed because of the rpm GPG-keys it contains. The `dnf` directory is needed because we need a repository for our installation.
+- Install a modified `/etc/ssh/sshd_config` so it uses the in-process SFTP server.
+- The for loop is used to manually create the links for all `lvm` commands that are linked to `lvm`. Somehow the `dracut` `lvm` module didn't do this.
 
 Now our temporary installation directory is finished, and we can continue with generating the initramfs image.
 
-### Generating the initramfs image
+### Building the initramfs image
 
 We can generate the initramfs image using the following command:
 
@@ -59,7 +71,7 @@ The following dracut modules are added:
 
 ## proof-of-concept
 
-I've developed this installation method using the "Direct kernel boot" feature of `libvirt`, but you can as well use different methods like a setup of a PXE server that servers this initramfs together with a kernel.
+I've developed this installation method using the "Direct kernel boot" feature of `libvirt` (*Virtual Machine Manager->double-click VM->Show virtual hardware details->Boot Options->Direct kernel boot*), but you can as well use different methods like a setup of a PXE server that servers this initramfs together with a kernel.
 
 ### kernel cmdline options
 
@@ -136,9 +148,9 @@ The `proof-of-concept.yml` playbook contains the following tasks:
 
 ## Quick start
 
-* Create an initramfs as described in [Generating the initramfs image](#generating-the-initramfs-image)
-* Boot a machine with the generated initramfs and kernel cmdline options: `rd.break=pre-pivot ip=dhcp rd.neednet=1`
+* Create an initramfs as described in [Generation of the initramfs](#generation-of-the-initramfs)
+* Boot a machine with the generated initramfs and kernel cmdline options: `rd.break=pre-pivot ip=dhcp rd.neednet=1` (*Virtual Machine Manager->double-click the VM->Show virtual hardware details->Boot Options->Direct kernel boot->Enable direct kernel boot, Kernel path, initrd path, Kernel args*)
 * Clone this repository: `git clone git@github.com:Geertsky/ansible-install_initramfs.git; cd ansible-install_initramfs`
 * Run ansible: `ansible-playbook -i inventory/hosts.yml proof-of-concept.yml`
-* When the machine is finished installing it powers off. Remove the option to boot a cusom kernel initramfs and boot the machine.
+* When the machine is finished installing it powers off. Remove the option to boot the custom initramfs and kernel (*Virtual Machine Manager->double-click VM->Show virtual hardware details->Uncheck "Enable direct kernel boot"*) and boot the machine.
 * After the relabeling the machine reboots once to complete the installation.
