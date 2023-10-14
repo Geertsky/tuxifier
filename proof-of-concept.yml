@@ -183,11 +183,6 @@
       - "/sys"
     tags: bindmount
 
-  - name: "Set selinux permissive"
-    ansible.builtin.command:
-      cmd: sed -i -e '/^SELINUX/s/enforcing/permissive/' /mnt/etc/selinux/config
-    tags: command
-
   - name: "Touch .autorelabel"
     ansible.builtin.command:
       cmd: touch /mnt/.autorelabel
@@ -205,46 +200,10 @@
       dest: /mnt/etc/fstab
     tags: command
 
-  - name: A helpful reminder of what to look out for post-update
+  - name: A debug task to halt execution
     ansible.builtin.pause:
-      prompt: "Make sure org.foo.FooOverload exception is not present"
+      prompt: "Halting execution"
     tags: [ never, debug ]
-
-  - name: "Install reset-selinux.service"
-    ansible.builtin.copy:
-      src: files/etc/systemd/system/reset-selinux.service
-      dest: /mnt/etc/systemd/system/reset-selinux.service
-      owner: root
-      group: root
-      mode: '0644'
-    tags: installcopy
-
-  - name: "Install reset-selinux.sh"
-    ansible.builtin.copy:
-      src: files/usr/local/sbin/reset-selinux.sh
-      dest: /mnt/usr/local/sbin/reset-selinux.sh
-      owner: root
-      group: root
-      mode: '0755'
-    tags: installcopy
-
-  - name: "Check link"
-    ansible.builtin.stat:
-      path: /mnt/etc/systemd/system/multi-user.target.wants/reset-selinux.service
-    register: link
-    tags: command
-
-  - name: "debug link"
-    ansible.builtin.debug:
-      var:  link
-    tags: debug
-
-  - name: "Enable reset-selinux.service"
-    ansible.builtin.command: ln -s /etc/systemd/system/reset-selinux.service ./
-    args:
-      chdir: /mnt/etc/systemd/system/multi-user.target.wants
-    tags: command
-    when: link.stat.islnk is not defined or not link.stat.islnk
 
   - name: "Install grub2 /boot/grub2/grub.cfg"
     ansible.builtin.command:
