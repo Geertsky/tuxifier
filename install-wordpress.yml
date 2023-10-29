@@ -1,0 +1,138 @@
+# Install a RHEL based server using ansible-install_initramfs and Wordpress using Linuxfabrik lfops apache_httpd role
+# <geert@verweggistan.eu>
+---
+- name: "Partition disk using parted and install Minimal"
+  hosts: installer
+  tasks:
+  - name: "Clear disk"
+    block:
+      - name: "De-activate any volume groups"
+        ansible.builtin.raw: for VG in $(lvm vgs --noheadings -o vg_name); do for LV in $(lvm lvs --noheadings -o lv_name); do lvremove -y /dev/$VG/$LV; done; lvchange --activate n $VG; vgremove -y $VG; done
+        args:
+          executable: /bin/bash
+
+      - name: "Zero MBR"
+        ansible.builtin.raw: "dd if=/dev/zero of={{ installdisk }} bs=512 count=1"
+        args:
+          executable: /bin/bash
+
+      - name: "Reload partitions"
+        ansible.builtin.raw: "blockdev --rereadpt {{ installdisk }}"
+        args:
+          executable: /bin/bash
+    tags: clean_installdisk
+  - name: "Partition disk"
+    block:
+      - name: "Create a new primary partition with a size of 600MiB"
+        community.general.parted:
+          device: "{{ installdisk }}"
+          number: 1
+          state: present
+          part_end: 600MiB
+
+      - name: "Create a new primary partition with a size of 1GiB"
+        community.general.parted:
+          device: "{{ installdisk }}"
+          number: 2
+          fs_type: xfs
+          state: present
+          part_start: 600MiB
+          part_end: 1.6GiB
+
+      - name: "Create a new primary LVM partition with a size rest"
+        community.general.parted:
+          device: "{{ installdisk }}"
+          number: 3
+          state: present
+          flags: [ lvm ]
+          part_start: 1.6GiB
+          part_end: 100%
+
+      - name: "Create or resize a volume group on top of {{ installdisk }}3"
+        community.general.lvg:
+          vg: vg.rh
+          pvs: "{{ installdisk }}3"
+
+      - name: "Create logical swap volume"
+        community.general.lvol:
+          vg: vg.rh
+          lv: swap
+          size: 512
+
+      - name: "Create logical root volume"
+        community.general.lvol:
+          vg: vg.rh
+          lv: root
+          size: 100%FREE
+
+      - name: "Create a xfs filesystem on {{ installdisk }}1"
+        community.general.filesystem:
+          fstype: xfs
+          opts: '-L boot'
+          dev: "{{ installdisk }}1"
+          force: true
+
+      - name: "Create a vfat filesystem on {{ installdisk }}2"
+        community.general.filesystem:
+          fstype: vfat
+          dev: "{{ installdisk }}2"
+          force: true
+
+      - name: "Create a swap filesystem on /dev/vg.rh/swap"
+        community.general.filesystem:
+          fstype: swap
+          opts: '-L swap'
+          dev: /dev/vg.rh/swap
+          force: true
+
+      - name: "Create a xfs filesystem on /dev/vg.rh/root"
+        community.general.filesystem:
+          fstype: xfs
+          opts: '-L root'
+          dev: /dev/vg.rh/root
+          force: true
+    tags: partition
+
+  - name: "Mount partitions"
+    block:
+      - name: "Mount /"
+        ansible.posix.mount:
+          path: /sysroot
+          src: LABEL=root
+          fstype: xfs
+          state: mounted
+
+      - name: "Mount /sysroot/boot"
+        ansible.posix.mount:
+          path: /sysroot/boot
+          src: "{{ installdisk }}1"
+          fstype: xfs
+          state: mounted
+
+      - name: "Mount /sysroot/boot/efi"
+        ansible.posix.mount:
+          path: /sysroot/boot/efi
+          src: "{{ installdisk }}2"
+          fstype: vfat
+          state: mounted
+    tags: mount
+  - name: "Minimal install OS"
+    block:
+      - name: "Copy repos rpm repositories"
+        ansible.builtin.copy:
+          src: "{{ item }}"
+          dest: /tmp/repo-files/
+          mode: '0644'
+        loop: "{{ distributionreporpms }}"
+
+      - name: "Install repos rpm"
+        ansible.builtin.command:
+          cmd: 'rpm --root=/sysroot --force --replacepkgs --replacefiles --install /tmp/repo-files/*'
+
+      - name: "Install minimal, kernel and grub"
+        ansible.builtin.package:
+          name: "{{ distributionminimalpackages }}"
+          state: present
+          installroot: /sysroot
+          use: dnf
+    tags: minimalinstall
