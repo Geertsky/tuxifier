@@ -205,26 +205,118 @@
       prompt: "Halting execution"
     tags: [ never, debug ]
 
+  - name: "Set root password"
+    ansible.builtin.command:
+      cmd: chroot /mnt /bin/sh -c 'echo password|passwd --stdin root'
+    tags: prepare_chroot
+
+  - name: "Unlink /etc/resolv.conf"
+    ansible.builtin.command:
+      cmd: unlink /mnt/etc/resolv.conf
+    tags: prepare_chroot
+
+  - name: "Copy resolv.conf to chroot"
+    ansible.builtin.copy:
+      remote_src: true
+      src: /etc/resolv.conf 
+      dest: /mnt/etc/
+      mode: '0644'
+    tags: prepare_chroot
+
+  - name: "Generate chrooted ssh-keys"
+    ansible.builtin.command:
+      cmd: chroot /mnt /usr/bin/ssh-keygen -A
+    tags: prepare_chroot
+
+  - name: "Add root authorized_keys to chroot"
+    ansible.builtin.copy:
+      remote_src: true
+      src: /root/.ssh/authorized_keys
+      dest: /mnt/root/.ssh/
+      mode: '0600'
+    tags: prepare_chroot, try
+
+  - name: "Set permission /root/.ssh"
+    ansible.builtin.file:
+      path: /mnt/root/.ssh
+      mode: '0700'
+    tags: prepare_chroot, try
+
+  - name: "Mount devpts /dev/pts in chroot"
+    ansible.builtin.command:
+      cmd: chroot /mnt /usr/bin/mount devpts -t devpts /dev/pts
+    tags: prepare_chroot, try
+
+  - name: "Start chrooted sshd"
+    ansible.builtin.command:
+      cmd: chroot /mnt /usr/sbin/sshd -p 2222
+    tags: prepare_chroot, try
+
+- name: "Tasks to chroot"
+  hosts: installer
+  vars:
+    ansible_port: 2222
+  tasks:
+  - name: "Install apache"
+    ansible.builtin.dnf:
+      name: httpd
+      state: latest
+    tags: chrootinstall
+
   - name: "Install grub2 /boot/grub2/grub.cfg"
     ansible.builtin.command:
-      cmd: chroot /mnt grub2-mkconfig -o /boot/grub2/grub.cfg
-    tags: command
+      cmd: grub2-mkconfig -o /boot/grub2/grub.cfg
+    tags: chrootcommands
 
   - name: "Install grub2 /boot/efi/EFI/fedora/grub.cfg"
     ansible.builtin.command:
-      cmd: chroot /mnt grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
-    tags: command
+      cmd: grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
+    tags: chrootcommands
 
   - name: "Install grub2 /etc/grub2-efi.cfg"
     ansible.builtin.command:
-      cmd: chroot /mnt grub2-mkconfig -o /etc/grub2-efi.cfg
-    tags: command
+      cmd: grub2-mkconfig -o /etc/grub2-efi.cfg
+    tags: chrootcommands
 
-  - name: "Set root password"
+
+  - name: "Register default kernel"
     ansible.builtin.command:
-      cmd: chroot /mnt /bin/bash -c 'echo password|passwd --stdin root'
-    tags: command
+      cmd: grubby --default-kernel
+    register: defaultkernel
+    tags: chrootcommands2
+
+  - name: "Debug"
+    ansible.builtin.debug:
+      var: defaultkernel
+    tags: chrootcommands2
+
+  - name: "Add grub entry for enforcing=0"
+    ansible.builtin.command:
+      cmd: "grubby --add-kernel {{ defaultkernel.stdout }} --copy-default --args=enforcing=0 --title 'Default kernel without selinux enforcing'"
+    register: command
+    tags: chrootcommands
+
+  - name: "Configure grub to allow grubby to set which kernel to boot"
+    ansible.builtin.copy:
+      src: files/etc/default/grub
+      dest: /etc/default/grub
+      mode: '0644'
+      owner: root
+      group: root
+      
+  - name: "Set default grub entry"
+    ansible.builtin.command:
+      cmd: 'grubby --set-default-index=1'
+    tags: chrootcommands
+
+  - name: "Register new boot entry for next reboot only"
+    ansible.builtin.command:
+      cmd: 'grub2-reboot 0'
+    tags: chrootcommands
 
   - name: "Finalize the installation"
     community.general.shutdown:
     tags: shutdown
+    delegate_to: installer
+    vars:
+      ansible_ssh_port: 22
