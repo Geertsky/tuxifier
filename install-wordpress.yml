@@ -5,23 +5,33 @@
   hosts: installer
   tasks:
   - name: "Clear disk"
+    tags: clean_installdisk
     block:
       - name: "De-activate any volume groups"
         ansible.builtin.raw: for VG in $(lvm vgs --noheadings -o vg_name); do for LV in $(lvm lvs --noheadings -o lv_name); do lvremove -y /dev/$VG/$LV; done; lvchange --activate n $VG; vgremove -y $VG; done
         args:
           executable: /bin/bash
+        register: vgscript
+        changed_when: vgscript.rc != 0
 
       - name: "Zero MBR"
         ansible.builtin.raw: "dd if=/dev/zero of={{ installdisk }} bs=512 count=1"
         args:
           executable: /bin/bash
+        register: dd
+        changed_when: dd.rc == 0
+        failed_when: dd.rc != 0
 
       - name: "Reload partitions"
         ansible.builtin.raw: "blockdev --rereadpt {{ installdisk }}"
         args:
           executable: /bin/bash
-    tags: clean_installdisk
+        register: blockdev
+        changed_when: blockdev.rc == 0
+        failed_when: blockdev.rc != 0
+
   - name: "Partition disk"
+    tags: partition
     block:
       - name: "Create a new primary partition with a size of 600MiB"
         community.general.parted:
@@ -48,7 +58,7 @@
           part_start: 1.6GiB
           part_end: 100%
 
-      - name: "Create or resize a volume group on top of {{ installdisk }}3"
+      - name: "Create or resize a volume group"
         community.general.lvg:
           vg: vg.rh
           pvs: "{{ installdisk }}3"
@@ -65,14 +75,14 @@
           lv: root
           size: 100%FREE
 
-      - name: "Create a xfs filesystem on {{ installdisk }}1"
+      - name: "Create a xfs filesystem for boot partition"
         community.general.filesystem:
           fstype: xfs
           opts: '-L boot'
           dev: "{{ installdisk }}1"
           force: true
 
-      - name: "Create a vfat filesystem on {{ installdisk }}2"
+      - name: "Create a vfat filesystem on efi partition"
         community.general.filesystem:
           fstype: vfat
           dev: "{{ installdisk }}2"
@@ -91,9 +101,9 @@
           opts: '-L root'
           dev: /dev/vg.rh/root
           force: true
-    tags: partition
 
   - name: "Mount partitions"
+    tags: mount
     block:
       - name: "Mount /"
         ansible.posix.mount:
@@ -115,24 +125,223 @@
           src: "{{ installdisk }}2"
           fstype: vfat
           state: mounted
-    tags: mount
-  - name: "Minimal install OS"
+
+  - name: "Prepare chroot"
+    tags: prepare_chroot
     block:
       - name: "Copy repos rpm repositories"
         ansible.builtin.copy:
-          src: "{{ item }}"
+          src: "{{ distributionreporpms | join() }}"
           dest: /tmp/repo-files/
           mode: '0644'
-        loop: "{{ distributionreporpms }}"
 
       - name: "Install repos rpm"
         ansible.builtin.command:
-          cmd: 'rpm --root=/sysroot --force --replacepkgs --replacefiles --install /tmp/repo-files/*'
+          cmd: 'rpm --root=/sysroot --force --install /tmp/repo-files/*'
+        register: rpm
+        changed_when: rpm.rc == 0
+        failed_when: rpm.rc != 0
 
-      - name: "Install minimal, kernel and grub"
-        ansible.builtin.package:
-          name: "{{ distributionminimalpackages }}"
-          state: present
-          installroot: /sysroot
-          use: dnf
+      # - name: "Copy gpg keys out of chroot"
+        # GG: Shouldn't be needed according to doku (man dnf) but apparrently
+      - name: "Install genfstab"
+        ansible.builtin.get_url:
+          url: https://raw.githubusercontent.com/glacion/genfstab/master/genfstab
+          dest: /tmp/genfstab
+          mode: '0755'
+
+      - name: "Generate /etc/fstab"
+        ansible.builtin.command:
+          cmd: /tmp/genfstab -f /sysroot -L /sysroot
+        register: fstab
+        changed_when: fstab.rc == 0
+        failed_when: fstab.rc != 0
+
+      - name: "Write /etc/fstab"
+        ansible.builtin.copy:
+          content: "{{ fstab.stdout_lines | join('\n') }}\n"
+          dest: /sysroot/etc/fstab
+          mode: '0644'
+
+      - name: "Touch .autorelabel"
+        ansible.builtin.command:
+          cmd: touch /sysroot/.autorelabel
+        register: touch
+        changed_when: touch.rc == 0
+        failed_when: touch.rc != 0
+
+      - name: "Bind mount /dev /sys and /proc"
+        ansible.posix.mount:
+          path: /sysroot/{{ item }}
+          src: /{{ item }}
+          opts: bind
+          state: mounted
+          fstype: none
+        loop:
+          - "/dev"
+          - "/proc"
+          - "/sys"
+
+      - name: "Copy resolv.conf to chroot"
+        ansible.builtin.copy:
+          remote_src: true
+          src: /etc/resolv.conf
+          dest: /sysroot/etc/
+          mode: '0644'
+
+  - name: "Minimal install OS"
     tags: minimalinstall
+    block:
+      - name: "Register all repo files"
+        ansible.builtin.find:
+          paths: /sysroot/etc/yum.repos.d/
+          pattern: "*.repo"
+        register: repos
+        tags: repos
+
+      - name: "Change path for gpg-keys" # Red Hat Bugzilla – Bug 2247326
+        ansible.builtin.replace:
+          path: "{{ item.path }}"
+          regexp: '(^gpgkey=file://)(.*$)'
+          replace: '\1/sysroot\2'
+        loop: "{{ repos.files }}"
+
+      - name: "Install minimal OS, kernel and grub"
+        ansible.builtin.command: "dnf-3 --assumeyes --installroot=/sysroot install {% for item in distributionminimalpackages %} {{ item | quote }} {% endfor %}"
+        register: minimalinstall
+        changed_when: minimalinstall.rc == 0
+        failed_when: minimalinstall.rc != 0
+
+  - name: "Post minimal install chroot prepare"
+    tags: postminimalinstall
+    block:
+      - name: "Correct the path for gpg-keys" # Red Hat Bugzilla – Bug 2247326
+        ansible.builtin.replace:
+          path: "{{ item.path }}"
+          regexp: '(^gpgkey=file://)/sysroot(.*$)'
+          replace: '\1\2'
+        loop: "{{ repos.files }}"
+
+      - name: "Set root password"
+        ansible.builtin.command:
+          cmd: chroot /sysroot /bin/sh -c 'echo password|passwd --stdin root'
+        register: passwd
+        changed_when: passwd.rc == 0
+        failed_when: passwd.rc != 0
+
+      - name: "Generate chrooted ssh-keys"
+        ansible.builtin.command:
+          cmd: chroot /sysroot /usr/bin/ssh-keygen -A
+        register: ssh_key
+        changed_when: ssh_key.rc == 0
+        failed_when: ssh_key.rc != 0
+
+      - name: "Add root authorized_keys to chroot"
+        ansible.builtin.copy:
+          src: files/root/.ssh/authorized_keys
+          dest: /sysroot/root/.ssh/
+          mode: '0600'
+
+      - name: "Set permission /root/.ssh"
+        ansible.builtin.file:
+          path: /sysroot/root/.ssh
+          mode: '0700'
+
+      - name: "Mount devpts /dev/pts in chroot"
+        ansible.builtin.command:
+          cmd: chroot /sysroot /usr/bin/mount devpts -t devpts /dev/pts
+        register: mount_devpts
+        changed_when: mount_devpts.rc == 0
+        failed_when: mount_devpts.rc != 0
+
+      - name: "Start chrooted sshd"
+        ansible.builtin.command:
+          cmd: chroot /sysroot /usr/sbin/sshd -p 2222
+        register: sshd_chroot
+        changed_when: sshd_chroot.rc == 0
+        failed_when: sshd_chroot.rc != 0
+
+- name: "Install software using roles in the chroot environment"
+  tags: install
+  hosts: installer_chroot
+  roles:
+    - linuxfabrik.lfops.apache_httpd
+
+- name: "Finalize install"
+  hosts: installer_chroot
+  tasks:
+  - name: "Finalize install"
+    block:
+
+      - name: "Dump facts"
+        delegate_to: localhost
+        run_once: true
+        ansible.builtin.copy:
+          content: "{{ hostvars[inventory_hostname] | to_nice_json }}"
+          dest: /tmp/facts-dump.json
+
+      - name: "Install grub2 /boot/grub2/grub.cfg"
+        ansible.builtin.command:
+          cmd: grub2-mkconfig -o /boot/grub2/grub.cfg
+        register: grub2_mkconfig
+        changed_when: grub2_mkconfig.rc == 0
+        failed_when: grub2_mkconfig.rc != 0
+
+      - name: "Install grub2 /boot/efi/EFI/{{ ansible_facts['distribution'] }}/grub.cfg"
+        ansible.builtin.command:
+          cmd: "grub2-mkconfig -o /boot/efi/EFI/{{ ansible_facts['distribution'] }}/grub.cfg"
+        register: grub2_mkconfig
+        changed_when: grub2_mkconfig.rc == 0
+        failed_when: grub2_mkconfig.rc != 0
+
+      - name: "Install grub2 /etc/grub2-efi.cfg"
+        ansible.builtin.command:
+          cmd: grub2-mkconfig -o /etc/grub2-efi.cfg
+        register: grub2_mkconfig
+        changed_when: grub2_mkconfig.rc == 0
+        failed_when: grub2_mkconfig.rc != 0
+
+      - name: "Register default kernel"
+        ansible.builtin.command:
+          cmd: grubby --default-kernel
+        register: defaultkernel
+        changed_when: defaultkernel.rc == 0
+        failed_when: defaultkernel.rc != 0
+
+      - name: "Debug"
+        ansible.builtin.debug:
+          var: defaultkernel
+
+      - name: "Add grub entry for enforcing=0"
+        ansible.builtin.command:
+          cmd: "grubby --add-kernel {{ defaultkernel.stdout }} --copy-default --args=enforcing=0 --title 'Default kernel without selinux enforcing'"
+        register: command
+        changed_when: command.rc == 0
+        failed_when: command.rc != 0
+
+      - name: "Configure grub to allow grubby to set which kernel to boot"
+        ansible.builtin.copy:
+          src: files/etc/default/grub
+          dest: /etc/default/grub
+          mode: '0644'
+          owner: root
+          group: root
+
+      - name: "Set default grub entry"
+        ansible.builtin.command:
+          cmd: 'grubby --set-default-index=1'
+        register: grubby
+        changed_when: grubby.rc == 0
+        failed_when: grubby.rc != 0
+
+      - name: "Register new boot entry for next reboot only"
+        ansible.builtin.command:
+          cmd: 'grub2-reboot 0'
+        register: grub2_reboot
+        changed_when: grub2_reboot.rc == 0
+        failed_when: grub2_reboot.rc != 0
+
+      - name: "Finalize the installation"
+        community.general.shutdown:
+        delegate_to: installer
+  tags: finalize
