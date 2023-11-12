@@ -35,7 +35,7 @@ To install all the necessary tools to a temporary directory we can issue the fol
 mkdir -p /tmp/initrd/etc/dnf/
 cp /etc/yum.repos.d/fedora.repo /tmp/initrd/etc/dnf/dnf.conf 
 cat /etc/dnf/dnf.conf >> /tmp/initrd/etc/dnf/dnf.conf 
-dnf --assumeyes --config /tmp/initrd/etc/dnf/dnf.conf --setopt=reposdir=/tmp/initrd/etc/yum.repos.d/ --releasever 38 install --installroot /tmp/initrd python3 python3-dnf python3-libselinux parted dosfstools e2fsprogs exfatprogs util-linux xfsprogs lvm2
+dnf --assumeyes --config /tmp/initrd/etc/dnf/dnf.conf --setopt=reposdir=/tmp/initrd/etc/yum.repos.d/ --releasever 38 install --installroot /tmp/initrd dnf python3 python3-dnf python3-libselinux parted dosfstools e2fsprogs util-linux xfsprogs lvm2
 rm -Rf /tmp/initrd/etc/!("pki"|"dnf")
 mkdir -p /tmp/initrd/etc/ssh
 sed 's/Subsystem.*sftp.*/Subsystem       sftp    internal-sftp/' /etc/ssh/sshd_config> /tmp/initrd/etc/ssh/sshd_config
