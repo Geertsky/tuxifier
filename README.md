@@ -1,4 +1,4 @@
-# ansible-install_initramfs
+# ansible-OSinstall_initramfs
 
 A typical workflow for an ansible installation of a machine is as follows:
 
