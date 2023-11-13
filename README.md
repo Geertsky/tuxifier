@@ -78,7 +78,7 @@ Installdisk
 -----------
 For partitioning and installation of the OS the `installdisk` var needs to be set to the blockdevice used for installation.
 
-[!WARNING]
+> :warning:
 By using this role, the disk specified by `installdisk` will be destroyed without asking for confirmation!!!
 
 Example:
