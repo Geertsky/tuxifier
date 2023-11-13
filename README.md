@@ -3,7 +3,7 @@ ansible-install_initramfs
 This role makes it possible to fulfill a minimal install of a distriubution using Ansible from within the initramfs. A customized initramfs image needs to be generated as described in the Requirements section below. This initramfs image in combination with its kernel need to be fed to the server by any way possible. For instance: PXE, qemu/kvm Direct kernel boot.
 
 
-equirements
+Requirements
 ------------
 
 Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
