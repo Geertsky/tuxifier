@@ -1,0 +1,14 @@
+---
+- name: Clear gathered facts from all currently targeted hosts
+  ansible.builtin.meta: clear_facts
+
+- name: "Wait for bootup to finish"
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    timeout: 300
+  tags: continueinstall
+
+- name: Gather facts for first time
+  ansible.builtin.setup:
+
+

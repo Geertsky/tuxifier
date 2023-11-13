@@ -1,0 +1,25 @@
+---
+# tasks file for ansible-install_initramfs
+- name: "Set the install distribution vars"
+  ansible.builtin.include_vars: "{{ installdistribution['name'] ~ installdistribution['version'] }}.yml"
+
+- name: "Clear install disk"
+  ansible.builtin.import_tasks: clear_disk.yml
+
+- name: "Partition install disk"
+  ansible.builtin.import_tasks: partition_disk.yml
+
+- name: "Mount Partitions"
+  ansible.builtin.import_tasks: mount_partitions.yml
+
+- name: "Prepare chroot"
+  ansible.builtin.import_tasks: prepare_chroot.yml
+
+- name: "Minimal Install"
+  ansible.builtin.import_tasks: minimal_install.yml
+
+- name: "Post Minimal Install"
+  ansible.builtin.import_tasks: post_minimal_install.yml
+
+- name: "Continue install"
+  ansible.builtin.import_tasks: continue_install.yml

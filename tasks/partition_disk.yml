@@ -1,0 +1,70 @@
+---
+- name: "Create a new primary partition with a size of 600MiB for boot"
+  community.general.parted:
+    device: "{{ installdisk }}"
+    number: 1
+    fs_type: ext4
+    state: present
+    part_end: 600MiB
+
+- name: "Create a new primary partition with a size of 1GiB for efi"
+  community.general.parted:
+    device: "{{ installdisk }}"
+    number: 2
+    fs_type: fat32
+    state: present
+    part_start: 600MiB
+    part_end: 1.6GiB
+
+- name: "Create a new primary LVM partition with a size rest"
+  community.general.parted:
+    device: "{{ installdisk }}"
+    number: 3
+    state: present
+    flags: [ lvm ]
+    part_start: 1.6GiB
+    part_end: 100%
+
+- name: "Create or resize a volume group"
+  community.general.lvg:
+    vg: vg.rh
+    pvs: "{{ installdisk }}3"
+
+- name: "Create logical swap volume"
+  community.general.lvol:
+    vg: vg.rh
+    lv: swap
+    size: 512
+
+- name: "Create logical root volume"
+  community.general.lvol:
+    vg: vg.rh
+    lv: root
+    size: 100%FREE
+
+- name: "Create a ext4 filesystem for boot partition"
+  community.general.filesystem:
+    fstype: ext4
+    opts: '-L boot'
+    dev: "{{ installdisk }}1"
+    force: true
+
+- name: "Create a vfat filesystem on efi partition"
+  community.general.filesystem:
+    fstype: vfat
+    dev: "{{ installdisk }}2"
+    force: true
+
+- name: "Create a swap filesystem on /dev/vg.rh/swap"
+  community.general.filesystem:
+    fstype: swap
+    opts: '-L swap'
+    dev: /dev/vg.rh/swap
+    force: true
+
+- name: "Create a xfs filesystem on /dev/vg.rh/root"
+  community.general.filesystem:
+    fstype: xfs
+    opts: '-L root'
+    dev: /dev/vg.rh/root
+    force: true

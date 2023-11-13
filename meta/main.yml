@@ -1,0 +1,23 @@
+galaxy_info:
+  author: Geert Geurts <geert@verweggistan.eu>
+  description: Install a server from the initramfs
+  issue_tracker_url: https://github.com/Geertsky/ansible-install_initramfs/issues
+  license: BSD-3-Clause
+
+
+  platforms:
+    - name: Fedora
+      versions:
+        - 38
+    - name: Rocky
+      versions:
+        - 8
+
+  galaxy_tags:
+    - minimal_install
+    - operating_system
+    - OS
+
+  dependencies:
+    - community.general
+    - ansible.posix

@@ -1,0 +1,49 @@
+---
+- name: "Register all repo files"
+  ansible.builtin.find:
+    paths: /sysroot/etc/yum.repos.d/
+    pattern: "*.repo"
+  register: minimalinstall__repos
+  tags: repos
+
+- name: "Change path for gpg-keys" # Red Hat Bugzilla – Bug 2247326
+  ansible.builtin.replace:
+    path: "{{ item.path }}"
+    regexp: '(^gpgkey=file://)(.*$)'
+    replace: '\1/sysroot\2'
+  loop: "{{ minimalinstall__repos.files }}"
+
+    #ansible.builtin.package:
+    #name: "{{ distributionminimalpackages }}"
+#name: 'kernel'
+#         conf_file: /sysroot/etc/dnf/dnf.conf
+#         state: latest
+#         installroot: '/sysroot'
+#         disablerepo: 'fedora'
+- name: "Install minimal OS"
+  ansible.builtin.command: "dnf --assumeyes --installroot=/sysroot install {% for item in distributionminimalpackages %} {{ item | quote }} {% endfor %}"
+  register: minimalinstall__minimalinstall
+  changed_when: minimalinstall__minimalinstall.rc == 0
+  failed_when: minimalinstall__minimalinstall.rc != 0
+
+#- name: "Add lvm module to dracut"
+#   ansible.builtin.lineinfile:
+#    path: /sysroot/etc/dracut.conf.d/lvm.conf
+#    line: "add_dracutmodules+=lvm"
+#    create: true
+#   state: present
+
+- name: "Resolve relocated rpmdb" # https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr
+  ansible.builtin.shell:
+    cmd: "rpmdb --root=/sysroot --exportdb|chroot /sysroot rpmdb --importdb"
+  register: minimalinstall__relocaterpmdb
+  changed_when: minimalinstall__relocaterpmdb.rc == 0
+  failed_when: minimalinstall__relocaterpmdb.rc != 0
+
+- name: "Dump minimalinstall output"
+  delegate_to: localhost
+  run_once: true
+  ansible.builtin.copy:
+    content: "{{ minimalinstall__minimalinstall.stdout_lines|join('\n') }}\n"
+    dest: "/tmp/{{ inventory_hostname }}-minimallinstall-stdout"
+    mode: "0644"

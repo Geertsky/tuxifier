@@ -1,0 +1,134 @@
+---
+- name: "Register all repo files"
+  ansible.builtin.find:
+    paths: /sysroot/etc/yum.repos.d/
+    pattern: "*.repo"
+  register: postminimalinstall__repos
+
+- name: "Correct the path for gpg-keys" # Red Hat Bugzilla – Bug 2247326
+  ansible.builtin.replace:
+    path: "{{ item.path }}"
+    regexp: '(^gpgkey=file://)/sysroot(.*$)'
+    replace: '\1\2'
+  loop: "{{ postminimalinstall__repos.files }}"
+
+- name: "Set root password"
+  ansible.builtin.command:
+    cmd: chroot /sysroot /bin/sh -c 'echo password|passwd --stdin root'
+  register: postminimallinstall__passwd
+  changed_when: postminimallinstall__passwd.rc == 0
+  failed_when: postminimallinstall__passwd.rc != 0
+
+    #- name: "Generate chrooted ssh-keys"
+  # ansible.builtin.command:
+    #    cmd: chroot /sysroot /usr/bin/ssh-keygen -A
+   #  register: postminimallinstall__ssh_key
+#  changed_when: postminimallinstall__ssh_key.rc == 0
+#  failed_when: postminimallinstall__ssh_key.rc != 0
+
+- name: "Add root authorized_keys to chroot"
+  ansible.posix.authorized_key:
+    key: "{{ item }}"
+    path: /sysroot/root/.ssh/authorized_keys
+    user: root
+  loop: "{{ root_authorized_keys }}"
+
+- name: "Install grub2 /boot/grub2/grub.cfg"
+  ansible.builtin.command:
+    cmd: "chroot /sysroot /usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg"
+  register: finalize__grub2_mkconfig
+  changed_when: finalize__grub2_mkconfig.rc == 0
+  failed_when: finalize__grub2_mkconfig.rc != 0
+
+- name: "Install grub.cfg"
+  ansible.builtin.command:
+    cmd: "chroot /sysroot /usr/sbin/grub2-mkconfig -o /boot/efi/EFI/{{ installdistribution['name'] }}/grub.cfg"
+  register: finalize__grub2_mkconfig
+  changed_when: finalize__grub2_mkconfig.rc == 0
+  failed_when: finalize__grub2_mkconfig.rc != 0
+
+- name: "Install grub2 /etc/grub2-efi.cfg"
+  ansible.builtin.file:
+    src: "/sysroot/boot/efi/EFI/{{ installdistribution['name'] }}/grub.cfg"
+    dest: "../../../../etc/grub2-efi.cfg"
+    owner: root
+    group: root
+    state: link
+
+- name: "Discover host keys"
+  ansible.builtin.shell:
+    cmd: "ls /etc/ssh/ssh_host_*key"
+  register: finalize__hostkeys
+  changed_when: finalize__hostkeys.rc == 0
+  failed_when: finalize__hostkeys.rc != 0
+
+- name: "Install ssh host keys"
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /sysroot/etc/ssh/
+    remote_src: yes
+    mode: '0600'
+  loop: "{{ finalize__hostkeys.stdout_lines }}"
+
+- name: "Discover host pub keys"
+  ansible.builtin.shell:
+    cmd: "ls /etc/ssh/ssh_host_*key.pub"
+  register: finalize__hostkeypubs
+  changed_when: finalize__hostkeypubs.rc == 0
+  failed_when: finalize__hostkeypubs.rc != 0
+
+
+- name: "Install ssh host pub keys"
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /sysroot/etc/ssh/
+    remote_src: yes
+    mode: '0644'
+  loop: "{{ finalize__hostkeypubs.stdout_lines }}"
+  tags: debug
+
+#- name: "Enable autorelabel"
+#  ansible.builtin.file:
+#    path: /sysroot/.autorelabel
+#    state: touch
+#    mode: '0644'
+#- name: "Enable selinux"
+#  ansible.builtin.command:
+#    cmd: "chroot /sysroot load_policy -i"
+#  register: finalize__load_policy
+#  changed_when: finalize__load_policy.rc == 0
+#  failed_when: finalize__load_policy.rc != 0
+#
+#- name: "Relabel rootfs"
+#  ansible.builtin.command:
+#    cmd: "chroot /sysroot restorecon -e /dev -e /proc -e /sys -R /"
+#  register: finalize__load_restorecon
+#  changed_when: finalize__load_restorecon.rc == 0
+#  failed_when: finalize__load_restorecon.rc != 0
+
+- name: "Umount /sysroot/dev, /sys and /proc"
+  ansible.posix.mount:
+    path: /sysroot/{{ item }}
+    state: unmounted
+  loop:
+    - "/dev"
+    - "/proc"
+    - "/sys/fs/selinux"
+    - "/sys"
+
+- name: "Unmount /sysroot"
+  ansible.posix.mount:
+    path: "{{ item }}"
+    state: unmounted
+  loop:
+    - "/sysroot/boot/efi"
+    - "/sysroot/boot"
+    - "/sysroot"
+
+- name: "Continue boot process"
+  ansible.builtin.systemd_service:
+    name: "dracut-emergency.service"
+    state: stopped
+  ignore_errors: True #Needed because the connection drops
+  register: finalize__stop_dracut_emergency
+  tags: continueboot

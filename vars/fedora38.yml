@@ -1,0 +1,17 @@
+---
+distributionminimalpackages:
+  - '@Minimal Install'
+  - 'grub2-common'
+  - 'grub2-efi-x64'
+  - 'grub2-tools-minimal'
+  - 'grub2-tools'
+  - 'grub2-tools-extra'
+  - 'grub2-tools-efi'
+  - 'kernel'
+  - 'libselinux'
+  - 'libselinux-utils'
+  - 'lvm2'
+  - 'python3-libselinux'
+  - 'selinux-policy'
+  - 'selinux-policy-targeted'
+  - 'shim-x64'

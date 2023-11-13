@@ -1,0 +1,21 @@
+---
+- name: "Mount /"
+  ansible.posix.mount:
+    path: /sysroot
+    src: LABEL=root
+    fstype: xfs
+    state: mounted
+
+- name: "Mount /sysroot/boot"
+  ansible.posix.mount:
+    path: /sysroot/boot
+    src: "{{ installdisk }}1"
+    fstype: ext4
+    state: mounted
+
+- name: "Mount /sysroot/boot/efi"
+  ansible.posix.mount:
+    path: /sysroot/boot/efi
+    src: "{{ installdisk }}2"
+    fstype: vfat
+    state: mounted

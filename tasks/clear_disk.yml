@@ -1,0 +1,23 @@
+---
+- name: "De-activate any volume groups"
+  ansible.builtin.raw: for VG in $(lvm vgs --noheadings -o vg_name); do for LV in $(lvm lvs --noheadings -o lv_name); do lvremove -y /dev/$VG/$LV; done; lvchange --activate n $VG; vgremove -y $VG; done
+  args:
+    executable: /bin/bash
+  register: clean_installdisk__vgscript
+  changed_when: clean_installdisk__vgscript.rc != 0
+
+- name: "Zero MBR"
+  ansible.builtin.raw: "dd if=/dev/zero of={{ installdisk }} bs=512 count=1"
+  args:
+    executable: /bin/bash
+  register: clean_installdisk__dd
+  changed_when: clean_installdisk__dd.rc == 0
+  failed_when: clean_installdisk__dd.rc != 0
+
+- name: "Reload partitions"
+  ansible.builtin.raw: "blockdev --rereadpt {{ installdisk }}"
+  args:
+    executable: /bin/bash
+  register: clean_installdisk__blockdev
+  changed_when: clean_installdisk__blockdev.rc == 0
+  failed_when: clean_installdisk__blockdev.rc != 0

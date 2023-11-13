@@ -1,0 +1,3 @@
+---
+# defaults file for ansible-install_initramfs
+distributionreporpms: files/rpms/{{ installdistribution['name'] }}/{{ installdistribution['version'] }}/

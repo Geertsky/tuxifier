@@ -1,0 +1,53 @@
+---
+- name: "Copy distribution repos_rpms"
+  ansible.builtin.copy:
+    src: "{{ distributionreporpms | join() }}"
+    dest: /tmp/repo-files/
+    mode: '0644'
+
+- name: "Install distribution repos rpms"
+  ansible.builtin.command:
+    cmd: 'rpm --root=/sysroot --force --install /tmp/repo-files/*'
+  register: prepare_chroot__rpm
+  changed_when: prepare_chroot__rpm.rc == 0
+  failed_when: prepare_chroot__rpm.rc != 0
+
+# - name: "Copy gpg keys out of chroot"
+  # GG: Shouldn't be needed according to doku (man dnf) but apparrently
+- name: "Install genfstab"
+  ansible.builtin.copy:
+    src: files/genfstab
+    dest: /tmp/genfstab
+    mode: '0755'
+
+- name: "Generate /etc/fstab"
+  ansible.builtin.command:
+    cmd: /tmp/genfstab -f /sysroot -L /sysroot
+  register: prepare_chroot__fstab
+  changed_when: prepare_chroot__fstab.rc == 0
+  failed_when: prepare_chroot__fstab.rc != 0
+
+- name: "Write /etc/fstab"
+  ansible.builtin.copy:
+    content: "{{ prepare_chroot__fstab.stdout_lines | join('\n') }}\n"
+    dest: /sysroot/etc/fstab
+    mode: '0644'
+
+- name: "Bind mount /dev /sys and /proc"
+  ansible.posix.mount:
+    path: /sysroot/{{ item }}
+    src: /{{ item }}
+    opts: bind
+    state: mounted
+    fstype: none
+  loop:
+    - "/dev"
+    - "/proc"
+    - "/sys"
+
+- name: "Copy resolv.conf to chroot"
+  ansible.builtin.copy:
+    remote_src: true
+    src: /etc/resolv.conf
+    dest: /sysroot/etc/
+    mode: '0644'
