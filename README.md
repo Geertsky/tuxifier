@@ -72,7 +72,15 @@ The following dracut modules are added:
 Role Variables
 --------------
 
-For the installation of the OS a number of packages are required. In the `vars/` directory these are defined in `<distribution><distribution version>.yml`.
+Mandatory variables
+-------------------
+
+Below the list of Mandatory role variables, followed by more extensive explanation and an example for each.
+
+|Variable|Description|
+|---------------------|-----------------------------------------------------------------------------------|
+|`installdisk`        |points to the blockdevice to be partitioned and used for the installation of the OS|
+|`installdistribution`|A two items dictionary with the distribution `name` and `version` to be installed. |
 
 Installdisk
 -----------
@@ -90,7 +98,7 @@ installdisk: /dev/vda
 
 Installdistribution
 -------------------
-The var `installdistribution` is a dictionary with two items:
+The `installdistribution` var is a dictionary with two items:
 * `name` The name of the distribution
 * `version` The version of the distribution
 
@@ -102,6 +110,15 @@ installdistribution:
   version: 8
 ```
 
+Optional variables
+------------------
+
+Below the list of Optional role variables, followed by more extensive explanation and an example for each.
+
+|Variable|Description|
+|--------|-----------|
+|root_authorized_keys|A list of ssh pub keys to be added to the `authorized_keys` file of the root user
+.
 Root_authorized_keys
 --------------------
 The `root_authorized_keys` var is a list of ssh pub-keys to be added to the `authorized_keys` file for the root user.
@@ -113,6 +130,8 @@ Example:
 root_authorized_keys:
   - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDlUb4UApMweLjlbmAadiwjPNwAiZ0i/ucxN9sk50kur geert@verweggistan.eu'
 ```
+
+For the installation of the OS a number of packages are required. In the `vars/` directory these are defined in `<distribution><distribution version>.yml`.
 
 Dependencies
 ------------
