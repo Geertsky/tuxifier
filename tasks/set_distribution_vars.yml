@@ -1,0 +1,3 @@
+---
+- name: "Set the install distribution vars"
+  ansible.builtin.include_vars: "{{ installdistribution['name'] ~ installdistribution['version'] }}.yml"

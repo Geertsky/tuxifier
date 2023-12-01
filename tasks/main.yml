@@ -2,6 +2,7 @@
 # tasks file for ansible-install_initramfs
 - name: "Set the install distribution vars"
   ansible.builtin.include_vars: "{{ installdistribution['name'] ~ installdistribution['version'] }}.yml"
+  tags: set_dist_vars
 
 - name: "Clear install disk"
   ansible.builtin.import_tasks: clear_disk.yml
