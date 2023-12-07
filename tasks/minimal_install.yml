@@ -13,18 +13,19 @@
     replace: '\1/sysroot\2'
   loop: "{{ minimalinstall__repos.files }}"
 
-    #ansible.builtin.package:
-    #name: "{{ distributionminimalpackages }}"
-#name: 'kernel'
-#         conf_file: /sysroot/etc/dnf/dnf.conf
-#         state: latest
-#         installroot: '/sysroot'
-#         disablerepo: 'fedora'
 - name: "Install minimal OS"
-  ansible.builtin.command: "dnf --assumeyes --installroot=/sysroot install {% for item in distributionminimalpackages %} {{ item | quote }} {% endfor %}"
-  register: minimalinstall__minimalinstall
-  changed_when: minimalinstall__minimalinstall.rc == 0
-  failed_when: minimalinstall__minimalinstall.rc != 0
+  ansible.builtin.dnf:
+    #    name: "{{ distributionminimalpackages }}"
+    name: "@Core"
+    state: present
+    installroot: '/sysroot'
+    releasever: "{{ installdistribution['version'] }}"
+  tags: installtry
+#- name: "Install minimal OS"
+#  ansible.builtin.command: "dnf --assumeyes --installroot=/sysroot install {% for item in distributionminimalpackages %} {{ item | quote }} {% endfor %}"
+#  register: minimalinstall__minimalinstall
+#  changed_when: minimalinstall__minimalinstall.rc == 0
+#  failed_when: minimalinstall__minimalinstall.rc != 0
 
 #- name: "Add lvm module to dracut"
 #   ansible.builtin.lineinfile:
