@@ -1,0 +1,51 @@
+- name: Create link to lvm
+  ansible.builtin.file:
+    src: "/usr/sbin/lvm"
+    dest: "/usr/sbin/{{ item }}"
+    state: link
+  loop:
+    - lvchange
+    - lvconvert
+    - lvcreate
+    - lvdisplay
+    - lvextend
+    - lvmconfig
+    - lvmdevices
+    - lvmdiskscan
+    - lvmsadc
+    - lvmsar
+    - lvreduce
+    - lvremove
+    - lvrename
+    - lvresize
+    - lvs
+    - lvscan
+    - pvchange
+    - pvck
+    - pvcreate
+    - pvdisplay
+    - pvmove
+    - pvremove
+    - pvresize
+    - pvs
+    - pvscan
+    - vgcfgbackup
+    - vgcfgrestore
+    - vgchange
+    - vgck
+    - vgconvert
+    - vgcreate
+    - vgdisplay
+    - vgexport
+    - vgextend
+    - vgimport
+    - vgimportclone
+    - vgimportdevices
+    - vgmerge
+    - vgmknodes
+    - vgreduce
+    - vgremove
+    - vgrename
+    - vgs
+    - vgscan
+    - vgsplit
