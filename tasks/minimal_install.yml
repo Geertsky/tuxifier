@@ -27,11 +27,14 @@
   changed_when: minimalinstall__minimalinstall.rc == 0
   failed_when: minimalinstall__minimalinstall.rc != 0
   tags: installtry
-#- name: "Install minimal OS"
-#  ansible.builtin.command: "dnf --assumeyes --installroot=/sysroot install {% for item in distributionminimalpackages %} {{ item | quote }} {% endfor %}"
-#  register: minimalinstall__minimalinstall
-#  changed_when: minimalinstall__minimalinstall.rc == 0
-#  failed_when: minimalinstall__minimalinstall.rc != 0
+
+- name: "Change back path for gpg-keys" # Red Hat Bugzilla – Bug 2247326
+  ansible.builtin.replace:
+    path: "{{ item.path }}"
+    regexp: '(^gpgkey=file://)/sysroot(.*$)'
+    replace: '\1\2'
+  loop: "{{ minimalinstall__repos.files }}"
+  tags: repotry
 
 #- name: "Add lvm module to dracut"
 #   ansible.builtin.lineinfile:
