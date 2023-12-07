@@ -6,8 +6,10 @@
     mode: '0644'
 
 - name: "Install distribution repos rpms"
-  ansible.builtin.command:
-    cmd: 'rpm --root=/sysroot --force --install /tmp/repo-files/*'
+  ansible.builtin.shell:
+    cmd: 'for R in /tmp/repo-files/*; do rpm2cpio $R|cpio -idm; done'
+  args:
+    chdir: /sysroot
   register: prepare_chroot__rpm
   changed_when: prepare_chroot__rpm.rc == 0
   failed_when: prepare_chroot__rpm.rc != 0
