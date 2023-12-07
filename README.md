@@ -1,6 +1,6 @@
-ansible-install_initramfs
+ansible-bambini
 =========================
-This role makes it possible to fulfill a minimal install of a distribution using Ansible from within the initramfs. A customized initramfs image needs to be generated as described in the Requirements section below. This initramfs image in combination with its kernel need to be fed to the server by any way possible. For instance: PXE, qemu/kvm Direct kernel boot.
+This role makes it possible to fulfill a bare metal minimal install of a distribution using Ansible from within the initramfs. A customized initramfs image needs to be generated as described in the Requirements section below. This initramfs image in combination with its kernel need to be fed to the server by any way possible. For instance: PXE, qemu/kvm Direct kernel boot.
 
 
 Requirements
