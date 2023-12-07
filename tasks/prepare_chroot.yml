@@ -33,6 +33,12 @@
   changed_when: prepare_chroot__fstab.rc == 0
   failed_when: prepare_chroot__fstab.rc != 0
 
+- name: "Create /etc"
+  ansible.builtin.file:
+    path: /sysroot/etc
+    state: directory
+    mode: '0755'
+
 - name: "Write /etc/fstab"
   ansible.builtin.copy:
     content: "{{ prepare_chroot__fstab.stdout_lines | join('\n') }}\n"
