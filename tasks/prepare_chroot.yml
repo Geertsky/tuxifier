@@ -14,8 +14,12 @@
   changed_when: prepare_chroot__rpm.rc == 0
   failed_when: prepare_chroot__rpm.rc != 0
 
-# - name: "Copy gpg keys out of chroot"
-  # GG: Shouldn't be needed according to doku (man dnf) but apparrently
+- name: "Copy a /certs/ca-bundle.trust.crt"
+  ansible.builtin.copy:
+    src: /etc/pki/tls/certs/ca-bundle.crt
+    dest: /etc/pki/tls/certs/
+    mode: '0644'
+
 - name: "Install genfstab"
   ansible.builtin.copy:
     src: files/genfstab
