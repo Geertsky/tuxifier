@@ -13,13 +13,19 @@
     replace: '\1/sysroot\2'
   loop: "{{ minimalinstall__repos.files }}"
 
+#- name: "Install minimal OS"
+#  ansible.builtin.dnf:
+#    name: "{{ distributionminimalpackages }}"
+#    #name: '@Minimal Install'
+#    state: present
+#    installroot: '/sysroot'
+#    releasever: "{{ installdistribution['version'] }}"
+
 - name: "Install minimal OS"
-  ansible.builtin.dnf:
-    #    name: "{{ distributionminimalpackages }}"
-    name: "@Core"
-    state: present
-    installroot: '/sysroot'
-    releasever: "{{ installdistribution['version'] }}"
+  ansible.builtin.command: "dnf-3 --releasever {{ installdistribution['version'] }} --assumeyes --installroot=/sysroot install {% for item in distributionminimalpackages %} {{ item | quote }} {% endfor %}"
+  register: minimalinstall__minimalinstall
+  changed_when: minimalinstall__minimalinstall.rc == 0
+  failed_when: minimalinstall__minimalinstall.rc != 0
   tags: installtry
 #- name: "Install minimal OS"
 #  ansible.builtin.command: "dnf --assumeyes --installroot=/sysroot install {% for item in distributionminimalpackages %} {{ item | quote }} {% endfor %}"
