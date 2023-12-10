@@ -4,9 +4,6 @@
   ansible.builtin.include_vars: "{{ installdistribution['name'] ~ installdistribution['version'] }}.yml"
   tags: set_dist_vars
 
-- name: "Set LVM links"
-  ansible.builtin.import_tasks: set_lvm_links.yml
-
 - name: "Clear install disk"
   ansible.builtin.import_tasks: clear_disk.yml
 
