@@ -115,9 +115,6 @@
     - "/sysroot"
 
 - name: "Continue boot process"
-  ansible.builtin.systemd_service:
-    name: "dracut-emergency.service"
-    state: stopped
-  ignore_errors: True #Needed because the connection drops
-  register: finalize__stop_dracut_emergency
-  tags: continueboot
+  ansible.builtin.file:
+    path: "/tmp/ansible-finished"
+    state: touch
