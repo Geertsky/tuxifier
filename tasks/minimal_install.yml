@@ -22,7 +22,7 @@
 #    releasever: "{{ installdistribution['version'] }}"
 
 - name: "Install minimal OS"
-  ansible.builtin.command: "dnf-3 --releasever {{ installdistribution['version'] }} --assumeyes --installroot=/sysroot install {% for item in distributionminimalpackages %} {{ item | quote }} {% endfor %}"
+  ansible.builtin.command: "dnf --releasever {{ installdistribution['version'] }} --assumeyes --installroot=/sysroot install {% for item in distributionminimalpackages %} {{ item | quote }} {% endfor %}"
   register: minimalinstall__minimalinstall
   changed_when: minimalinstall__minimalinstall.rc == 0
   failed_when: minimalinstall__minimalinstall.rc != 0
@@ -36,31 +36,9 @@
   loop: "{{ minimalinstall__repos.files }}"
   tags: repotry
 
-#- name: "Add lvm module to dracut"
-#   ansible.builtin.lineinfile:
-#    path: /sysroot/etc/dracut.conf.d/lvm.conf
-#    line: "add_dracutmodules+=lvm"
-#    create: true
-#   state: present
-
-#- name: "Resolve relocated rpmdb" # https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr
-#  ansible.builtin.shell:
-#    cmd: "rpmdb --root=/sysroot --exportdb|chroot /sysroot rpmdb --importdb"
-#  register: minimalinstall__relocaterpmdb
-#  changed_when: minimalinstall__relocaterpmdb.rc == 0
-#  failed_when: minimalinstall__relocaterpmdb.rc != 0
-
 - name: "Resolve relocated rpmdb" # https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr
   #For install of older distributions this shouldn't be done actually... Still need to solve this.
   ansible.builtin.shell:
-    cmd: '[ -d var/lib/rpm ]&&mv var/lib/rpm{,.bak}&&ln -s usr/lib/sysimage/rpm var/lib/rpm'
+    cmd: '[ -d rpm ]&&mv rpm{,.bak}&&ln -s /usr/lib/sysimage/rpm ./'
   args:
-    chdir: /sysroot
-
-#- name: "Dump minimalinstall output"
-#  delegate_to: localhost
-#  run_once: true
-#  ansible.builtin.copy:
-#    content: "{{ minimalinstall__minimalinstall.stdout_lines|join('\n') }}\n"
-#    dest: "/tmp/{{ inventory_hostname }}-minimallinstall-stdout"
-#    mode: "0644"
+    chdir: /sysroot/var/lib
