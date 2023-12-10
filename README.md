@@ -72,8 +72,8 @@ Below the list of Optional role variables, followed by more extensive explanatio
 
 |Variable|Description|
 |--------|-----------|
-|root_authorized_keys|A list of ssh pub keys to be added to the `authorized_keys` file of the root user
-.
+|root_authorized_keys|A list of ssh pub keys to be added to the `authorized_keys` file of the root user|
+
 Root_authorized_keys
 --------------------
 The `root_authorized_keys` var is a list of ssh pub-keys to be added to the `authorized_keys` file for the root user.
@@ -95,12 +95,27 @@ A list of other roles hosted on Galaxy should go here, plus any details in regar
 
 Example Playbook
 ----------------
+```
+---
+- hosts: installer
+  vars_files:
+    - vault.yml
+  roles:
+    - role: "/home/geert/git/geertsky/ansible-bambini/"
+```
+Example host_vars
+-----------------
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+```
+installdisk: /dev/vda
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+installdistribution:
+  name: rocky
+  version: 8
+
+root_authorized_keys:
+  - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDlUb4UApMweLjlbmAadiwjPNwAiZ0i/ucxN9sk50kur geert
+```
 
 License
 -------
