@@ -88,24 +88,12 @@
   loop: "{{ finalize__hostkeypubs.stdout_lines }}"
   tags: debug
 
+#A relabel at this stage couses a reboot which requires a manual intervention to stop the boot process. Considered cleaner to require touching of /.autorelabel after install is finished.
 #- name: "Enable autorelabel"
 #  ansible.builtin.file:
 #    path: /sysroot/.autorelabel
 #    state: touch
 #    mode: '0644'
-#- name: "Enable selinux"
-#  ansible.builtin.command:
-#    cmd: "chroot /sysroot load_policy -i"
-#  register: finalize__load_policy
-#  changed_when: finalize__load_policy.rc == 0
-#  failed_when: finalize__load_policy.rc != 0
-#
-#- name: "Relabel rootfs"
-#  ansible.builtin.command:
-#    cmd: "chroot /sysroot restorecon -e /dev -e /proc -e /sys -R /"
-#  register: finalize__load_restorecon
-#  changed_when: finalize__load_restorecon.rc == 0
-#  failed_when: finalize__load_restorecon.rc != 0
 
 - name: "Umount /sysroot/dev, /sys and /proc"
   ansible.posix.mount:
