@@ -36,6 +36,7 @@ Below the list of Mandatory role variables, followed by more extensive explanati
 |---------------------|-----------------------------------------------------------------------------------|
 |`installdisk`        |points to the blockdevice to be partitioned and used for the installation of the OS|
 |`installdistribution`|A two items dictionary with the distribution `name` and `version` to be installed. |
+|`rootpw`             |The root password for the installed OS. Should be set in a vault...                |
 
 Installdisk
 -----------
