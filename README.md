@@ -2,6 +2,9 @@ ansible-bambini
 =========================
 The `ansible-bambini` role makes a Bare Metal minimal Install of a distribution using Ansible using a initial ramdisk created using dracut and the [dracut-bambini](https://github.com/Geertsky/dracut-bambini) module. This initramfs image in combination with its kernel need to be fed to the server by any way possible. For instance: PXE, qemu/kvm Direct kernel boot, customized grub.
 
+whetting your appetite
+----------------------
+[youtube demonstration of an ansible minimal Bare Metal Install using bambini](https://youtu.be/r7R1V7xLOFg)
 
 Requirements
 ------------
