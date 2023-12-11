@@ -4,7 +4,7 @@ The `ansible-bambini` role makes a Bare Metal minimal Install of a distribution 
 
 whetting your appetite
 ----------------------
-[youtube demonstration of an ansible minimal Bare Metal Install using bambini](https://youtu.be/r7R1V7xLOFg)
+[youtube demonstration of an ansible minimal Bare Metal Install using bambini](https://youtu.be/DpHdE-qsa5o)
 
 _You'll have to view it fullscreen..._
 
