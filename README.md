@@ -1,37 +1,31 @@
-ansible-bambini
-=========================
-The `ansible-bambini` role makes a Bare Metal minimal Install of a distribution using Ansible using a initial ramdisk created using dracut and the [dracut-bambini](https://github.com/Geertsky/dracut-bambini) module. This initramfs image in combination with its kernel need to be fed to the server by any way possible. For instance: PXE, qemu/kvm Direct kernel boot, customized grub.
+# ansible-bambini
 
-whetting your appetite
-----------------------
-[youtube demonstration of an ansible minimal Bare Metal Install using bambini](https://youtu.be/7qW9YJ4XMa4)
+`ansible-bambini` makes the bare metal installation of machines completely controlled by ansible. Additionally, it is faster and less error prone.
 
-Requirements
-------------
+A typical workflow for a bare metal installation of a machine is as follows:
 
-Collection requirements
------------------------
-There are two collections that need to be installed:
-* community.general
-* ansible.posix
+- Perform a minimal install of a machine using for instance a kickstart file.
+- Boot the freshly installed machine.
+- Modify the installation using ansible.
 
-They can be installed with the following two commands:
+That is two out of three, ok quite minor, but still manual tasks to perform.
+With the [dracut-bambini](https://github.com/Geertsky/dracut-bambini) dracut module, we can hold the boot execution just before the root filesystem gets mounted so we can use ansible to partition the disk and install a minimal OS.
+The `ansible-bambini` role is designed to do exactly that. It partitions a disk, installs a minimal OS, and waits for the boot process to finish.
 
-```
-ansible-galaxy collection install community.general
-ansible-galaxy collection install ansible.posix
-```
+## whetting your appetite
+[youtube demonstration](https://youtu.be/7qW9YJ4XMa4) of an ansible bare metal install using bambini
 
-Initramfs image generation
---------------------------
+## Dependencies
+
+## Collection dependencies
+
+## Initramfs image generation
 
 See: the [dracut-bambini](https://github.com/Geertsky/dracut-bambini) git repository for the steps to create the initramfs
 
-Role Variables
---------------
+## Role Variables
 
-Mandatory variables
--------------------
+## Mandatory variables
 
 Below the list of Mandatory role variables, followed by more extensive explanation and an example for each.
 
@@ -41,27 +35,23 @@ Below the list of Mandatory role variables, followed by more extensive explanati
 |`installdistribution`|A two items dictionary with the distribution `name` and `version` to be installed. |
 |`rootpw`             |The root password for the installed OS. Should be set in a vault...                |
 
-Installdisk
------------
+### Installdisk
 For partitioning and installation of the OS the `installdisk` var needs to be set to the blockdevice used for installation.
 
 > :warning:
 By using this role, the disk specified by `installdisk` will be destroyed without asking for confirmation!!!
 
-Example:
---------
-
+#### Example:
 ```
 installdisk: /dev/vda
 ```
 
-Installdistribution
--------------------
+### Installdistribution
 The `installdistribution` var is a dictionary with two items:
 * `name` The name of the distribution
 * `version` The version of the distribution
 
-Example:
+#### Example:
 
 ```
 installdistribution:
@@ -69,8 +59,7 @@ installdistribution:
   version: 8
 ```
 
-Optional variables
-------------------
+## Optional variables
 
 Below the list of Optional role variables, followed by more extensive explanation and an example for each.
 
@@ -78,12 +67,10 @@ Below the list of Optional role variables, followed by more extensive explanatio
 |--------|-----------|
 |root_authorized_keys|A list of ssh pub keys to be added to the `authorized_keys` file of the root user|
 
-Root_authorized_keys
---------------------
+### Root_authorized_keys
 The `root_authorized_keys` var is a list of ssh pub-keys to be added to the `authorized_keys` file for the root user.
 
-Example:
---------
+#### Example:
 
 ```
 root_authorized_keys:
@@ -92,13 +79,7 @@ root_authorized_keys:
 
 For the installation of the OS a number of packages are required. In the `vars/` directory these are defined in `<distribution><distribution version>.yml`.
 
-Dependencies
-------------
-
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
-
-Example Playbook
-----------------
+### Example Playbook
 ```
 ---
 - hosts: installer
@@ -107,8 +88,7 @@ Example Playbook
   roles:
     - role: "/home/geert/git/geertsky/ansible-bambini/"
 ```
-Example host_vars
------------------
+### Example host_vars
 
 ```
 installdisk: /dev/vda
@@ -121,12 +101,10 @@ root_authorized_keys:
   - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDlUb4UApMweLjlbmAadiwjPNwAiZ0i/ucxN9sk50kur geert
 ```
 
-License
--------
+## License
 
 BSD
 
-Author Information
-------------------
+## Author Information
 
 Geert Geurts `<geert AT verweggistan.eu>`
