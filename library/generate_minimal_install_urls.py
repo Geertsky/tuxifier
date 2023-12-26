@@ -3,13 +3,12 @@ import dnf
 import os
 base = dnf.Base()
 conf = base.conf 
-conf.read('/home/geert/git/geertsky/dracut-bambini/Rocky-BaseOS.repo') 
 conf.set_or_append_opt_value('reposdir','/tmp/rocky8-reposdir')
 conf.set_or_append_opt_value('installroot','/tmp/rocky8-root')
 conf.substitutions['releasever']='8'
 conf.substitutions['arch']='x86_64'
 conf.substitutions['basearch']='x86_64'
-base.repos.add_new_repo('BaseOS', conf,metalink='https://mirrors.rockylinux.org/metalink?arch=$basearch&repo=BaseOS-$releasever&country=ch')
+base.repos.add_new_repo('BaseOS', conf,metalink='https://mirrors.rockylinux.org/metalink?arch=$basearch&repo=BaseOS-$releasever')
 for d in ['/tmp/rocky8-reposdir','/tmp/rocky8-root']:
     try:
         os.mkdir(d)
