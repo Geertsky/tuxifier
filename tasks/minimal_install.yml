@@ -36,8 +36,5 @@
 #  tags: repotry
 
 - name: "Resolve relocated rpmdb" # https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr
-  #For install of older distributions this shouldn't be done actually... Still need to solve this.
   ansible.builtin.shell:
-    cmd: '[ -d rpm ]&&mv rpm{,.bak}&&ln -s /usr/lib/sysimage/rpm ./'
-  args:
-    chdir: /sysroot/var/lib
+    cmd: 'rpmdb --root=/sysroot --exportdb|chroot /sysroot rpmdb --importdb'
