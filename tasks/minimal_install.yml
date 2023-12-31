@@ -1,27 +1,12 @@
 ---
-#- name: "Register all repo files"
-#  ansible.builtin.find:
-#    paths: /sysroot/etc/yum.repos.d/
-#    pattern: "*.repo"
-#  register: minimalinstall__repos
-#  tags: repos
-#
-#- name: "Change path for gpg-keys" # Red Hat Bugzilla – Bug 2247326
-#  ansible.builtin.replace:
-#    path: "{{ item.path }}"
-#    regexp: '(^gpgkey=file://)(.*$)'
-#    replace: '\1/sysroot\2'
-#  loop: "{{ minimalinstall__repos.files }}"
-
-- name: "Resolve packages"
-  register: rpm_urls
-  ansible.builtin.script:
-    cmd: ../library/generate_minimal_install_urls.py
-    executable: /usr/bin/python3
-  delegate_to: localhost
+- name: resolve install urls
+  geertsky.bambini.generate_minimal_install_urls_info:
+    distribution: "{{ distribution }}" 
+  register: result
+  debugger: on_failed
 
 - name: "Install minimal OS"
-  ansible.builtin.command: "rpm --root=/sysroot --install {{ rpm_urls.stdout }}"
+  ansible.builtin.command: "rpm --root=/sysroot --install {{ result.rpm_urls }}"
   register: minimalinstall__minimalinstall
   changed_when: minimalinstall__minimalinstall.rc == 0
   failed_when: minimalinstall__minimalinstall.rc != 0

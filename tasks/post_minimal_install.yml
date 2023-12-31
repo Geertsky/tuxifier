@@ -1,18 +1,5 @@
 ---
 
-#- name: "Register all repo files"
-#  ansible.builtin.find:
-#    paths: /sysroot/etc/yum.repos.d/
-#    pattern: "*.repo"
-#  register: postminimalinstall__repos
-#
-#- name: "Correct the path for gpg-keys" # Red Hat Bugzilla – Bug 2247326
-#  ansible.builtin.replace:
-#    path: "{{ item.path }}"
-#    regexp: '(^gpgkey=file://)/sysroot(.*$)'
-#    replace: '\1\2'
-#  loop: "{{ postminimalinstall__repos.files }}"
-
 - name: "Set root password"
   ansible.builtin.command:
     cmd: "chroot /sysroot /bin/sh -c 'echo {{ rootpw }}|passwd --stdin root'"
