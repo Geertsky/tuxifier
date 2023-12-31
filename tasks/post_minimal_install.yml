@@ -7,13 +7,6 @@
   changed_when: postminimallinstall__passwd.rc == 0
   failed_when: postminimallinstall__passwd.rc != 0
 
-    #- name: "Generate chrooted ssh-keys"
-  # ansible.builtin.command:
-    #    cmd: chroot /sysroot /usr/bin/ssh-keygen -A
-   #  register: postminimallinstall__ssh_key
-#  changed_when: postminimallinstall__ssh_key.rc == 0
-#  failed_when: postminimallinstall__ssh_key.rc != 0
-
 - name: "Add root authorized_keys to chroot"
   ansible.posix.authorized_key:
     key: "{{ item }}"
