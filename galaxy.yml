@@ -1,0 +1,35 @@
+namespace: geertsky
+
+# The name of the collection. Has the same character restrictions as 'namespace'
+name: bambini
+
+# The version of the collection. Must be compatible with semantic versioning
+version: 1.0.0
+
+# The path to the Markdown (.md) readme file. This path is relative to the root of the collection
+readme: README-collection.md
+
+# A list of the collection's content authors. Can be just the name or in the format 'Full Name <email> (url)
+# @nicks:irc/im.site#channel'
+authors:
+- geert geurts <geert@verweggistan.eu>
+
+
+### OPTIONAL but strongly recommended
+# A short summary description of the collection
+description: Bare Metal Installation using ansible
+
+license:
+- BSD-1-Clause
+
+tags: []
+
+# Collections that this collection requires to be installed for it to be usable. The key of the dict is the
+# collection label 'namespace.name'. The value is a version range
+# L(specifiers,https://python-semanticversion.readthedocs.io/en/latest/#requirement-specification). Multiple version
+# range specifiers can be set and are separated by ','
+dependencies: {}
+
+# The URL of the originating SCM repository
+repository: http://github.com/geertsky/bambini
+

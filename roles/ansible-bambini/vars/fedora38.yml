@@ -1,0 +1,16 @@
+---
+rpmdb_reimport: False
+distribution:
+  name: 'fedora'
+  arch: 'x86_64'
+  version: '38'
+  repo:
+    type: 'metalink'
+    url: 'https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch'
+  minimalpackages:
+    - '@Core'
+    - 'kernel'
+    - 'grub2-efi-x64'
+    - 'grub2-tools-efi'
+    - 'lvm2'
+    - 'shim-x64'

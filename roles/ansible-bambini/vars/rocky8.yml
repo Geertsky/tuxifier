@@ -1,0 +1,16 @@
+---
+rpmdb_reimport: True
+distribution:
+  name: 'rocky'
+  arch: 'x86_64'
+  version: '8'
+  repo:
+    type: 'metalink'
+    url: 'https://mirrors.rockylinux.org/metalink?arch=$basearch&repo=BaseOS-$releasever'
+  minimalpackages:
+    - '@Core'
+    - 'kernel'
+    - 'grub2-efi-x64'
+    - 'grub2-tools-efi'
+    - 'lvm2'
+    - 'shim-x64'

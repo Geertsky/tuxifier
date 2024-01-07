@@ -1,31 +1,11 @@
 ---
 
-#- name: "Register all repo files"
-#  ansible.builtin.find:
-#    paths: /sysroot/etc/yum.repos.d/
-#    pattern: "*.repo"
-#  register: postminimalinstall__repos
-#
-#- name: "Correct the path for gpg-keys" # Red Hat Bugzilla – Bug 2247326
-#  ansible.builtin.replace:
-#    path: "{{ item.path }}"
-#    regexp: '(^gpgkey=file://)/sysroot(.*$)'
-#    replace: '\1\2'
-#  loop: "{{ postminimalinstall__repos.files }}"
-
 - name: "Set root password"
   ansible.builtin.command:
     cmd: "chroot /sysroot /bin/sh -c 'echo {{ rootpw }}|passwd --stdin root'"
   register: postminimallinstall__passwd
   changed_when: postminimallinstall__passwd.rc == 0
   failed_when: postminimallinstall__passwd.rc != 0
-
-    #- name: "Generate chrooted ssh-keys"
-  # ansible.builtin.command:
-    #    cmd: chroot /sysroot /usr/bin/ssh-keygen -A
-   #  register: postminimallinstall__ssh_key
-#  changed_when: postminimallinstall__ssh_key.rc == 0
-#  failed_when: postminimallinstall__ssh_key.rc != 0
 
 - name: "Add root authorized_keys to chroot"
   ansible.posix.authorized_key:
