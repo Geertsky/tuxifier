@@ -13,5 +13,8 @@
 
 - name: "Resolve relocated rpmdb" # https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr
   ansible.builtin.shell:
-    cmd: 'rpmdb --root=/sysroot --exportdb|chroot /sysroot rpmdb --importdb'
-  when: '(rpmdb_reimport is defined and rpmdb_reimport == True) or False' 
+    cmd: 'set -o pipefail && rpmdb --root=/sysroot --exportdb|chroot /sysroot rpmdb --importdb'
+  when: '(rpmdb_reimport is defined and rpmdb_reimport) or False'
+  register: rpmdb_relocate
+  changed_when: '(rpmdb_reimport is defined and rpmdb_reimport) and rpmdb_relocate.rc == 0'
+  failed_when: '(rpmdb_reimport is defined and rpmdb_reimport) and rpmdb_relocate.rc != 0'
