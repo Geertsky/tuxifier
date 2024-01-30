@@ -1,6 +1,12 @@
 #!/usr/bin/python
 import dnf
-import os
+import os,sys
+distributionrepourltype=sys.argv[1]
+distributionrepourl=sys.argv[2]
+packages=sys.argv[3:]
+print("distrourl:", distributionrepourltype)
+print("distrourl:", distributionrepourl)
+print("packages:", packages)
 base = dnf.Base()
 conf = base.conf 
 conf.set_or_append_opt_value('reposdir','/tmp/rocky8-reposdir')
@@ -8,7 +14,12 @@ conf.set_or_append_opt_value('installroot','/tmp/rocky8-root')
 conf.substitutions['releasever']='8'
 conf.substitutions['arch']='x86_64'
 conf.substitutions['basearch']='x86_64'
-base.repos.add_new_repo('BaseOS', conf,metalink='https://mirrors.rockylinux.org/metalink?arch=$basearch&repo=BaseOS-$releasever')
+if distributionrepourltype == "metalink":
+    base.repos.add_new_repo('BaseOS', conf, metalink=distributionrepourl)
+elif distributionrepourltype == mirrorlist:
+    base.repos.add_new_repo('BaseOS', conf, mirrorlist=distributionrepourl)
+elif distributionrepourltype == baseurl:
+    base.repos.add_new_repo('BaseOS', conf, baseurl=distributionrepourl)
 for d in ['/tmp/rocky8-reposdir','/tmp/rocky8-root']:
     try:
         os.mkdir(d)
