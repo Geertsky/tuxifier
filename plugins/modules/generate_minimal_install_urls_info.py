@@ -5,104 +5,109 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import absolute_import, division, print_function
-from ansible.module_utils.basic import AnsibleModule
-import dnf
-import atexit
 import os
+import shutil
+import atexit
+import dnf
+from ansible.module_utils.basic import AnsibleModule
 
 __metaclass__ = type
 
 DOCUMENTATION = r'''
----
 module: generate_minimal_install_urls
-short_description: This module generates urls to all the rpms needed for a minimal install of a distribution of choice.
-version_added: "1.0.0"
+
+short_description: "This module generates urls to all the rpms needed for a minimal install of a distribution of choice."
+
 description:
-  - This module uses the dnf module to generate urls for all rpms required for installation of a set of packages and/or package groups.
-  - The output is a string containing all the urls to the required rpms.
+    - This module uses the dnf module to generate urls for all rpms required for installation of a set of packages and/or package groups.
+    - The output is a string containing all the urls to the required rpms.
+
 author:
-  - Geert Geurts (@Geertsky)
+    - Geert Geurts (@Geertsky)
+
+version_added: "1.0.0"
+
 options:
-  rpmdb_reimport:
-    description:
-      - Boolean to specify if the distribution to install uses a different location for the rpmdb as the distribution used for generating the initramfs.
-          (See: U(https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr.))
-    required: False
-    default: False
-    type: bool
-  distribution:
-    description:
-      - Dictionary to define the distribution to install.
-    required: True
-    type: dict
-    suboptions:
-      arch:
+    rpmdb_reimport:
         description:
-          - The architecture for the distribution to install.
-        required: True
-        type: str
-      name:
+            - Boolean to specify if the distribution to install uses a different location for the rpmdb as the distribution used for generating the initramfs.
+                    (See <a href="https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr">Fedora Wiki RelocateRPMToUsr</a>)
+        required: False
+        default: False
+        type: bool
+    distribution:
         description:
-          - The name of the distribution.
-        required: True
-        type: str
-      version:
-        description:
-          - The version of the distribution to install.
-        required: True
-        type: str
-      repo:
-        description:
-          - Dictionary to define the repository to use for the installation.
+            - Dictionary to define the distribution to install.
         required: True
         type: dict
         suboptions:
-          type:
-            description:
-              - The type of the link specified by the url option. One of [metalink|mirrorlist|baseurl].
-            required: True
-            type: str
-          url:
-            description:
-              - The url of the repository.
-            required: True
-            type: str
+            arch:
+                description:
+                    - The architecture for the distribution to install.
+                required: True
+                type: str
+            name:
+                description:
+                    - The name of the distribution.
+                required: True
+                type: str
+            version:
+                description:
+                    - The version of the distribution to install.
+                required: True
+                type: str
+            repo:
+                description:
+                    - Dictionary to define the repository to use for the installation.
+                required: True
+                type: dict
+                suboptions:
+                    type:
+                        description:
+                            - The type of the link specified by the url option. One of [metalink|mirrorlist|baseurl].
+                        required: True
+                        type: str
+                    url:
+                        description:
+                            - The url of the repository.
+                        required: True
+                        type: str
 '''
 
 EXAMPLES = r'''
 ---
 - name: Retrieve urls
-  geertsky.generate_minimal_install_urls:
-    rpmdb_reimport: True
-    distribution:
-      name: "rocky"
-      version: 8
-      repo:
-        type: "metalink"
-        url: "https://mirrors.rockylinux.org/metalink?arch=$basearch&repo=BaseOS-$releasever"
-      minimalpackages:
-        - "@Core"
-        - "kernel"
-  register: result
+    geertsky.generate_minimal_install_urls:
+        rpmdb_reimport: True
+        distribution:
+            name: "rocky"
+            version: 8
+            repo:
+                type: "metalink"
+                url: "https://mirrors.rockylinux.org/metalink?arch=$basearch&repo=BaseOS-$releasever"
+            minimalpackages:
+                - "@Core"
+                - "kernel"
+    register: result
 
 - ansible.builtin.debug:
-  var: result.rpm_urls
+    var: result.rpm_urls
 '''
 
 RETURN = r'''
 ---
 rpm_urls:
-  description:
-    - The module returns one large string with urls to all the rpms needed to resolve the minimalpackages.
-  type: str
-  returned: always
-  sample: >-
-    http://dl.rockylinux.org/$contentdir/$releasever/BaseOS/$basearch/os/Packages/n/NetworkManager-1.40.16-9.el8.x86_64.rpm
-    http://dl.rockylinux.org/$contentdir/$releasever/BaseOS/$basearch/os/Packages/n/NetworkManager-libnm-1.40.16-9.el8.x86_64.rpm
-    ...
-    
-    http://dl.rockylinux.org/$contentdir/$releasever/BaseOS/$basearch/os/Packages/y/yum-4.7.0-19.el8.noarch.rpm
-    http://dl.rockylinux.org/$contentdir/$releasever/BaseOS/$basearch/os/Packages/z/zlib-1.2.11-25.el8.x86_64.rpm
+    description:
+        - The module returns one large string with urls to all the rpms needed to resolve the minimalpackages.
+    type: str
+    returned: always
+    sample: >-
+        http://dl.rockylinux.org/$contentdir/$releasever/BaseOS/$basearch/os/Packages/n/NetworkManager-1.40.16-9.el8.x86_64.rpm
+        http://dl.rockylinux.org/$contentdir/$releasever/BaseOS/$basearch/os/Packages/n/NetworkManager-libnm-1.40.16-9.el8.x86_64.rpm
+        ...
+
+        http://dl.rockylinux.org/$contentdir/$releasever/BaseOS/$basearch/os/Packages/y/yum-4.7.0-19.el8.noarch.rpm
+        http://dl.rockylinux.org/$contentdir/$releasever/BaseOS/$basearch/os/Packages/z/zlib-1.2.11-25.el8.x86_64.rpm
 '''
 
 
@@ -126,7 +131,7 @@ def run_module():
     def cleanup():
         for d in ["/tmp/reposdir", "/tmp/root"]:
             try:
-                os.rmdir(d)
+                shutil.rmtree(d)
             except FileNotFoundError:
                 continue
 
