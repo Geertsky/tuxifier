@@ -1,18 +1,20 @@
 ---
-- name: resolve install urls
+- name: Resolve install urls
   geertsky.bambini.generate_minimal_install_urls_info:
-    distribution: "{{ distribution }}" 
+    distribution: "{{ distribution }}"
   register: result
-  debugger: on_failed
+  delegate_to: localhost
 
 - name: "Install minimal OS"
   ansible.builtin.command: "rpm --root=/sysroot --install {{ result.rpm_urls }}"
   register: minimalinstall__minimalinstall
   changed_when: minimalinstall__minimalinstall.rc == 0
   failed_when: minimalinstall__minimalinstall.rc != 0
-  tags: installtry
 
 - name: "Resolve relocated rpmdb" # https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr
   ansible.builtin.shell:
-    cmd: 'rpmdb --root=/sysroot --exportdb|chroot /sysroot rpmdb --importdb'
-  when: '(rpmdb_reimport is defined and rpmdb_reimport == True) or False' 
+    cmd: 'set -o pipefail && rpmdb --root=/sysroot --exportdb|chroot /sysroot rpmdb --importdb'
+  when: '(rpmdb_reimport is defined and rpmdb_reimport) or False'
+  register: rpmdb_relocate
+  changed_when: '(rpmdb_reimport is defined and rpmdb_reimport) and rpmdb_relocate.rc == 0'
+  failed_when: '(rpmdb_reimport is defined and rpmdb_reimport) and rpmdb_relocate.rc != 0'
