@@ -68,12 +68,12 @@
   loop: "{{ finalize__hostkeypubs.stdout_lines }}"
   tags: debug
 
-#A relabel at this stage couses a reboot which requires a manual intervention to stop the boot process. Considered cleaner to require touching of /.autorelabel after install is finished.
-#- name: "Enable autorelabel"
-#  ansible.builtin.file:
-#    path: /sysroot/.autorelabel
-#    state: touch
-#    mode: '0644'
+- name: "Enable autorelabel"
+  ansible.builtin.file:
+    path: /sysroot/.autorelabel
+    state: touch
+    mode: '0644'
+  when: '( strict_selinux is defined and strict_selinux == True) or False'
 
 - name: "Umount /sysroot/dev, /sys and /proc"
   ansible.posix.mount:
