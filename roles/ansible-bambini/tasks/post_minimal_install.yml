@@ -73,28 +73,4 @@
     path: /sysroot/.autorelabel
     state: touch
     mode: '0644'
-  when: '( strict_selinux is defined and strict_selinux == True) or False'
-
-- name: "Umount /sysroot/dev, /sys and /proc"
-  ansible.posix.mount:
-    path: /sysroot/{{ item }}
-    state: unmounted
-  loop:
-    - "/dev"
-    - "/proc"
-    - "/sys/fs/selinux"
-    - "/sys"
-
-- name: "Unmount /sysroot"
-  ansible.posix.mount:
-    path: "{{ item }}"
-    state: unmounted
-  loop:
-    - "/sysroot/boot/efi"
-    - "/sysroot/boot"
-    - "/sysroot"
-
-- name: "Continue boot process"
-  ansible.builtin.file:
-    path: "/tmp/ansible-finished"
-    state: touch
+  when: '( strict_selinux is defined and strict_selinux ) or False'

@@ -2,13 +2,16 @@
 - name: Clear gathered facts from all currently targeted hosts
   ansible.builtin.meta: clear_facts
 
+- name: "Trigger continuation of boot process"
+  ansible.builtin.file:
+    path: "/tmp/ansible-finished"
+    state: touch
+    mode: '0644'
+
 - name: "Wait for bootup to finish"
   ansible.builtin.wait_for_connection:
     delay: 5
-    timeout: 300
-  tags: continueinstall
+    timeout: 600
 
 - name: Gather facts for first time
   ansible.builtin.setup:
-
-

@@ -1,0 +1,13 @@
+---
+- name: "Unmount /sysroot"
+  ansible.posix.mount:
+    path: "{{ item }}"
+    state: unmounted
+  loop:
+    - "/sysroot/dev"
+    - "/sysroot/proc"
+    - "/sysroot/sys/fs/selinux"
+    - "/sysroot/sys"
+    - "/sysroot/boot/efi"
+    - "/sysroot/boot"
+    - "/sysroot"
