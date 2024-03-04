@@ -37,6 +37,38 @@ Below the list of Mandatory role variables, followed by more extensive explanati
 
 ### Installdisk
 For partitioning and installation of the OS the `installdisk` var needs to be set to the blockdevice used for installation.
+The partitioning scheme is currently still hardcoded in the role... 
+
+<sub>
+I'm currently working on implementing Blivet so we can parametrize the partitioning using the storage role of the linux-system-roles collection (https://github.com/linux-system-roles/) with which the partitioning could look like the following:
+</sub>
+
+
+<sub>
+
+  ```
+    - name: Get unused disks
+      include_tasks: get_unused_disk.yml
+      vars:
+        min_size: "{{ volume_size }}"
+        max_return: 1
+
+    - name: Create a LVM logical volume with default fs_type
+      include_role:
+        name: linux-system-roles.storage
+      vars:
+        storage_pools:
+          - name: foo
+            disks: "{{ unused_disks }}"
+            volumes:
+              - name: test1
+                size: "{{ volume_size }}"
+                mount_point: "{{ mount_location }}"
+  ```
+</sub>
+
+<sub>as described here: https://linux-system-roles.github.io/storage/#role-variables</sub>
+
 
 > :warning:
 By using this role, the disk specified by `installdisk` will be destroyed without asking for confirmation!!!
