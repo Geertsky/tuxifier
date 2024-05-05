@@ -21,7 +21,7 @@
     device: "{{ installdisk }}"
     number: 3
     state: present
-    flags: [ lvm ]
+    flags: [lvm]
     part_start: 1.6GiB
     part_end: 100%
 
