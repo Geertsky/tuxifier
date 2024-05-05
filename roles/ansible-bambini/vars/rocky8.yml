@@ -14,4 +14,4 @@ distribution:
     - 'grub2-tools-efi'
     - 'lvm2'
     - 'shim-x64'
-    - 'python3'
+    - 'platform-python'
