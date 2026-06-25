@@ -1,0 +1,68 @@
+---
+- name: Initialize installdisk_partition_map
+  ansible.builtin.set_fact:
+    installdisk_partition_map: []
+
+- name: Build partition map
+  ansible.builtin.set_fact:
+    installdisk_partition_map: >-
+      {{
+        installdisk_partition_map | combine({
+          item.1.id: item.0.device ~
+          ('p' if item.0.device is regex('[0-9]$') else '') ~
+          item.1.number
+        })
+      }}
+  loop: "{{ installdisk.disks | subelements('partitions') }}"
+  when:
+    - item.1.id is defined
+  loop_control:
+    label: "{{ item.1.id }}"
+
+- name: Validate LVM layout
+  ansible.builtin.assert:
+    that:
+      - item.vg is defined
+      - item.pvs is defined
+      - item.pvs | length > 0
+    fail_msg: "Each LVM layout item requires vg and pvs."
+  loop: "{{ installdisk.lvm_layout | default([]) }}"
+  loop_control:
+    label: "{{ item.vg | default('undefined') }}"
+
+- name: Create volume groups
+  community.general.lvg:
+    vg: "{{ item.vg }}"
+    pvs: "{{ item.pvs | map('extract', installdisk_partition_map) | list }}"
+    pesize: "{{ item.pesize | default(omit) }}"
+    pv_options: "{{ item.pv_options | default(omit) }}"
+    vg_options: "{{ item.vg_options | default(omit) }}"
+    state: present
+  loop: "{{ installdisk.lvm_layout | default([]) }}"
+  loop_control:
+    label: "{{ item.vg }}"
+
+- name: Create logical volumes
+  community.general.lvol:
+    vg: "{{ item.0.vg }}"
+    lv: "{{ item.1.lv }}"
+    size: "{{ item.1.size }}"
+    opts: "{{ item.1.lv_opts | default(omit) }}"
+    resizefs: "{{ item.1.resizefs | default(false) }}"
+    shrink: "{{ item.1.shrink | default(false) }}"
+    state: present
+  loop: "{{ installdisk.lvm_layout | default([]) | subelements('lvs') }}"
+  loop_control:
+    label: "{{ item.0.vg }}/{{ item.1.lv }}"
+
+- name: Create Filesystem
+  community.general.filesystem:
+    fstype: "{{ lv.fstype | replace('fat32', 'vfat') }}"
+    opts: "{{ lv.mkfs_opts }}"
+    dev: "{{ '/dev/' ~ vg.vg ~ '/' ~ lv.lv }}"
+  loop: "{{ installdisk.lvm_layout | ansible.builtin.subelements('lvs') }}"
+  loop_control:
+    loop_var: vg_lv
+  vars:
+    vg: "{{ vg_lv.0 }}"
+    lv: "{{ vg_lv.1 }}"

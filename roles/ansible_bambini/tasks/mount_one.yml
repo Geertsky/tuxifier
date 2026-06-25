@@ -1,0 +1,19 @@
+- name: Stat mountpoint
+  ansible.builtin.stat:
+    path: "{{ mount_item.path }}"
+  register: _stat
+
+- name: Create mountpoint when needed
+  when: not _stat.stat.exists
+  ansible.builtin.file:
+    path: "{{ mount_item.path }}"
+    state: directory
+    mode: "0755"
+
+- name: Mount one
+  ansible.posix.mount:
+    path: "{{ mount_item.path }}"
+    src: "{{ mount_item.src }}"
+    opts: "{{ mount_item.mount_opts | default(omit) }}"
+    fstype: "{{ mount_item.fstype | replace('fat32', 'vfat') }}"
+    state: ephemeral

@@ -1,0 +1,18 @@
+---
+- name: Set device
+  ansible.builtin.set_fact:
+    device: "{{ item.device }}"
+
+- name: Create filesystems on normal partitions
+  community.general.filesystem:
+    fstype: "{{ item.fstype | replace('fat32', 'vfat') | default(omit) }}"
+    opts: "{{ item.mkfs_opts | default(omit) }}"
+    dev: "{{ device ~ item.number }}"
+    force: "{{ item.force | default(true) }}"
+  loop: "{{ item.partitions }}"
+  when:
+    - item.fstype is defined
+    - item.id is defined
+    - "'lvm' not in (item.flags | default([]))"
+  loop_control:
+    label: "{{ item.id }}"

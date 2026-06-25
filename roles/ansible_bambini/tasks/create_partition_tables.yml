@@ -1,0 +1,24 @@
+---
+- name: Validate disk layout
+  ansible.builtin.assert:
+    that:
+      - installdisk is mapping
+      - installdisk.disks is defined
+      - installdisk.disks | length > 0
+    fail_msg: "installdisk.disks must be defined."
+
+- name: Create partitions
+  community.general.parted:
+    device: "{{ item.0.device }}"
+    label: "{{ item.0.label | default('gpt') }}"
+    number: "{{ item.1.number }}"
+    name: "{{ item.1.name | default(item.1.id | default(omit)) }}"
+    fs_type: "{{ item.1.fstype | default(omit) }}"
+    state: present
+    flags: "{{ item.1.flags | default(omit) }}"
+    part_start: "{{ item.1.part_start | default(omit) }}"
+    part_end: "{{ item.1.part_end }}"
+    resize: "{{ item.1.resize | default(false) }}"
+  loop: "{{ installdisk.disks | subelements('partitions') }}"
+  loop_control:
+    label: "{{ item.0.device }} partition {{ item.1.number }}"

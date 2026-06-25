@@ -1,0 +1,7 @@
+---
+- name: Create filesystems on normal partitions per disk
+  ansible.builtin.include_tasks:
+    file: create_filesystems_on_disk.yml
+  loop: "{{ installdisk.disks }}"
+  loop_control:
+    label: "{{ item.device }}"

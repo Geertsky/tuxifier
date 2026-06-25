@@ -7,9 +7,15 @@
   ansible.builtin.import_tasks: clear_disk.yml
   tags: clear_disk"
 
-- name: "Partition install disk"
-  ansible.builtin.import_tasks: partition_disk.yml
-  tags: partition_disk
+- name: Create partition tables and partitions
+  ansible.builtin.include_tasks: create_partition_tables.yml
+
+- name: Create Simple partitions
+  ansible.builtin.include_tasks: create_filesystems.yml
+
+- name: Create LVM layout
+  ansible.builtin.include_tasks: create_lvm_layout.yml
+  when: installdisk.lvm_layout | default([]) | length > 0
 
 - name: "Mount Partitions"
   ansible.builtin.import_tasks: mount_partitions.yml

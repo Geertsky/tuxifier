@@ -1,21 +1,83 @@
 ---
-- name: "Mount /"
-  ansible.posix.mount:
-    path: /sysroot
-    src: LABEL=root
-    fstype: xfs
-    state: mounted
+- name: Initialize installdisk_mounts
+  ansible.builtin.set_fact:
+    installdisk_mounts: []
 
-- name: "Mount /sysroot/boot"
-  ansible.posix.mount:
-    path: /sysroot/boot
-    src: "{{ installdisk }}1"
-    fstype: ext4
-    state: mounted
+- name: Add partition mountpoints
+  ansible.builtin.set_fact:
+    installdisk_mounts: "{{ installdisk_mounts + [_mount_item] }}"
+  vars:
+    _partition_device: >-
+      {{
+        item.0.device ~
+        ('p' if item.0.device is regex('[0-9]$') else '') ~
+        item.1.number
+      }}
+    _mount_path: >-
+      {{
+        installdisk.mount_root ~
+        ('' if item.1.mountpoint == '/' else item.1.mountpoint)
+      }}
+    _mount_item:
+      type: partition
+      id: "{{ item.1.id | default(_partition_device) }}"
+      src: "{{ _partition_device }}"
+      path: "{{ _mount_path }}"
+      fstype: "{{ item.1.fstype }}"
+      opts: "{{ item.1.mount_opts | default(item.1.fsoptions | default('defaults')) }}"
+      order: "{{ item.1.mount_order | default(50) | int }}"
+      mode: "{{ item.1.mount_mode | default('0755') }}"
+      state: "{{ item.1.mount_state | default(installdisk.mount_state | default('ephemeral')) }}"
+  loop: "{{ installdisk.disks | default([]) | subelements('partitions', skip_missing=True) }}"
+  when:
+    - item.1.mountpoint is defined
+    - item.1.mountpoint not in ['swap', 'none']
+  loop_control:
+    label: "{{ item.1.id | default(item.1.number) }}"
 
-- name: "Mount /sysroot/boot/efi"
-  ansible.posix.mount:
-    path: /sysroot/boot/efi
-    src: "{{ installdisk }}2"
-    fstype: vfat
-    state: mounted
+- name: Add logical volume mountpoints
+  ansible.builtin.set_fact:
+    installdisk_mounts: "{{ installdisk_mounts + [_mount_item] }}"
+  vars:
+    _lv_device: "/dev/{{ item.0.vg }}/{{ item.1.lv }}"
+    _mount_item:
+      type: lvm
+      id: "{{ item.0.vg }}/{{ item.1.lv }}"
+      src: "{{ _lv_device }}"
+      path: "{{ '/sysroot' ~ item.1.mountpoint }}"
+      fstype: "{{ item.1.fstype }}"
+      opts: "{{ item.1.mount_opts | default(item.1.fsoptions | default('defaults')) }}"
+      order: "{{ item.1.mount_order | default(50) | int }}"
+      mode: "{{ item.1.mount_mode | default('0755') }}"
+      state: "ephemeral"
+  loop: "{{ installdisk.lvm_layout | default([]) | subelements('lvs', skip_missing=True) }}"
+  when:
+    - item.1.mountpoint is defined
+    - item.1.mountpoint not in ['swap', 'none']
+  loop_control:
+    label: "/dev/{{ item.0.vg }}/{{ item.1.lv }}"
+
+- name: Validate mount entries
+  ansible.builtin.assert:
+    that:
+      - item.src is defined
+      - item.path is defined
+      - item.fstype is defined
+      - item.path is regex('^/')
+    fail_msg: "Invalid mount entry: {{ item }}"
+  loop: "{{ installdisk_mounts }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+- name: Detect lvm setup
+  ansible.builtin.setup:
+    filter: "ansible_lvm"
+    gather_subset: "!all,!min,hardware"
+  register: lvm_facts
+
+- name: Mount filesystems in mount order
+  ansible.builtin.include_tasks: mount_one.yml
+  loop: "{{ installdisk_mounts | sort(attribute='order') }}"
+  loop_control:
+    loop_var: mount_item
+    label: "{{ mount_item.path }}"
