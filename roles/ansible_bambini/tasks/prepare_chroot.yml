@@ -30,7 +30,6 @@
   ansible.builtin.command:
     cmd: /tmp/genfstab -f /sysroot -L /sysroot
   register: prepare_chroot__fstab
-  changed_when: prepare_chroot__fstab.rc == 0
   failed_when: prepare_chroot__fstab.rc != 0
 
 - name: "Create /etc"

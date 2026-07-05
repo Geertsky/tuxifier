@@ -4,7 +4,6 @@
   ansible.builtin.command:
     cmd: "chroot /sysroot /bin/sh -c 'echo {{ rootpw }}|passwd --stdin root'"
   register: postminimallinstall__passwd
-  changed_when: postminimallinstall__passwd.rc == 0
   failed_when: postminimallinstall__passwd.rc != 0
 
 - name: "Add root authorized_keys to chroot"
@@ -25,7 +24,6 @@
   ansible.builtin.command:
     cmd: "chroot /sysroot /usr/sbin/grub2-mkconfig -o /boot/efi/EFI/{{ installdistribution['name'] }}/grub.cfg"
   register: finalize__grub2_mkconfig
-  changed_when: finalize__grub2_mkconfig.rc == 0
   failed_when: finalize__grub2_mkconfig.rc != 0
 
 - name: "Install grub2 /etc/grub2-efi.cfg"
@@ -40,7 +38,6 @@
   ansible.builtin.shell:
     cmd: "ls /etc/ssh/ssh_host_*key"
   register: finalize__hostkeys
-  changed_when: finalize__hostkeys.rc == 0
   failed_when: finalize__hostkeys.rc != 0
 
 - name: "Install ssh host keys"
@@ -55,7 +52,6 @@
   ansible.builtin.shell:
     cmd: "ls /etc/ssh/ssh_host_*key.pub"
   register: finalize__hostkeypubs
-  changed_when: finalize__hostkeypubs.rc == 0
   failed_when: finalize__hostkeypubs.rc != 0
 
 

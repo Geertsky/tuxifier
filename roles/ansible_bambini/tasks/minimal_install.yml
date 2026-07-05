@@ -8,7 +8,6 @@
 - name: "Install minimal OS"
   ansible.builtin.command: "rpm --root=/sysroot --install {{ result.rpm_urls }}"
   register: minimalinstall__minimalinstall
-  changed_when: minimalinstall__minimalinstall.rc == 0
   failed_when: minimalinstall__minimalinstall.rc != 0
 
 - name: "Resolve relocated rpmdb" # https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr
@@ -16,5 +15,4 @@
     cmd: 'set -o pipefail && rpmdb --root=/sysroot --exportdb|chroot /sysroot rpmdb --importdb'
   when: '(rpmdb_reimport is defined and rpmdb_reimport) or False'
   register: rpmdb_relocate
-  changed_when: '(rpmdb_reimport is defined and rpmdb_reimport) and rpmdb_relocate.rc == 0'
   failed_when: '(rpmdb_reimport is defined and rpmdb_reimport) and rpmdb_relocate.rc != 0'

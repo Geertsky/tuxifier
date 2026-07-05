@@ -3,7 +3,6 @@
     set -o pipefail
     awk '$2 ~ /^\/sysroot/ {print $2}' /proc/mounts|sort -r
   register: sysroot_mounts
-  changed_when: sysroot_mounts.rc == 0
   failed_when: sysroot_mounts.rc != 0
 
 - name: "Unmount /sysroot"

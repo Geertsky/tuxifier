@@ -1,4 +1,5 @@
 ---
+
 - name: "De-activate any volume groups"
   ansible.builtin.raw: |
     export PATH="{{ ansible_facts['env']['PATH'] }}"
@@ -22,7 +23,6 @@
   args:
     executable: /bin/bash
   register: clean_installdisk__dd
-  changed_when: clean_installdisk__dd.rc == 0
   failed_when: clean_installdisk__dd.rc != 0
 
 - name: "Reload partitions"
@@ -33,5 +33,4 @@
   args:
     executable: /bin/bash
   register: clean_installdisk__blockdev
-  changed_when: clean_installdisk__blockdev.rc == 0
   failed_when: clean_installdisk__blockdev.rc != 0
