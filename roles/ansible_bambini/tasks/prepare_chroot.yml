@@ -1,7 +1,7 @@
 ---
 - name: "Copy a /certs/ca-bundle.trust.crt"
   ansible.builtin.copy:
-    src: /etc/pki/tls/certs/ca-bundle.crt
+    src: etc/ssl/certs/ca-bundle.crt
     dest: /etc/pki/tls/certs/
     mode: '0644'
 
