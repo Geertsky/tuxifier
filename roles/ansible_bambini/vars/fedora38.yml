@@ -1,5 +1,5 @@
 ---
-rpmdb_reimport: False
+rpmdb_reimport: false
 distribution:
   name: 'fedora'
   arch: 'x86_64'
@@ -9,9 +9,13 @@ distribution:
     url: 'https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch'
   minimalpackages:
     - '@Core'
+    - 'util-linux'
     - 'kernel'
     - 'grub2-efi-x64'
     - 'grub2-tools-efi'
+    - 'grub2-pc'
     - 'lvm2'
     - 'shim-x64'
+    - 'efibootmgr'
     - 'python3'
+    - 'selinux-policy-targeted'

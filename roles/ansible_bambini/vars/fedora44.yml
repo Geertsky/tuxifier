@@ -1,12 +1,12 @@
 ---
-rpmdb_reimport: False
+rpmdb_reimport: false
 distribution:
-  name: 'rocky'
+  name: 'fedora'
   arch: 'x86_64'
-  version: '9'
+  version: '44'
   repo:
     type: 'metalink'
-    url: 'https://mirrors.rockylinux.org/metalink?arch=$basearch&repo=BaseOS-$releasever'
+    url: 'https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch'
   minimalpackages:
     - '@Core'
     - 'util-linux'
@@ -14,8 +14,8 @@ distribution:
     - 'grub2-efi-x64'
     - 'grub2-tools-efi'
     - 'grub2-pc'
-    - 'efibootmgr'
     - 'lvm2'
     - 'shim-x64'
+    - 'efibootmgr'
     - 'python3'
     - 'selinux-policy-targeted'

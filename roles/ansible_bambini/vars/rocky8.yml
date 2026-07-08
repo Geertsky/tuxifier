@@ -1,5 +1,7 @@
 ---
 rpmdb_reimport: True
+rpm_additional_macros:
+  - "--define='%_db_backend bdb'"
 distribution:
   name: 'rocky'
   arch: 'x86_64'
@@ -9,9 +11,12 @@ distribution:
     url: 'https://mirrors.rockylinux.org/metalink?arch=$basearch&repo=BaseOS-$releasever'
   minimalpackages:
     - '@Core'
+    - 'util-linux'
     - 'kernel'
     - 'grub2-efi-x64'
     - 'grub2-tools-efi'
-    - 'lvm2'
+    - 'grub2-pc'
     - 'shim-x64'
+    - 'lvm2'
+    - 'efibootmgr'
     - 'platform-python'

@@ -1,12 +1,12 @@
 ---
-rpmdb_reimport: False
+rpmdb_reimport: false
 distribution:
   name: 'rocky'
   arch: 'x86_64'
-  version: '9'
+  version: '10'
   repo:
-    type: 'metalink'
-    url: 'https://mirrors.rockylinux.org/metalink?arch=$basearch&repo=BaseOS-$releasever'
+    type: 'baseurl'
+    url: 'https://mirror.puzzle.ch/rockylinux/10/BaseOS/x86_64/os/'
   minimalpackages:
     - '@Core'
     - 'util-linux'
