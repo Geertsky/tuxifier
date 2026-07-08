@@ -2,13 +2,21 @@
 - name: Resolve install urls
   geertsky.bambini.generate_minimal_install_urls_info:
     distribution: "{{ distribution }}"
-  register: result
+  register: generate_minimal_install
   delegate_to: localhost
 
-- name: "Install minimal OS"
-  ansible.builtin.command: "rpm --root=/sysroot --install {{ result.rpm_urls }}"
-  register: minimalinstall__minimalinstall
-  failed_when: minimalinstall__minimalinstall.rc != 0
+- name: Install the rpms
+  ansible.builtin.shell: |
+     set -o pipefail
+     rpm --dbpath=/var/lib/rpm \
+     --root=/sysroot \
+     --define '_var /var' \
+     --define '_tmppath /var/tmp' \
+     --define '__urlhelpercmd /local/conda/envs/bambini-python/bin/curl' \
+     --verbose \
+     --install {{ generate_minimal_install.rpm_urls }}
+  register: rpm_output
+  #    {{ rpm_additional_macros | join(' ') }} \
 
 - name: "Resolve relocated rpmdb" # https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr
   ansible.builtin.shell:
