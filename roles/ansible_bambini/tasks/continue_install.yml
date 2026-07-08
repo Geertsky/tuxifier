@@ -1,17 +1,34 @@
 ---
-- name: Clear gathered facts from all currently targeted hosts
-  ansible.builtin.meta: clear_facts
 
-- name: "Trigger continuation of boot process"
-  ansible.builtin.file:
-    path: "/tmp/ansible-finished"
-    state: touch
-    mode: '0644'
+- name: Poweroff
+  when: not current_version_installed or not continue_install
+  block:
+    - name: Shutdown
+      community.general.shutdown:
+        msg:
+          - "Install finished!"
+          - "Please remove the bambini initial ramdisk and boot the server."
 
-- name: "Wait for bootup to finish"
-  ansible.builtin.wait_for_connection:
-    delay: 5
-    timeout: 600
+    - name: End play
+      ansible.builtin.meta: end_play
 
-- name: Gather facts for first time
-  ansible.builtin.setup:
+
+- name: Continue install
+  when: continue_install and current_version_installed
+  block:
+    - name: Clear gathered facts from all currently targeted hosts
+      ansible.builtin.meta: clear_facts
+
+    - name: "Trigger continuation of boot process"
+      ansible.builtin.file:
+        path: "/tmp/ansible-finished"
+        state: touch
+        mode: '0644'
+
+    - name: "Wait for bootup to finish"
+      ansible.builtin.wait_for_connection:
+        delay: 5
+        timeout: 600
+
+    - name: Gather facts for first time
+      ansible.builtin.setup:

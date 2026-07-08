@@ -1,0 +1,33 @@
+---
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ hostname | default('installer') }}"
+
+- name: Install Apache
+  ansible.builtin.package:
+    name: httpd
+
+- name: Enable apache
+  ansible.builtin.systemd_service:
+    name: httpd
+    enabled: true
+
+- name: Install bullshit page
+  ansible.builtin.copy:
+    dest: /var/www/html/index.html
+    mode: "0644"
+    owner: apache
+    group: apache
+    content: >
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+      <meta charset="utf-8">
+      <title>Freshly installed Webserver</title>
+      </head>
+      <body>
+        <h1>Hello, World!</h1>
+        I am a freshly installed webserver using Ansible and bambini!
+      </body>
+      </html>
+      <html>

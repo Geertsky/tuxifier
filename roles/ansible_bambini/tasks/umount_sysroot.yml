@@ -5,6 +5,17 @@
   register: sysroot_mounts
   failed_when: sysroot_mounts.rc != 0
 
+- name: Record installed kernel version == current kernel version
+  block:
+    - name: Stat vmlinuz
+      ansible.builtin.stat:
+        path: "{{ '/sysroot/boot/vmlinuz-' ~ ansible_facts['kernel'] }}"
+      register: _vmlinuz
+
+    - name: Set_fact current_version_installed
+      ansible.builtin.set_fact:
+        current_version_installed: "{{ _vmlinuz.stat.exists }}"
+
 - name: "Unmount /sysroot"
   ansible.posix.mount:
     path: "{{ item }}"
