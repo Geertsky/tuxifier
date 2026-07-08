@@ -13,26 +13,89 @@
     user: root
   loop: "{{ root_authorized_keys }}"
 
+- name: Detect EFI
+  block:
+    - name: Stat /sys/firmware/efi
+      ansible.builtin.stat:
+        path: "/sys/firmware/efi"
+      register: _efi
+
+    - name: Set_fact grub_target
+      ansible.builtin.set_fact:
+        grub_target: "{% if _efi.stat.exists %}x86_64-efi{% else %}i386-pc{% endif %}"
+
+- name: Set_fact boot_disk when not in hosts_vars
+  ansible.builtin.set_fact:
+    boot_disk: "{{ installdisk.boot_disk | default(installdisk.disks[0].device) }}"
+  when:
+    - installdisk.disks | default([]) | length == 1
+
+- name: Set_fact boot_disk when multiple disks in installdisk in hosts_vars
+  ansible.builtin.set_fact:
+    boot_disk: "{{ installdisk_boot_disk | default('') }}"
+  when:
+    - installdisk.disks | default([]) | length >= 2
+
+- name: Validate boot_disk
+  ansible.builtin.assert:
+    that:
+      - boot_disk | default('', true) | string | trim != ''
+    fail_msg: "boot_disk in not defined. Set this in hosts_vars when there are more then one disks in installdisk."
+
+- name: Install grub2 to boot_disk for BIOS
+  when: grub_target == "i386-pc"
+  ansible.builtin.command:
+    cmd: "chroot /sysroot grub2-install --target=i386-pc --recheck {{ boot_disk }}"
+  changed_when: true
+
+- name: Install grub2 at efi
+  when: grub_target == "x86_64-efi"
+  block:
+    - name: Set_fact efi partitionnr
+      ansible.builtin.set_fact:
+        efi_partitionnr: >-
+          {{
+          installdisk.disks
+          | map(attribute='partitions')
+          | flatten
+          | selectattr('id', 'equalto', 'efi')
+          | map(attribute='number')
+          | first
+          }}
+
+    - name: Set_fact _efibootmgr
+      ansible.builtin.set_fact:
+        _efibootmgr: "{{ efibootmgr | default('/sysroot/usr/sbin/efibootmgr') }}"
+
+    - name: Read existing EFI boot entries
+      ansible.builtin.command: "{{ _efibootmgr }} -v"
+      register: efibootmgr_entries
+      changed_when: false
+      environment:
+        LD_PRELOAD: "/sysroot/lib64/libefivar.so.1 /sysroot/lib64/libefiboot.so.1"
+
+    - name: Install grub2 at efi
+      ansible.builtin.command: >
+        {{ _efibootmgr }} --create --disk {{ boot_disk }}
+        --part {{ efi_partitionnr }}
+        --label {{ installdistribution.name | capitalize }}
+        --loader '\EFI\{{ installdistribution.name }}\shimx64.efi'
+      environment:
+        LD_PRELOAD: "/sysroot/lib64/libefivar.so.1 /sysroot/lib64/libefiboot.so.1"
+      changed_when: false
+
+    - name: "Install grub2 at /boot/efi/EFI/<distribution.name>/grub.cfg for RHEL8"
+      when: distribution.version == "8"
+      ansible.builtin.command:
+        cmd: "chroot /sysroot /usr/sbin/grub2-mkconfig -o /boot/efi/EFI/{{ distribution.name }}/grub.cfg"
+      register: finalize__grub2_mkconfig
+      failed_when: finalize__grub2_mkconfig.rc != 0
+
 - name: "Install grub2 /boot/grub2/grub.cfg"
   ansible.builtin.command:
     cmd: "chroot /sysroot /usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg"
   register: finalize__grub2_mkconfig
-  changed_when: finalize__grub2_mkconfig.rc == 0
   failed_when: finalize__grub2_mkconfig.rc != 0
-
-- name: "Install grub.cfg"
-  ansible.builtin.command:
-    cmd: "chroot /sysroot /usr/sbin/grub2-mkconfig -o /boot/efi/EFI/{{ installdistribution['name'] }}/grub.cfg"
-  register: finalize__grub2_mkconfig
-  failed_when: finalize__grub2_mkconfig.rc != 0
-
-- name: "Install grub2 /etc/grub2-efi.cfg"
-  ansible.builtin.file:
-    src: "/sysroot/boot/efi/EFI/{{ installdistribution['name'] }}/grub.cfg"
-    dest: "../../../../etc/grub2-efi.cfg"
-    owner: root
-    group: root
-    state: link
 
 - name: "Discover host keys"
   ansible.builtin.shell:
@@ -44,7 +107,7 @@
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: /sysroot/etc/ssh/
-    remote_src: yes
+    remote_src: true
     mode: '0600'
   loop: "{{ finalize__hostkeys.stdout_lines }}"
 
@@ -54,17 +117,16 @@
   register: finalize__hostkeypubs
   failed_when: finalize__hostkeypubs.rc != 0
 
-
 - name: "Install ssh host pub keys"
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: /sysroot/etc/ssh/
-    remote_src: yes
+    remote_src: true
     mode: '0644'
   loop: "{{ finalize__hostkeypubs.stdout_lines }}"
   tags: debug
 
-- name: "Enable autorelabel"
+- name: "Relabel /sysroot"
   ansible.builtin.file:
     path: /sysroot/.autorelabel
     state: touch
