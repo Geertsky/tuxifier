@@ -1,190 +1,363 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 # Copyright: (c) 2023, Geert Geurts <geert@verweggistan.eu>
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# GNU General Public License v3.0+ (see COPYING or
+# https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import absolute_import, division, print_function
-import os
-import shutil
-import atexit
-import dnf
+
+import tempfile
+import traceback
+from pathlib import Path
+
 from ansible.module_utils.basic import AnsibleModule
+
 
 __metaclass__ = type
 
-DOCUMENTATION = r'''
-module: generate_minimal_install_urls
+VALID_REPO_URL_TYPES = ("metalink", "mirrorlist", "baseurl")
+GROUP_PACKAGE_TYPES = ("mandatory", "default")
 
-short_description: "This module generates urls to all the rpms needed for a minimal install of a distribution of choice."
+
+DOCUMENTATION = r"""
+---
+module: generate_minimal_install_urls_info
+
+short_description: Resolve RPM URLs for a minimal distribution installation
 
 description:
-    - This module uses the dnf module to generate urls for all rpms required for installation of a set of packages and/or package groups.
-    - The output is a string containing all the urls to the required rpms.
+  - Uses the Python DNF API to resolve packages, package groups, and dependencies.
+  - Resolves against only the repository supplied in the distribution parameter.
+  - Returns both a whitespace-separated URL string and a URL list.
 
 author:
-    - Geert Geurts (@Geertsky)
+  - Geert Geurts (@Geertsky)
 
 version_added: "1.0.0"
 
 options:
-    rpmdb_reimport:
+  rpmdb_reimport:
+    description:
+      - Makes it possible for the rpmdb to be reimported.
+    required: false
+    default: false
+    type: bool
+
+  distribution:
+    description:
+      - Distribution and repository definition.
+    required: true
+    type: dict
+    suboptions:
+      name:
         description:
-            - Boolean to specify if the distribution to install uses a different location for the rpmdb as the distribution used for generating the initramfs.
-                    (See <a href="https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr">Fedora Wiki RelocateRPMToUsr</a>)
-        required: False
-        default: False
-        type: bool
-    distribution:
+          - Distribution name.
+        required: true
+        type: str
+      version:
         description:
-            - Dictionary to define the distribution to install.
-        required: True
+          - Distribution release version used for DNF substitutions.
+        required: true
+        type: str
+      arch:
+        description:
+          - Target architecture used for DNF substitutions.
+        required: true
+        type: str
+      repo:
+        description:
+          - Repository definition.
+        required: true
         type: dict
         suboptions:
-            arch:
-                description:
-                    - The architecture for the distribution to install.
-                required: True
-                type: str
-            name:
-                description:
-                    - The name of the distribution.
-                required: True
-                type: str
-            version:
-                description:
-                    - The version of the distribution to install.
-                required: True
-                type: str
-            repo:
-                description:
-                    - Dictionary to define the repository to use for the installation.
-                required: True
-                type: dict
-                suboptions:
-                    type:
-                        description:
-                            - The type of the link specified by the url option. One of [metalink|mirrorlist|baseurl].
-                        required: True
-                        type: str
-                    url:
-                        description:
-                            - The url of the repository.
-                        required: True
-                        type: str
-'''
+          type:
+            description:
+              - Repository URL type.
+            required: true
+            type: str
+            choices:
+              - metalink
+              - mirrorlist
+              - baseurl
+          url:
+            description:
+              - Repository URL.
+            required: true
+            type: str
+      minimalpackages:
+        description:
+          - Package specifications and DNF groups to resolve.
+          - Group specifications must start with C(@), for example C(@Core).
+        required: true
+        type: list
+        elements: str
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 ---
-- name: Retrieve urls
-    geertsky.generate_minimal_install_urls:
-        rpmdb_reimport: True
-        distribution:
-            name: "rocky"
-            version: 8
-            repo:
-                type: "metalink"
-                url: "https://mirrors.rockylinux.org/metalink?arch=$basearch&repo=BaseOS-$releasever"
-            minimalpackages:
-                - "@Core"
-                - "kernel"
-    register: result
+- name: Resolve URLs for a Rocky Linux minimal installation
+  geertsky.bambini.generate_minimal_install_urls_info:
+    distribution:
+      name: rocky
+      version: "10"
+      arch: x86_64
+      repo:
+        type: baseurl
+        url: https://mirror.example.org/rockylinux/10/BaseOS/x86_64/os/
+      minimalpackages:
+        - "@Core"
+        - kernel
+        - lvm2
+  register: result
 
-- ansible.builtin.debug:
-    var: result.rpm_urls
-'''
+- name: Show resolved URLs
+  ansible.builtin.debug:
+    var: result.urls
+"""
 
-RETURN = r'''
+RETURN = r"""
 ---
 rpm_urls:
-    description:
-        - The module returns one large string with urls to all the rpms needed to resolve the minimalpackages.
-    type: str
-    returned: always
-    sample: >-
-        http://dl.rockylinux.org/$contentdir/$releasever/BaseOS/$basearch/os/Packages/n/NetworkManager-1.40.16-9.el8.x86_64.rpm
-        http://dl.rockylinux.org/$contentdir/$releasever/BaseOS/$basearch/os/Packages/n/NetworkManager-libnm-1.40.16-9.el8.x86_64.rpm
-        ...
+  description:
+    - All resolved RPM URLs as one whitespace-separated string.
+  returned: always
+  type: str
 
-        http://dl.rockylinux.org/$contentdir/$releasever/BaseOS/$basearch/os/Packages/y/yum-4.7.0-19.el8.noarch.rpm
-        http://dl.rockylinux.org/$contentdir/$releasever/BaseOS/$basearch/os/Packages/z/zlib-1.2.11-25.el8.x86_64.rpm
-'''
+urls:
+  description:
+    - All resolved RPM URLs as a list.
+  returned: always
+  type: list
+  elements: str
+
+package_count:
+  description:
+    - Number of RPM URLs returned.
+  returned: always
+  type: int
+"""
+
+
+def generate_urls(distribution):
+    """Resolve package/group specifications and return their RPM URLs."""
+    try:
+        import dnf
+    except ImportError as exc:
+        raise RuntimeError(
+            "the Python dnf module is required on the host executing this module"
+        ) from exc
+
+    repo_type = distribution["repo"]["type"]
+    repo_url = distribution["repo"]["url"]
+    releasever = str(distribution["version"])
+    arch = distribution["arch"]
+    package_specs = distribution["minimalpackages"]
+
+    cleaned_specs = [
+        package_spec.strip()
+        for package_spec in package_specs
+        if package_spec and package_spec.strip()
+    ]
+    if not cleaned_specs:
+        raise ValueError(
+            "distribution.minimalpackages must contain at least one package "
+            "or @group"
+        )
+
+    with tempfile.TemporaryDirectory(prefix="dnf-url-resolver-") as temp_dir:
+        workdir = Path(temp_dir)
+        reposdir = workdir / "repos"
+        installroot = workdir / "root"
+        cachedir = workdir / "cache"
+        logdir = workdir / "log"
+        persistdir = workdir / "persist"
+
+        for directory in (
+            reposdir,
+            installroot,
+            cachedir,
+            logdir,
+            persistdir,
+        ):
+            directory.mkdir(parents=True, exist_ok=True)
+
+        with dnf.Base() as base:
+            conf = base.conf
+            conf.reposdir = [str(reposdir)]
+            conf.installroot = str(installroot)
+            conf.cachedir = str(cachedir)
+            conf.logdir = str(logdir)
+            conf.persistdir = str(persistdir)
+
+            conf.substitutions["releasever"] = str(distribution["version"])
+            conf.substitutions["arch"] = str(distribution["arch"])
+            conf.substitutions["basearch"] = str(distribution["arch"])
+
+            repo_type = str(distribution["repo"]["type"]).strip().lower()
+            repo_url = str(distribution["repo"]["url"]).strip()
+
+            repo_id = "{}-{}".format(
+                distribution["name"],
+                distribution["version"],
+            )
+
+            repo = base.repos.add_new_repo(repo_id, conf)
+
+            if repo_type == "baseurl":
+                repo.baseurl = [repo_url]
+            elif repo_type == "metalink":
+                repo.metalink = repo_url
+            elif repo_type == "mirrorlist":
+                repo.mirrorlist = repo_url
+            else:
+                raise ValueError(
+                    "Unsupported repository type {!r}; expected one of: "
+                    "baseurl, metalink, mirrorlist".format(repo_type)
+                )
+
+            # Resolve as an empty target system using only the supplied repo.
+            base.fill_sack(
+                load_system_repo=False,
+                load_available_repos=True
+            )
+
+            # Required before looking up or installing DNF package groups.
+            base.read_comps(arch_filter=True)
+
+            for package_spec in cleaned_specs:
+                if package_spec.startswith("@"):
+                    group_pattern = package_spec[1:].strip()
+                    if not group_pattern:
+                        raise ValueError(
+                            "empty DNF group specification: '@'"
+                        )
+
+                    group = base.comps.group_by_pattern(
+                        group_pattern,
+                        case_sensitive=False
+                    )
+                    if group is None:
+                        available_groups = ", ".join(
+                            sorted(
+                                group_item.id
+                                for group_item in base.comps.groups
+                            )
+                        )
+                        raise ValueError(
+                            "DNF group {0!r} was not found. "
+                            "Available group IDs: {1}".format(
+                                package_spec,
+                                available_groups or "<none>"
+                            )
+                        )
+
+                    base.group_install(
+                        group.id,
+                        GROUP_PACKAGE_TYPES,
+                        strict=True
+                    )
+                else:
+                    base.install(
+                        package_spec,
+                        reponame=repo_id,
+                        strict=True
+                    )
+
+            base.resolve()
+
+            transaction_packages = sorted(
+                base.transaction.install_set,
+                key=lambda package: (
+                    package.name,
+                    package.epoch,
+                    package.version,
+                    package.release,
+                    package.arch,
+                )
+            )
+
+            urls = []
+            for package in transaction_packages:
+                url = package.remote_location()
+                if not url:
+                    raise RuntimeError(
+                        "DNF did not provide a remote URL for package {0}".format(
+                            package
+                        )
+                    )
+                urls.append(url)
+
+    # Preserve order while removing accidental duplicates.
+    return list(dict.fromkeys(urls))
 
 
 def run_module():
-    # define available arguments/parameters a user can pass to the module
-    module_args = dict(
-        distribution=dict(type="dict", required=True),
-        rpmdb_reimport=dict(type="bool", required=False, default=False),
+    module_args = {
+        "distribution": {
+            "type": "dict",
+            "required": True,
+            "options": {
+                "name": {
+                    "type": "str",
+                    "required": True,
+                },
+                "version": {
+                    "type": "str",
+                    "required": True,
+                },
+                "arch": {
+                    "type": "str",
+                    "required": True,
+                },
+                "repo": {
+                    "type": "dict",
+                    "required": True,
+                    "options": {
+                        "type": {
+                            "type": "str",
+                            "required": True,
+                            "choices": list(VALID_REPO_URL_TYPES),
+                        },
+                        "url": {
+                            "type": "str",
+                            "required": True,
+                        },
+                    },
+                },
+                "minimalpackages": {
+                    "type": "list",
+                    "elements": "str",
+                    "required": True,
+                },
+            },
+        },
+        "rpmdb_reimport": {
+            "type": "bool",
+            "required": False,
+            "default": False,
+        },
+    }
+
+    module = AnsibleModule(
+        argument_spec=module_args,
+        supports_check_mode=True,
     )
 
-    result = dict(
+    try:
+        urls = generate_urls(module.params["distribution"])
+    except Exception as exc:
+        module.fail_json(
+            msg=str(exc),
+            exception=traceback.format_exc(),
+        )
+
+    module.exit_json(
         changed=False,
-        rpm_urls=None,
+        rpm_urls=" ".join(urls),
+        urls=urls,
+        package_count=len(urls),
     )
-
-    module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
-
-    if module.check_mode:
-        module.exit_json(**result)
-
-    def cleanup():
-        for d in ["/tmp/reposdir", "/tmp/root"]:
-            try:
-                shutil.rmtree(d)
-            except FileNotFoundError:
-                continue
-
-    # Create tempory directories
-    for d in ["/tmp/reposdir", "/tmp/root"]:
-        try:
-            os.mkdir(d)
-        except FileExistsError:
-            continue
-
-    # Cleanup temporary directories
-    atexit.register(cleanup)
-
-    base = dnf.Base()
-    conf = base.conf
-
-    # Set the distribution vars
-    conf.set_or_append_opt_value("reposdir", "/tmp/reposdir")
-    conf.set_or_append_opt_value("installroot", "/tmp/root")
-    conf.substitutions["releasever"] = module.params["distribution"]["version"]
-    conf.substitutions["arch"] = module.params["distribution"]["arch"]
-    conf.substitutions["basearch"] = module.params["distribution"]["arch"]
-    if module.params["distribution"]["repo"]["type"] == "metalink":
-        base.repos.add_new_repo(
-            "BaseOS", conf, metalink=module.params["distribution"]["repo"]["url"]
-        )
-    elif module.params["distribution"]["repo"]["type"] == "mirrorlist":
-        base.repos.add_new_repo(
-            "BaseOS", conf, mirrorlist=module.params["distribution"]["repo"]["url"]
-        )
-    elif module.params["distribution"]["repo"]["type"] == "baseurl":
-        base.repos.add_new_repo(
-            "BaseOS", conf, baseurl=module.params["distribution"]["repo"]["url"]
-        )
-    base.read_all_repos()
-    base.fill_sack()
-    base.read_comps(arch_filter=True)
-    for package in module.params["distribution"]["minimalpackages"]:
-        if package[0] == "@":
-            group = base.comps.group_by_pattern(package[1:])
-            base.group_install(group.id, ["mandatory", "default"])
-        else:
-            base.install(package)
-    base.resolve()
-
-    def get_remote_location(pkg):
-        return pkg.remote_location()
-
-    urls = map(get_remote_location, list(base.transaction.install_set))
-
-    result["rpm_urls"] = " ".join(list(urls))
-
-    module.exit_json(**result)
 
 
 def main():
