@@ -127,8 +127,6 @@
   tags: debug
 
 - name: "Relabel /sysroot"
-  ansible.builtin.file:
-    path: /sysroot/.autorelabel
-    state: touch
-    mode: '0644'
+  ansible.builtin.command:
+    cmd: /local/conda/envs/bambini-python/bin/chroot /sysroot /usr/sbin/fixfiles -F onboot
   when: '( strict_selinux is defined and strict_selinux ) or False'
