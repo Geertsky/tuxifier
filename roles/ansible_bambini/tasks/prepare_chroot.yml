@@ -45,13 +45,24 @@
     dest: /sysroot/etc/fstab
     mode: '0644'
 
+- name: "Mkdirs /dev /sys and /proc"
+  ansible.builtin.file:
+    path: "/sysroot{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "/dev"
+    - "/proc"
+    - "/sys"
+
 - name: "Bind mount /dev /sys and /proc"
-  ansible.posix.mount:
-    path: /sysroot/{{ item }}
-    src: /{{ item }}
-    opts: bind
-    state: mounted
-    fstype: none
+  ansible.builtin.command:
+    argv:
+      - mount
+      - --rbind
+      - --make-slave
+      - "{{ item }}"
+      - "/sysroot/{{ item }}"
   loop:
     - "/dev"
     - "/proc"
