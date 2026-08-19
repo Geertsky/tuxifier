@@ -44,7 +44,7 @@
     argv:
       - mount
       - --rbind
-      - --make-slave
+      - --make-rslave
       - "{{ item }}"
       - "/sysroot/{{ item }}"
   loop:
