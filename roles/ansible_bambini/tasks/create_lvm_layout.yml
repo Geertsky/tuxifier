@@ -44,10 +44,10 @@
 
 - name: Create logical volumes
   community.general.lvol:
+    force: true
     vg: "{{ item.0.vg }}"
     lv: "{{ item.1.lv }}"
     size: "{{ item.1.size }}"
-    opts: "{{ item.1.lv_opts | default(omit) }}"
     resizefs: "{{ item.1.resizefs | default(false) }}"
     shrink: "{{ item.1.shrink | default(false) }}"
     state: present
@@ -58,6 +58,7 @@
 - name: Create Filesystem
   community.general.filesystem:
     fstype: "{{ lv.fstype | replace('fat32', 'vfat') }}"
+    force: true
     opts: "{{ lv.mkfs_opts }}"
     dev: "{{ '/dev/' ~ vg.vg ~ '/' ~ lv.lv }}"
   loop: "{{ installdisk.lvm_layout | ansible.builtin.subelements('lvs') }}"
