@@ -4,11 +4,7 @@
   ansible.builtin.raw: |
     export PATH="{{ ansible_facts['env']['PATH'] }}"
     for VG in $(lvm vgs --noheadings -o vg_name); do
-      for LV in $(lvm lvs --noheadings -o lv_name); do
-        lvremove -y /dev/$VG/$LV;
-      done;
-      lvchange --activate n $VG;
-      vgremove -y $VG;
+      lvm lvchange --activate n $VG;
     done
   args:
     executable: /bin/bash
@@ -18,7 +14,7 @@
 - name: "Zero MBR"
   ansible.builtin.raw: |
     export PATH="{{ ansible_facts['env']['PATH'] }}"
-    dd if=/dev/zero of={{ item.device }} bs=1M count=1024
+    wipefs -af "{{ item.device }}"
   loop: "{{ installdisk.disks }}"
   args:
     executable: /bin/bash
