@@ -20,3 +20,6 @@ distribution:
     - 'lvm2'
     - 'efibootmgr'
     - 'platform-python'
+    - 'sqlite'
+
+gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-Rocky-8

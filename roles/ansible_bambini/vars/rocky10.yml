@@ -19,3 +19,4 @@ distribution:
     - 'shim-x64'
     - 'python3'
     - 'selinux-policy-targeted'
+gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-Rocky-10
