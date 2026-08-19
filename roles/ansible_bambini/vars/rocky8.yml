@@ -1,14 +1,12 @@
 ---
 rpmdb_reimport: True
-rpm_additional_macros:
-  - "--define='%_db_backend bdb'"
 distribution:
   name: 'rocky'
   arch: 'x86_64'
   version: '8'
   repo:
-    type: 'metalink'
-    url: 'https://mirrors.rockylinux.org/metalink?arch=$basearch&repo=BaseOS-$releasever'
+    type: 'baseurl'
+    url: 'https://mirror.puzzle.ch/rockylinux/8/BaseOS/x86_64/os/'
   minimalpackages:
     - '@Core'
     - 'util-linux'
