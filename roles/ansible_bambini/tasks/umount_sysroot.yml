@@ -23,3 +23,13 @@
   loop: "{{ sysroot_mounts['stdout_lines'] }}"
   register: bambini_sysroot_umount
 
+- name: Wait for pending udev activity
+  ansible.builtin.command:
+    cmd: udevadm settle
+  changed_when: false
+
+# systemd-udevd keeps root mounted
+- name: Restart systemd-udevd
+  ansible.builtin.systemd_service:
+    name: systemd-udevd
+    state: restarted
