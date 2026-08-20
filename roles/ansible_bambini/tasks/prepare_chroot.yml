@@ -13,25 +13,25 @@
 
 - name: "Generate /etc/fstab"
   ansible.builtin.command:
-    cmd: /tmp/genfstab -f /sysroot -L /sysroot
+    cmd: /tmp/genfstab -f /bambini-sysroot -L /bambini-sysroot
   register: prepare_chroot__fstab
   failed_when: prepare_chroot__fstab.rc != 0
 
 - name: "Create /etc"
   ansible.builtin.file:
-    path: /sysroot/etc
+    path: /bambini-sysroot/etc
     state: directory
     mode: '0755'
 
 - name: "Write /etc/fstab"
   ansible.builtin.copy:
     content: "{{ prepare_chroot__fstab.stdout_lines | join('\n') }}\n"
-    dest: /sysroot/etc/fstab
+    dest: /bambini-sysroot/etc/fstab
     mode: '0644'
 
 - name: "Mkdirs /dev /sys and /proc"
   ansible.builtin.file:
-    path: "/sysroot{{ item }}"
+    path: "/bambini-sysroot{{ item }}"
     state: directory
     mode: '0755'
   loop:
@@ -46,7 +46,7 @@
       - --rbind
       - --make-rslave
       - "{{ item }}"
-      - "/sysroot/{{ item }}"
+      - "/bambini-sysroot/{{ item }}"
   loop:
     - "/dev"
     - "/proc"
@@ -56,5 +56,5 @@
   ansible.builtin.copy:
     remote_src: true
     src: /etc/resolv.conf
-    dest: /sysroot/etc/
+    dest: /bambini-sysroot/etc/
     mode: '0644'

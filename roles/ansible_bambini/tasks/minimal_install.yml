@@ -2,7 +2,7 @@
 
 - name: Create directory for gpg key
   ansible.builtin.file:
-    path: "/sysroot/var/lib/rpm/pubkeys/"
+    path: "/bambini-sysroot/var/lib/rpm/pubkeys/"
     state: directory
     mode: "0755"
 
@@ -17,8 +17,8 @@
 - name: Import gpt key
   ansible.builtin.shell: |
     rpmkeys \
-      --dbpath=/sysroot/var/lib/rpm \
-      --define '_var /sysroot/var' \
+      --dbpath=/bambini-sysroot/var/lib/rpm \
+      --define '_var /bambini-sysroot/var' \
       --define '_tmppath /var/tmp' \
       --define '__urlhelpercmd /local/conda/envs/bambini-python/bin/curl' \
       --define '__urlhelper_localopts --retry=10 --retry-all-errors --cacert=/etc/pki/tls/certs/ca-bundle.crt' \
@@ -39,13 +39,13 @@
       --define '_tmppath /var/tmp' \
       --define '__urlhelpercmd /local/conda/envs/bambini-python/bin/curl' \
       --define '__urlhelper_localopts --retry=10 --retry-all-errors --cacert=/etc/pki/tls/certs/ca-bundle.crt' \
-      --root=/sysroot \
+      --root=/bambini-sysroot \
       --install {{ generate_minimal_install.rpm_urls }}
   register: rpm_output
 
 - name: "Resolve relocated rpmdb" # https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr
   when: '(rpmdb_reimport is defined and rpmdb_reimport) or False'
   ansible.builtin.shell: |
-    chroot /sysroot /bin/sh -c 'rpmdb --exportdb >/tmp/rpmdb&&mv /var/lib/rpm/rpmdb* /tmp/&&cat /tmp/rpmdb|rpmdb --importdb'
+    chroot /bambini-sysroot /bin/sh -c 'rpmdb --exportdb >/tmp/rpmdb&&mv /var/lib/rpm/rpmdb* /tmp/&&cat /tmp/rpmdb|rpmdb --importdb'
   register: rpmdb_import
   failed_when: '(rpmdb_reimport is defined and rpmdb_reimport) and rpmdb_import.rc != 0'

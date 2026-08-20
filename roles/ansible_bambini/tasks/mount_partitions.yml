@@ -1,4 +1,10 @@
 ---
+- name: Create mount_root mountpoint
+  ansible.builtin.file:
+    path: "/bambini-sysroot"
+    state: directory
+    mode: "0755"
+
 - name: Initialize installdisk_mounts
   ansible.builtin.set_fact:
     installdisk_mounts: []
@@ -15,7 +21,7 @@
       }}
     _mount_path: >-
       {{
-        installdisk.mount_root ~
+        '/bambini-sysroot' ~
         ('' if item.1.mountpoint == '/' else item.1.mountpoint)
       }}
     _mount_item:
@@ -44,7 +50,7 @@
       type: lvm
       id: "{{ item.0.vg }}/{{ item.1.lv }}"
       src: "{{ _lv_device }}"
-      path: "{{ '/sysroot' ~ item.1.mountpoint }}"
+      path: "{{ '/bambini-sysroot' ~ item.1.mountpoint }}"
       fstype: "{{ item.1.fstype }}"
       opts: "{{ item.1.mount_opts | default(item.1.fsoptions | default('defaults')) }}"
       order: "{{ item.1.mount_order | default(50) | int }}"
