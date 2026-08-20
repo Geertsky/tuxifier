@@ -4,10 +4,18 @@
   when: not current_version_installed or not continue_install
   block:
     - name: Shutdown
-      community.general.shutdown:
-        msg:
-          - "Install finished!"
-          - "Please remove the bambini initial ramdisk and boot the server."
+      ansible.builtin.copy:
+        dest: /usr/lib/dracut/hooks/pre-pivot/999-shutdown.sh
+        mode: "0755"
+        content: |
+          #!/bin/sh
+          systemctl poweroff
+
+    - name: "Trigger continuation of boot process"
+      ansible.builtin.file:
+        path: "/tmp/ansible-finished"
+        state: touch
+        mode: '0644'
 
     - name: End play
       ansible.builtin.meta: end_play
