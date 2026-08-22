@@ -24,14 +24,14 @@
 - name: Continue install
   when: continue_install and current_version_installed
   block:
-    - name: Clear gathered facts from all currently targeted hosts
-      ansible.builtin.meta: clear_facts
-
     - name: "Trigger continuation of boot process"
       ansible.builtin.file:
         path: "/tmp/ansible-finished"
         state: touch
         mode: '0644'
+
+    - name: Clear gathered facts from all currently targeted hosts
+      ansible.builtin.meta: clear_facts
 
     - name: "Wait for bootup to finish"
       ansible.builtin.wait_for_connection:
