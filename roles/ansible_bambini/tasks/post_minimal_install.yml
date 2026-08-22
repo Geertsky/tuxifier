@@ -65,23 +65,19 @@
 
     - name: Set_fact _efibootmgr
       ansible.builtin.set_fact:
-        _efibootmgr: "{{ efibootmgr | default('/bambini-sysroot/usr/sbin/efibootmgr') }}"
+        _efibootmgr: "{{ efibootmgr | default('/usr/sbin/efibootmgr') }}"
 
     - name: Read existing EFI boot entries
-      ansible.builtin.command: "{{ _efibootmgr }} -v"
+      ansible.builtin.command: "chroot /bambini-sysroot {{ _efibootmgr }} -v"
       register: efibootmgr_entries
       changed_when: false
-      environment:
-        LD_PRELOAD: "/bambini-sysroot/lib64/libefivar.so.1 /bambini-sysroot/lib64/libefiboot.so.1"
 
     - name: Install grub2 at efi
       ansible.builtin.command: >
-        {{ _efibootmgr }} --create --disk {{ boot_disk }}
+        chroot /bambini-sysroot {{ _efibootmgr }} --create --disk {{ boot_disk }}
         --part {{ efi_partitionnr }}
         --label {{ installdistribution.name | capitalize }}
         --loader '\EFI\{{ installdistribution.name }}\shimx64.efi'
-      environment:
-        LD_PRELOAD: "/bambini-sysroot/lib64/libefivar.so.1 /bambini-sysroot/lib64/libefiboot.so.1"
       changed_when: false
 
     - name: "Install grub2 at /boot/efi/EFI/<distribution.name>/grub.cfg for RHEL8"
