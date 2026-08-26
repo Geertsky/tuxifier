@@ -2,7 +2,12 @@
 
 - name: "Set root password"
   ansible.builtin.command:
-    cmd: "chroot /bambini-sysroot /bin/sh -c 'echo {{ rootpw }}|passwd --stdin root'"
+    argv:
+      - chroot
+      - /bambini-sysroot
+      - /bin/sh
+      - -c
+      - "echo {{ rootpw }}|passwd --stdin root"
   register: postminimallinstall__passwd
   failed_when: postminimallinstall__passwd.rc != 0
 

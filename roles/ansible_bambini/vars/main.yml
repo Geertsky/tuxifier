@@ -9,3 +9,17 @@ ansible_interpreter_python_fallback:
   - python3.9
   - /usr/bin/python3
   - python3
+
+rpm_argv:
+  - rpm
+  - --dbpath=/var/lib/rpm
+  - --define
+  - "_var /var"
+  - --define
+  - "_tmppath /var/tmp"
+  - --define
+  - "__urlhelpercmd /local/conda/envs/bambini-python/bin/curl"
+  - --define
+  - "__urlhelper_localopts --retry=10 --retry-all-errors --cacert=/etc/pki/tls/certs/ca-bundle.crt"
+  - --root=/bambini-sysroot
+  - --install

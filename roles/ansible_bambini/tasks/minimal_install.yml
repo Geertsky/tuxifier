@@ -14,15 +14,21 @@
     owner: root
     group: root
 
-- name: Import gpt key
-  ansible.builtin.shell: |
-    rpmkeys \
-      --dbpath=/bambini-sysroot/var/lib/rpm \
-      --define '_var /bambini-sysroot/var' \
-      --define '_tmppath /var/tmp' \
-      --define '__urlhelpercmd /local/conda/envs/bambini-python/bin/curl' \
-      --define '__urlhelper_localopts --retry=10 --retry-all-errors --cacert=/etc/pki/tls/certs/ca-bundle.crt' \
-      --import /tmp/{{ gpg_key | basename }}
+- name: Import gpg key
+  ansible.builtin.command:
+    argv:
+      - rpmkeys
+      - --dbpath=/bambini-sysroot/var/lib/rpm
+      - --define
+      - "_var /bambini-sysroot/var"
+      - --define
+      - "_tmppath /var/tmp"
+      - --define
+      - "__urlhelpercmd /local/conda/envs/bambini-python/bin/curl"
+      - --define
+      - "__urlhelper_localopts --retry=10 --retry-all-errors --cacert=/etc/pki/tls/certs/ca-bundle.crt"
+      - --import
+      - "/tmp/{{ gpg_key | basename }}"
 
 - name: Resolve install urls
   geertsky.bambini.generate_minimal_install_urls_info:
@@ -31,21 +37,18 @@
   delegate_to: localhost
 
 - name: Install the rpms
-  ansible.builtin.shell: |
-    set -o pipefail
-    rpm \
-      --dbpath=/var/lib/rpm \
-      --define '_var /var' \
-      --define '_tmppath /var/tmp' \
-      --define '__urlhelpercmd /local/conda/envs/bambini-python/bin/curl' \
-      --define '__urlhelper_localopts --retry=10 --retry-all-errors --cacert=/etc/pki/tls/certs/ca-bundle.crt' \
-      --root=/bambini-sysroot \
-      --install {{ generate_minimal_install.rpm_urls }}
+  ansible.builtin.command:
+    argv: "{{ rpm_argv + generate_minimal_install.urls }}"
   register: rpm_output
 
 - name: "Resolve relocated rpmdb" # https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr
   when: '(rpmdb_reimport is defined and rpmdb_reimport) or False'
-  ansible.builtin.shell: |
-    chroot /bambini-sysroot /bin/sh -c 'rpmdb --exportdb >/tmp/rpmdb&&mv /var/lib/rpm/rpmdb* /tmp/&&cat /tmp/rpmdb|rpmdb --importdb'
+  ansible.builtin.command:
+    argv:
+      - chroot
+      - /bambini-sysroot
+      - /bin/sh
+      - -c
+      - 'rpmdb --exportdb >/tmp/rpmdb&&mv /var/lib/rpm/rpmdb* /tmp/&&cat /tmp/rpmdb|rpmdb --importdb'
   register: rpmdb_import
   failed_when: '(rpmdb_reimport is defined and rpmdb_reimport) and rpmdb_import.rc != 0'
