@@ -23,3 +23,17 @@ rpm_argv:
   - "__urlhelper_localopts --retry=10 --retry-all-errors --cacert=/etc/pki/tls/certs/ca-bundle.crt"
   - --root=/bambini-sysroot
   - --install
+
+
+virtual_filesystems:
+  - { path: /proc, src: proc, opts: "rw,nosuid,nodev,noexec,relatime" }
+  - { path: /sys, src: sysfs, opts: "rw,nosuid,nodev,noexec,relatime" }
+  - { path: /sys/kernel/security, src: securityfs, opts: "rw,nosuid,nodev,noexec,relatime" }
+  - { path: /sys/fs/cgroup, src: cgroup2, opts: "rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot" }
+  - { path: /sys/fs/pstore, src: pstore, opts: "rw,nosuid,nodev,noexec,relatime" }
+  - { path: /sys/firmware/efi/efivars, src: efivarfs, opts: "rw,nosuid,nodev,noexec,relatime" }
+  - { path: /sys/fs/bpf, src: bpf, opts: "rw,nosuid,nodev,noexec,relatime,mode=700" }
+  - { path: /sys/kernel/config, src: configfs, opts: "rw,nosuid,nodev,noexec,relatime" }
+  - { path: /dev, src: devtmpfs, opts: "rw,nosuid,mode=755" }
+  - { path: /dev/shm, src: tmpfs, opts: "rw,nosuid,nodev" }
+  - { path: /dev/pts, src: devpts, opts: "rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000" }

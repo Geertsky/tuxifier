@@ -39,18 +39,30 @@
     - "/proc"
     - "/sys"
 
-- name: "Bind mount /dev /sys and /proc"
-  ansible.builtin.command:
-    argv:
-      - mount
-      - --rbind
-      - --make-rslave
-      - "{{ item }}"
-      - "/bambini-sysroot/{{ item }}"
-  loop:
-    - "/dev"
-    - "/proc"
-    - "/sys"
+- name: See if we're boot with efi
+  ansible.builtin.stat:
+    path: /sys/firmware/efi
+  register: _efi
+
+- name: Determine virtual_filesystems to mount
+  ansible.builtin.set_fact:
+    virtual_filesystems_to_mount: >-
+      {{
+        virtual_filesystems
+        if _efi.stat.exists
+        else virtual_filesystems
+        | rejectattr('src', 'equalto', 'efivarfs')
+        | list
+      }}
+
+- name: Mount all virtual_filesystems
+  ansible.posix.mount:
+    path: "{{ '/bambini-sysroot' ~ item.path }}"
+    src: "{{ item.src }}"
+    fstype: "{{ item.src }}"
+    opts: "{{ item.opts }}"
+    state: ephemeral
+  loop: "{{ virtual_filesystems_to_mount }}"
 
 - name: "Copy resolv.conf to chroot"
   ansible.builtin.copy:
