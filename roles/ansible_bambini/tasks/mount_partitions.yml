@@ -1,9 +1,4 @@
 ---
-- name: Create mount_root mountpoint
-  ansible.builtin.file:
-    path: "/bambini-sysroot"
-    state: directory
-    mode: "0755"
 
 - name: Initialize installdisk_mounts
   ansible.builtin.set_fact:

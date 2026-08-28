@@ -1,0 +1,5 @@
+#!/bin/sh
+
+exec /local/conda/envs/bambini-python/bin/nsenter \
+    --mount=/root/namespaces/bambini-sysroot \
+    /bin/sh "$@"

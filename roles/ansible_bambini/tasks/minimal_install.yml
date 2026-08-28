@@ -35,6 +35,8 @@
     distribution: "{{ distribution }}"
   register: generate_minimal_install
   delegate_to: localhost
+  vars:
+    ansible_shell_executable: /bin/sh
 
 - name: Install the rpms
   ansible.builtin.command:
