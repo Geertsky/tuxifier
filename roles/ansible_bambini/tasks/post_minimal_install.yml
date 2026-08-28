@@ -110,10 +110,14 @@
   failed_when: finalize__grub2_mkconfig.rc != 0
 
 - name: "Discover host keys"
-  ansible.builtin.shell:
-    cmd: "ls /etc/ssh/ssh_host_*key"
-  register: finalize__hostkeys
-  failed_when: finalize__hostkeys.rc != 0
+  ansible.builtin.find:
+    path: "/etc/ssh/"
+  register: etc_ssh
+
+- name: Set_fact ssh_keys and ssh_pubs
+  ansible.builtin.set_fact:
+    ssh_keys: "{{ etc_ssh.files | map(attribute='path') | select('match', '.*key$') }}"
+    ssh_pubs: "{{ etc_ssh.files | map(attribute='path') | select('match', '.*pub$') }}"
 
 - name: "Install ssh host keys"
   ansible.builtin.copy:
@@ -121,13 +125,7 @@
     dest: /bambini-sysroot/etc/ssh/
     remote_src: true
     mode: '0600'
-  loop: "{{ finalize__hostkeys.stdout_lines }}"
-
-- name: "Discover host pub keys"
-  ansible.builtin.shell:
-    cmd: "ls /etc/ssh/ssh_host_*key.pub"
-  register: finalize__hostkeypubs
-  failed_when: finalize__hostkeypubs.rc != 0
+  loop: "{{ ssh_keys }}"
 
 - name: "Install ssh host pub keys"
   ansible.builtin.copy:
@@ -135,7 +133,7 @@
     dest: /bambini-sysroot/etc/ssh/
     remote_src: true
     mode: '0644'
-  loop: "{{ finalize__hostkeypubs.stdout_lines }}"
+  loop: "{{ ssh_pubs }}"
   tags: debug
 
 - name: "Issue pre-pivot commands"
