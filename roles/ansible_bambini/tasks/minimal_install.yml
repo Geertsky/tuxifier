@@ -1,11 +1,5 @@
 ---
 
-- name: Create directory for gpg key
-  ansible.builtin.file:
-    path: "/bambini-sysroot/var/lib/rpm/pubkeys/"
-    state: directory
-    mode: "0755"
-
 - name: Copy rpm gpg key for distribution
   ansible.builtin.copy:
     src: "{{ gpg_key }}"
