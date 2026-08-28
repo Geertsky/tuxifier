@@ -5,8 +5,8 @@ distribution:
   arch: 'x86_64'
   version: '9'
   repo:
-    type: 'metalink'
-    url: 'https://mirrors.rockylinux.org/metalink?arch=$basearch&repo=BaseOS-$releasever'
+    type: 'baseurl'
+    url: 'https://mirror.puzzle.ch/rockylinux/9/BaseOS/x86_64/os/'
   minimalpackages:
     - '@Core'
     - 'util-linux'
