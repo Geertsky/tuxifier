@@ -122,6 +122,11 @@
   loop: "{{ finalize__hostkeypubs.stdout_lines }}"
   tags: debug
 
+- name: "Issue pre-pivot commands"
+  when: distribution.pre_pivot_cmds is defined
+  ansible.builtin.command: "chroot /bambini-sysroot /usr/bin/sh -c '{{ item }}'"
+  loop: "{{ distribution.pre_pivot_cmds | default([]) }}"
+
 - name: "Relabel /bambini-sysroot"
   ansible.builtin.command:
     cmd: /local/conda/envs/bambini-python/bin/chroot /bambini-sysroot /usr/sbin/fixfiles -F onboot

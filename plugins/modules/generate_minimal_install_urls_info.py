@@ -92,6 +92,12 @@ options:
         required: true
         type: list
         elements: str
+      pre_pivot_cmds:
+        description:
+          - Commands that should be issued after minimal install to make the installation ansible capable
+        required: false
+        type: list
+        elements: str
 """
 
 EXAMPLES = r"""
@@ -109,6 +115,8 @@ EXAMPLES = r"""
         - "@Core"
         - kernel
         - lvm2
+      pre_pivot_cmds:
+        - "dnf install -y python3.12"
   register: result
 
 - name: Show resolved URLs
@@ -329,6 +337,11 @@ def run_module():
                     "type": "list",
                     "elements": "str",
                     "required": True,
+                },
+                "pre_pivot_cmds": {
+                    "type": "list",
+                    "elements": "str",
+                    "required": False,
                 },
             },
         },
