@@ -1,5 +1,16 @@
 ---
 
+- name: Record installed kernel version == current kernel version
+  block:
+    - name: Stat vmlinuz
+      ansible.builtin.stat:
+        path: "{{ '/bambini-sysroot/boot/vmlinuz-' ~ ansible_facts['kernel'] }}"
+      register: _vmlinuz
+
+    - name: Set_fact current_version_installed
+      ansible.builtin.set_fact:
+        current_version_installed: "{{ _vmlinuz.stat.exists }}"
+
 - name: "Set root password"
   ansible.builtin.command:
     argv:
