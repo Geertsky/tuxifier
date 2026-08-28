@@ -17,9 +17,7 @@ distribution:
     - 'shim-x64'
     - 'lvm2'
     - 'efibootmgr'
-    - 'platform-python'
     - 'sqlite'
-
   pre_pivot_cmds:
     - "dnf install -y python3.12 python3-dnf"
 gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-Rocky-8
