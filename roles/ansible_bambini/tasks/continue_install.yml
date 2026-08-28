@@ -20,9 +20,8 @@
     - name: End play
       ansible.builtin.meta: end_play
 
-
 - name: Continue install
-  when: continue_install and current_version_installed
+  when: continue_install is defined and continue_install and current_version_installed
   block:
     - name: "Trigger continuation of boot process"
       ansible.builtin.file:
