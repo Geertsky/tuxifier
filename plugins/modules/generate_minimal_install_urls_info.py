@@ -205,6 +205,11 @@ def generate_urls(distribution):
             repo_type = str(distribution["repo"]["type"]).strip().lower()
             repo_url = str(distribution["repo"]["url"]).strip()
 
+            # Required for dependencies expressed as absolute file paths. Eg. alma8 shim/grub dependencies
+            optional_metadata_types = set(conf.optional_metadata_types)
+            optional_metadata_types.add("filelists")
+            conf.optional_metadata_types = sorted(optional_metadata_types)
+
             repo_id = "{}-{}".format(
                 distribution["name"],
                 distribution["version"],
