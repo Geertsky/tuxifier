@@ -33,7 +33,7 @@
 - name: Deploy ansible_shell_wrapper
   ansible.builtin.copy:
     src: namespaced-ansible-shell
-    dest: /bin/
+    dest: /tmp/
     mode: "0755"
     owner: root
     group: root
@@ -56,7 +56,7 @@
   ansible.builtin.import_tasks: mount_partitions.yml
   tags: mount_partitions
   vars:
-    ansible_shell_executable: /bin/namespaced-ansible-shell
+    ansible_shell_executable: /tmp/namespaced-ansible-shell
 
 - name: "Update message"
   ansible.builtin.copy:
@@ -68,7 +68,7 @@
   ansible.builtin.import_tasks: prepare_chroot.yml
   tags: prepare_chroot
   vars:
-    ansible_shell_executable: /bin/namespaced-ansible-shell
+    ansible_shell_executable: /tmp/namespaced-ansible-shell
 
 - name: "Update message"
   ansible.builtin.copy:
@@ -80,13 +80,13 @@
   ansible.builtin.import_tasks: minimal_install.yml
   tags: minimal_install
   vars:
-    ansible_shell_executable: /bin/namespaced-ansible-shell
+    ansible_shell_executable: /tmp/namespaced-ansible-shell
 
 - name: "Post Minimal Install"
   ansible.builtin.import_tasks: post_minimal_install.yml
   tags: post_minimal_install
   vars:
-    ansible_shell_executable: /bin/namespaced-ansible-shell
+    ansible_shell_executable: /tmp/namespaced-ansible-shell
 
 - name: "Update message"
   ansible.builtin.copy:
@@ -98,7 +98,7 @@
   ansible.builtin.command:
     cmd: umount -R -A /bambini-sysroot
   vars:
-    ansible_shell_executable: /bin/namespaced-ansible-shell
+    ansible_shell_executable: /tmp/namespaced-ansible-shell
 
 - name: Umount /root/namespaces
   ansible.builtin.command:
