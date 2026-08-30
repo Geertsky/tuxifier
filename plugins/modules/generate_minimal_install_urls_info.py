@@ -88,7 +88,7 @@ options:
       minimalpackages:
         description:
           - Package specifications and DNF groups to resolve.
-          - Group specifications must start with C(@), for example C(@Core).
+          - Group specifications must start with "@", for example "@Core".
         required: true
         type: list
         elements: str
