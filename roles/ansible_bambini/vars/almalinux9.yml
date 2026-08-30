@@ -1,0 +1,23 @@
+---
+rpmdb_reimport: false
+distribution:
+  name: 'almalinux'
+  arch: 'x86_64'
+  version: '9'
+  repo:
+    type: 'baseurl'
+    url: 'https://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os/'
+  minimalpackages:
+    - '@Core'
+    - 'util-linux'
+    - "{{ 'kernel-' ~ ansible_facts['kernel'] if (continue_install | default(false) | bool) else 'kernel' }}"
+    - 'grub2-efi-x64'
+    - 'grub2-tools-efi'
+    - 'grub2-pc'
+    - 'efibootmgr'
+    - 'lvm2'
+    - 'shim-x64'
+    - 'python3'
+    - 'selinux-policy-targeted'
+
+gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux-9
