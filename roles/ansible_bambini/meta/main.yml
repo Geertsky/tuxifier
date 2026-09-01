@@ -1,8 +1,8 @@
 galaxy_info:
   author: Geert Geurts <geert@verweggistan.eu>
-  description: Install a server from the initramfs
+  description: Partition and install a server from the initramfs build with dracut-tuxifier
   issue_tracker_url: https://github.com/Geertsky/ansible-install_initramfs/issues
-  license: BSD-3-Clause
+  license: EUPL 1.2
 
 
   platforms:
@@ -12,6 +12,12 @@ galaxy_info:
     - name: Rocky
       versions:
         - 8
+        - 9
+        - 10
+    - name: Almalinux
+      versions:
+        - 9
+        - 10
 
   galaxy_tags:
     - minimal_install
