@@ -12,20 +12,20 @@
   ansible.builtin.command:
     argv:
       - rpmkeys
-      - --dbpath=/bambini-sysroot/var/lib/rpm
+      - --dbpath=/tuxifier-sysroot/var/lib/rpm
       - --define
-      - "_var /bambini-sysroot/var"
+      - "_var /tuxifier-sysroot/var"
       - --define
       - "_tmppath /var/tmp"
       - --define
-      - "__urlhelpercmd /local/conda/envs/bambini-python/bin/curl"
+      - "__urlhelpercmd /local/conda/envs/tuxifier-python/bin/curl"
       - --define
       - "__urlhelper_localopts --retry=10 --retry-all-errors --cacert=/etc/pki/tls/certs/ca-bundle.crt"
       - --import
       - "/tmp/{{ gpg_key | basename }}"
 
 - name: Resolve install urls
-  geertsky.bambini.generate_minimal_install_urls_info:
+  geertsky.tuxifier.generate_minimal_install_urls_info:
     distribution: "{{ distribution }}"
   register: generate_minimal_install
   delegate_to: localhost
@@ -42,7 +42,7 @@
   ansible.builtin.command:
     argv:
       - chroot
-      - /bambini-sysroot
+      - /tuxifier-sysroot
       - /bin/sh
       - -c
       - 'rpmdb --exportdb >/tmp/rpmdb&&mv /var/lib/rpm/rpmdb* /tmp/&&cat /tmp/rpmdb|rpmdb --importdb'

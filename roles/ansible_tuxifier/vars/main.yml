@@ -1,6 +1,6 @@
 ansible_interpreter_python_fallback:
-  - /local/conda/envs/bambini-python/bin/python3
-  - /local/conda/envs/bambini-python/bin/python
+  - /local/conda/envs/tuxifier-python/bin/python3
+  - /local/conda/envs/tuxifier-python/bin/python
   - python3.14
   - python3.13
   - python3.12
@@ -18,10 +18,10 @@ rpm_argv:
   - --define
   - "_tmppath /var/tmp"
   - --define
-  - "__urlhelpercmd /local/conda/envs/bambini-python/bin/curl"
+  - "__urlhelpercmd /local/conda/envs/tuxifier-python/bin/curl"
   - --define
   - "__urlhelper_localopts --retry=10 --retry-all-errors --cacert=/etc/pki/tls/certs/ca-bundle.crt"
-  - --root=/bambini-sysroot
+  - --root=/tuxifier-sysroot
   - --install
 
 

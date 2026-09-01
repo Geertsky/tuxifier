@@ -14,25 +14,25 @@
 
 - name: "Generate /etc/fstab"
   ansible.builtin.command:
-    cmd: /tmp/genfstab -f /bambini-sysroot -L /bambini-sysroot
+    cmd: /tmp/genfstab -f /tuxifier-sysroot -L /tuxifier-sysroot
   register: prepare_chroot__fstab
   failed_when: prepare_chroot__fstab.rc != 0
 
 - name: "Create /etc"
   ansible.builtin.file:
-    path: /bambini-sysroot/etc
+    path: /tuxifier-sysroot/etc
     state: directory
     mode: '0755'
 
 - name: "Write /etc/fstab"
   ansible.builtin.copy:
     content: "{{ prepare_chroot__fstab.stdout_lines | join('\n') }}\n"
-    dest: /bambini-sysroot/etc/fstab
+    dest: /tuxifier-sysroot/etc/fstab
     mode: '0644'
 
 - name: "Mkdirs /dev /sys and /proc"
   ansible.builtin.file:
-    path: "/bambini-sysroot{{ item }}"
+    path: "/tuxifier-sysroot{{ item }}"
     state: directory
     mode: '0755'
   loop:
@@ -58,7 +58,7 @@
 
 - name: Mount all virtual_filesystems
   ansible.posix.mount:
-    path: "{{ '/bambini-sysroot' ~ item.path }}"
+    path: "{{ '/tuxifier-sysroot' ~ item.path }}"
     src: "{{ item.src }}"
     fstype: "{{ item.src }}"
     opts: "{{ item.opts }}"
@@ -69,5 +69,5 @@
   ansible.builtin.copy:
     remote_src: true
     src: /etc/resolv.conf
-    dest: /bambini-sysroot/etc/
+    dest: /tuxifier-sysroot/etc/
     mode: '0644'

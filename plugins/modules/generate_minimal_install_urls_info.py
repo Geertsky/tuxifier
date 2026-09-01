@@ -103,7 +103,7 @@ options:
 EXAMPLES = r"""
 ---
 - name: Resolve URLs for a Rocky Linux minimal installation
-  geertsky.bambini.generate_minimal_install_urls_info:
+  geertsky.tuxifier.generate_minimal_install_urls_info:
     distribution:
       name: rocky
       version: "10"

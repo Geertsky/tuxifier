@@ -38,17 +38,17 @@
     owner: root
     group: root
 
-- name: Make /bambini-sysroot a private namespace
+- name: Make /tuxifier-sysroot a private namespace
   ansible.builtin.shell: |
     mkdir /root/namespaces
     mount --bind /root/namespaces /root/namespaces
     mount --make-private /root/namespaces
-    touch /root/namespaces/bambini-sysroot
-    unshare --mount=/root/namespaces/bambini-sysroot sh -c 'sleep 1'
+    touch /root/namespaces/tuxifier-sysroot
+    unshare --mount=/root/namespaces/tuxifier-sysroot sh -c 'sleep 1'
 
-- name: Create /bambini-sysroot mountpoint
+- name: Create /tuxifier-sysroot mountpoint
   ansible.builtin.file:
-    path: "/bambini-sysroot"
+    path: "/tuxifier-sysroot"
     state: directory
     mode: "0755"
 
@@ -94,15 +94,15 @@
     content: Installation finished
     mode: "0644"
 
-- name: Umount /bambini-sysroot
+- name: Umount /tuxifier-sysroot
   ansible.builtin.command:
-    cmd: umount -R -A /bambini-sysroot
+    cmd: umount -R -A /tuxifier-sysroot
   vars:
     ansible_shell_executable: /tmp/namespaced-ansible-shell
 
 - name: Umount /root/namespaces
   ansible.builtin.command:
-    cmd: umount /root/namespaces/bambini-sysroot
+    cmd: umount /root/namespaces/tuxifier-sysroot
 
 - name: Umount /root/namespaces
   ansible.builtin.command:

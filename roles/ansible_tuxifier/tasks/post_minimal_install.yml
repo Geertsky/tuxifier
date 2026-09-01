@@ -4,7 +4,7 @@
   block:
     - name: Stat vmlinuz
       ansible.builtin.stat:
-        path: "{{ '/bambini-sysroot/boot/vmlinuz-' ~ ansible_facts['kernel'] }}"
+        path: "{{ '/tuxifier-sysroot/boot/vmlinuz-' ~ ansible_facts['kernel'] }}"
       register: _vmlinuz
 
     - name: Set_fact current_version_installed
@@ -15,7 +15,7 @@
   ansible.builtin.command:
     argv:
       - chroot
-      - /bambini-sysroot
+      - /tuxifier-sysroot
       - /bin/sh
       - -c
       - "echo {{ rootpw }}|passwd --stdin root"
@@ -25,7 +25,7 @@
 - name: "Add root authorized_keys to chroot"
   ansible.posix.authorized_key:
     key: "{{ item }}"
-    path: /bambini-sysroot/root/.ssh/authorized_keys
+    path: /tuxifier-sysroot/root/.ssh/authorized_keys
     user: root
   loop: "{{ root_authorized_keys }}"
 
@@ -61,7 +61,7 @@
 - name: Install grub2 to boot_disk for BIOS
   when: grub_target == "i386-pc"
   ansible.builtin.command:
-    cmd: "chroot /bambini-sysroot grub2-install --target=i386-pc --recheck {{ boot_disk }}"
+    cmd: "chroot /tuxifier-sysroot grub2-install --target=i386-pc --recheck {{ boot_disk }}"
   changed_when: true
 
 - name: Install grub2 at efi
@@ -84,13 +84,13 @@
         _efibootmgr: "{{ efibootmgr | default('/usr/sbin/efibootmgr') }}"
 
     - name: Read existing EFI boot entries
-      ansible.builtin.command: "chroot /bambini-sysroot {{ _efibootmgr }} -v"
+      ansible.builtin.command: "chroot /tuxifier-sysroot {{ _efibootmgr }} -v"
       register: efibootmgr_entries
       changed_when: false
 
     - name: Install grub2 at efi
       ansible.builtin.command: >
-        chroot /bambini-sysroot {{ _efibootmgr }} --create --disk {{ boot_disk }}
+        chroot /tuxifier-sysroot {{ _efibootmgr }} --create --disk {{ boot_disk }}
         --part {{ efi_partitionnr }}
         --label {{ installdistribution.name | capitalize }}
         --loader '\EFI\{{ installdistribution.name }}\shimx64.efi'
@@ -99,13 +99,13 @@
     - name: "Install grub2 at /boot/efi/EFI/<distribution.name>/grub.cfg for RHEL8"
       when: distribution.version == "8"
       ansible.builtin.command:
-        cmd: "chroot /bambini-sysroot /usr/sbin/grub2-mkconfig -o /boot/efi/EFI/{{ distribution.name }}/grub.cfg"
+        cmd: "chroot /tuxifier-sysroot /usr/sbin/grub2-mkconfig -o /boot/efi/EFI/{{ distribution.name }}/grub.cfg"
       register: finalize__grub2_mkconfig
       failed_when: finalize__grub2_mkconfig.rc != 0
 
 - name: "Install grub2 /boot/grub2/grub.cfg"
   ansible.builtin.command:
-    cmd: "chroot /bambini-sysroot /usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg"
+    cmd: "chroot /tuxifier-sysroot /usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg"
   register: finalize__grub2_mkconfig
   failed_when: finalize__grub2_mkconfig.rc != 0
 
@@ -122,7 +122,7 @@
 - name: "Install ssh host keys"
   ansible.builtin.copy:
     src: "{{ item }}"
-    dest: /bambini-sysroot/etc/ssh/
+    dest: /tuxifier-sysroot/etc/ssh/
     remote_src: true
     mode: '0600'
   loop: "{{ ssh_keys }}"
@@ -130,7 +130,7 @@
 - name: "Install ssh host pub keys"
   ansible.builtin.copy:
     src: "{{ item }}"
-    dest: /bambini-sysroot/etc/ssh/
+    dest: /tuxifier-sysroot/etc/ssh/
     remote_src: true
     mode: '0644'
   loop: "{{ ssh_pubs }}"
@@ -138,10 +138,10 @@
 
 - name: "Issue pre-pivot commands"
   when: distribution.pre_pivot_cmds is defined
-  ansible.builtin.command: "chroot /bambini-sysroot /usr/bin/sh -c '{{ item }}'"
+  ansible.builtin.command: "chroot /tuxifier-sysroot /usr/bin/sh -c '{{ item }}'"
   loop: "{{ distribution.pre_pivot_cmds | default([]) }}"
 
-- name: "Relabel /bambini-sysroot"
+- name: "Relabel /tuxifier-sysroot"
   ansible.builtin.command:
-    cmd: chroot /bambini-sysroot /usr/sbin/fixfiles -F onboot
+    cmd: chroot /tuxifier-sysroot /usr/sbin/fixfiles -F onboot
   when: '(strict_selinux | default(false) | bool) and not (continue_install | default(false) | bool)'

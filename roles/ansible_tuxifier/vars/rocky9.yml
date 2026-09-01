@@ -4,8 +4,7 @@ distribution:
   name: 'rocky'
   arch: 'x86_64'
   version: '9'
-  repo:
-    repo: "{{ installdistribution.repo | default({'type': 'mirrorlist', 'url': 'https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-9'}) }}"
+  repo: "{{ installdistribution.repo | default({'type': 'mirrorlist', 'url': 'https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-9'}) }}"
   minimalpackages:
     - '@Core'
     - 'util-linux'
