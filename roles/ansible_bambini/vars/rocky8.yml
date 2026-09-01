@@ -4,9 +4,7 @@ distribution:
   name: 'rocky'
   arch: 'x86_64'
   version: '8'
-  repo:
-    type: 'baseurl'
-    url: 'https://mirror.puzzle.ch/rockylinux/8/BaseOS/x86_64/os/'
+  repo: "{{ installdistribution.repo | default({'type': 'mirrorlist', 'url': 'https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-8'}) }}"
   minimalpackages:
     - '@Core'
     - 'util-linux'

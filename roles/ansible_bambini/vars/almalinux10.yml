@@ -4,9 +4,7 @@ distribution:
   name: 'almalinux'
   arch: 'x86_64'
   version: '10'
-  repo:
-    type: 'baseurl'
-    url: 'https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/'
+  repo: "{{ installdistribution.repo | default({'type': 'mirrorlist', 'url': 'https://mirrors.almalinux.org/mirrorlist/10/baseos'}) }}"
   minimalpackages:
     - '@Core'
     - 'util-linux'
