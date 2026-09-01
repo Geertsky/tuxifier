@@ -1,0 +1,26 @@
+---
+rpmdb_reimport: false
+distribution:
+  name: 'opensuse'
+  arch: 'x86_64'
+  version: '16.0'
+  #efi_loader: 'shim.efi'
+  repo:
+    type: 'baseurl'
+    url: 'https://download.opensuse.org/distribution/leap/16.0/repo/oss/'
+  minimalpackages:
+    - 'patterns-base-minimal_base'
+    - 'util-linux'
+    - "{{ 'kernel-default-' ~ ansible_facts['kernel'] if (continue_install | default(false) | bool) else 'kernel-default' }}"
+    - 'grub2'
+    - 'grub2-x86_64-efi'
+    - 'grub2-i386-pc'
+    - 'shim'
+    - 'lvm2'
+    - 'efibootmgr'
+    - 'openssh-server'
+    - 'python313'
+  pre_pivot_cmds:
+    - 'systemctl enable sshd.service'
+
+gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-openSUSE-Leap-16.0

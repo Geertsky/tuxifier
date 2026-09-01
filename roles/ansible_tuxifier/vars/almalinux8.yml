@@ -1,0 +1,22 @@
+---
+rpmdb_reimport: true
+distribution:
+  name: 'almalinux'
+  arch: 'x86_64'
+  version: '8'
+  repo: "{{ installdistribution.repo | default({'type': 'mirrorlist', 'url': 'https://mirrors.almalinux.org/mirrorlist/8/baseos'}) }}"
+  minimalpackages:
+    - '@Core'
+    - 'util-linux'
+    - "{{ 'kernel-' ~ ansible_facts['kernel'] if (continue_install | default(false) | bool) else 'kernel' }}"
+    - 'grub2-efi-x64'
+    - 'grub2-tools-efi'
+    - 'grub2-pc'
+    - 'shim-x64'
+    - 'lvm2'
+    - 'efibootmgr'
+    - 'sqlite'
+  pre_pivot_cmds:
+    - "dnf install -y python3.12 python3-dnf"
+
+gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux-8

@@ -1,6 +1,6 @@
-# ansible-bambini
+# ansible-tuxifier
 
-`ansible-bambini` makes the bare metal installation of machines completely controlled by ansible. Additionally, it is faster and less error prone.
+`ansible-tuxifier` makes the bare metal installation of machines completely controlled by ansible. Additionally, it is faster and less error prone.
 
 A typical workflow for a bare metal installation of a machine is as follows:
 
@@ -9,11 +9,11 @@ A typical workflow for a bare metal installation of a machine is as follows:
 - Modify the installation using ansible.
 
 That is two out of three, ok quite minor, but still manual tasks to perform.
-With the [dracut-bambini](https://github.com/Geertsky/dracut-bambini) dracut module, we can hold the boot execution just before the root filesystem gets mounted so we can use ansible to partition the disk and install a minimal OS.
-The `ansible-bambini` role is designed to do exactly that. It partitions a disk, installs a minimal OS, and waits for the boot process to finish.
+With the [dracut-tuxifier](https://github.com/Geertsky/dracut-tuxifier) dracut module, we can hold the boot execution just before the root filesystem gets mounted so we can use ansible to partition the disk and install a minimal OS.
+The `ansible-tuxifier` role is designed to do exactly that. It partitions a disk, installs a minimal OS, and waits for the boot process to finish.
 
 ## whetting your appetite
-[youtube demonstration](https://youtu.be/7qW9YJ4XMa4) of an ansible bare metal install using bambini
+[youtube demonstration](https://youtu.be/7qW9YJ4XMa4) of an ansible bare metal install using tuxifier
 
 ## Dependencies
 
@@ -21,7 +21,7 @@ The `ansible-bambini` role is designed to do exactly that. It partitions a disk,
 
 ## Initramfs image generation
 
-See: the [dracut-bambini](https://github.com/Geertsky/dracut-bambini) git repository for the steps to create the initramfs
+See: the [dracut-tuxifier](https://github.com/Geertsky/dracut-tuxifier) git repository for the steps to create the initramfs
 
 ## Role Variables
 
@@ -37,7 +37,7 @@ Below the list of Mandatory role variables, followed by more extensive explanati
 
 ### Installdisk
 For partitioning and installation of the OS the `installdisk` var needs to be set to the blockdevice used for installation.
-The partitioning scheme is currently still hardcoded in the role... 
+The partitioning scheme is currently still hardcoded in the role...
 
 <sub>
 I'm currently working on implementing Blivet so we can parametrize the partitioning using the storage role of the linux-system-roles collection (https://github.com/linux-system-roles/) with which the partitioning could look like the following:
@@ -118,7 +118,7 @@ For the installation of the OS a number of packages are required. In the `vars/`
   vars_files:
     - vault.yml
   roles:
-    - role: "/home/geert/git/geertsky/ansible-bambini/"
+    - role: "/home/geert/git/geertsky/ansible-tuxifier/"
 ```
 ### Example host_vars
 

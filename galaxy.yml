@@ -1,7 +1,7 @@
 namespace: geertsky
 
 # The name of the collection. Has the same character restrictions as 'namespace'
-name: bambini
+name: tuxifier
 
 # The version of the collection. Must be compatible with semantic versioning
 version: 1.0.0
@@ -32,5 +32,5 @@ dependencies:
   community.general: ">=1.3.0"
 
 # The URL of the originating SCM repository
-repository: http://github.com/geertsky/bambini
+repository: http://github.com/geertsky/tuxifier
 
