@@ -12,7 +12,7 @@
 
 - name: "Clear install disk"
   ansible.builtin.import_tasks: clear_disk.yml
-  tags: clear_disk"
+  tags: clear_disk
 
 - name: "Update message"
   ansible.builtin.copy:
