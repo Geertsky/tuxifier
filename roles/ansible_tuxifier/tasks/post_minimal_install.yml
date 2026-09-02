@@ -23,11 +23,22 @@
   failed_when: postminimallinstall__passwd.rc != 0
 
 - name: "Add root authorized_keys to chroot"
-  ansible.posix.authorized_key:
-    key: "{{ item }}"
-    path: /tuxifier-sysroot/root/.ssh/authorized_keys
-    user: root
-  loop: "{{ root_authorized_keys }}"
+  block:
+    - name: Read authorized_keys
+      ansible.builtin.slurp:
+        src: /root/.ssh/authorized_keys
+      register: _authorized_keys
+
+    - name: Set_fact authorized_keys
+      ansible.builtin.set_fact:
+        authorized_keys: "{{ _authorized_keys['content'] | b64decode | split('\n') | reject('equalto','') }}"
+
+    - name: Write authorized_keys
+      ansible.posix.authorized_key:
+        key: "{{ item }}"
+        path: /tuxifier-sysroot/root/.ssh/authorized_keys
+        user: root
+      loop: "{{ ( authorized_keys + root_authorized_keys ) | unique | reject('equalto','') }}"
 
 - name: Detect EFI
   block:
