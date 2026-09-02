@@ -20,7 +20,7 @@ authors:
 description: Bare Metal Installation using ansible
 
 license:
-- BSD-1-Clause
+  - EUPL-1.2
 
 tags: []
 
