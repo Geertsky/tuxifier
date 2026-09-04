@@ -101,7 +101,7 @@
 
     - name: Install grub2 at efi
       ansible.builtin.command: >
-        chroot /tuxifier-sysroot {{ _efibootmgr }} --create --disk {{ boot_disk }}
+        chroot /tuxifier-sysroot {{ _efibootmgr }} --remove-dups --create --disk {{ boot_disk }}
         --part {{ efi_partitionnr }}
         --label {{ installdistribution.name | capitalize }}
         --loader '\EFI\{{ installdistribution.name }}\shimx64.efi'
