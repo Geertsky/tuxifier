@@ -15,5 +15,5 @@
     path: "{{ mount_item.path }}"
     src: "{{ mount_item.src }}"
     opts: "{{ mount_item.mount_opts | default(omit) }}"
-    fstype: "{{ mount_item.fstype | replace('fat32', 'vfat') }}"
+    fstype: "{{ mount_item.fstype }}"
     state: ephemeral

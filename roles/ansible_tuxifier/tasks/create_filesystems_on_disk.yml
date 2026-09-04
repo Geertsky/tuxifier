@@ -5,7 +5,7 @@
 
 - name: Create filesystems on normal partitions
   community.general.filesystem:
-    fstype: "{{ item.fstype | replace('fat32', 'vfat') | default(omit) }}"
+    fstype: "{{ item.fstype }}"
     opts: "{{ item.mkfs_opts | default(omit) }}"
     dev: "{{ device ~ item.number }}"
     force: "{{ item.force | default(true) }}"

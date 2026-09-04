@@ -57,7 +57,7 @@
 
 - name: Create Filesystem
   community.general.filesystem:
-    fstype: "{{ lv.fstype | replace('fat32', 'vfat') }}"
+    fstype: "{{ lv.fstype }}"
     force: true
     opts: "{{ lv.mkfs_opts }}"
     dev: "{{ '/dev/' ~ vg.vg ~ '/' ~ lv.lv }}"

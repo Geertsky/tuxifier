@@ -13,7 +13,7 @@
     label: "{{ item.0.label | default('gpt') }}"
     number: "{{ item.1.number }}"
     name: "{{ item.1.name | default(item.1.id | default(omit)) }}"
-    fs_type: "{{ item.1.fstype | default(omit) }}"
+    fs_type: "{{ item.1.fstype | default(omit) | replace('vfat', 'fat32') }}"
     state: present
     flags: "{{ item.1.flags | default(omit) }}"
     part_start: "{{ item.1.part_start | default(omit) }}"
