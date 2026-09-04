@@ -31,14 +31,14 @@
 
     - name: Set_fact authorized_keys
       ansible.builtin.set_fact:
-        authorized_keys: "{{ _authorized_keys['content'] | b64decode | split('\n') | reject('equalto','') }}"
+        authorized_keys: "{{ _authorized_keys['content'] | b64decode | split('\n') | reject('equalto', '') }}"
 
     - name: Write authorized_keys
       ansible.posix.authorized_key:
         key: "{{ item }}"
         path: /tuxifier-sysroot/root/.ssh/authorized_keys
         user: root
-      loop: "{{ ( authorized_keys + root_authorized_keys ) | unique | reject('equalto','') }}"
+      loop: "{{ (authorized_keys + root_authorized_keys) | unique | reject('equalto', '') }}"
 
 - name: Detect EFI
   block:

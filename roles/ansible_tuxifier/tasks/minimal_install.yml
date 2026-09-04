@@ -37,7 +37,7 @@
     argv: "{{ rpm_argv + generate_minimal_install.urls }}"
   register: rpm_output
 
-- name: "Resolve relocated rpmdb" # https://fedoraproject.org/wiki/Changes/RelocateRPMToUsr
+- name: "Resolve relocated rpmdb"
   when: '(rpmdb_reimport is defined and rpmdb_reimport) or False'
   ansible.builtin.command:
     argv:
