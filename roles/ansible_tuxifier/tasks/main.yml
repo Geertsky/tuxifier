@@ -1,5 +1,8 @@
 ---
 
+- name: Gather_facts
+  ansible.builtin.setup:
+
 - name: "Create message file"
   ansible.builtin.file:
     path: /tmp/message
