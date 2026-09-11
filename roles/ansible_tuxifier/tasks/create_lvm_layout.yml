@@ -1,7 +1,7 @@
 ---
 - name: Initialize installdisk_partition_map
   ansible.builtin.set_fact:
-    installdisk_partition_map: []
+    installdisk_partition_map: {}
 
 - name: Build partition map
   ansible.builtin.set_fact:
