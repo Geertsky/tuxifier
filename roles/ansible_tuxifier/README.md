@@ -160,7 +160,7 @@ In the role a number of variables are defined in different var files.
 
 | Variable                                       | Type | Description                                                                                                                                                                      |
 |------------------------------------------------|------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| ansible_interpreter_python_fallback | list | The `ansible_interpreter_python_fallback` var is extended with the python interpreter of the tuxifier-python environment available in the initramfs                                         |
+| ansible_interpreter_python_fallback | list | The `ansible_interpreter_python_fallback` var is extended with the python interpreter of the python-nest environment available in the initramfs                                         |
 | rpm_argv | list | The arguments list to the rpm commands executed by `tuxifier`                                                                                                                                                          |
 | virtual_filesystems | list | The list of virtual filesystems mounted in the `/tuxifier-sysroot` for the installation.                                                                                                                    |
 

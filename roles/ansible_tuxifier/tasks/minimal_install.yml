@@ -18,7 +18,7 @@
       - --define
       - "_tmppath /var/tmp"
       - --define
-      - "__urlhelpercmd /local/conda/envs/tuxifier-python/bin/curl"
+      - "__urlhelpercmd /local/conda/envs/python-nest/bin/curl"
       - --define
       - "__urlhelper_localopts --retry=10 --retry-all-errors --cacert=/etc/pki/tls/certs/ca-bundle.crt"
       - --import
