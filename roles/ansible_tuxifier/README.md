@@ -8,13 +8,13 @@ Version - 1.0.0
 Repository - http://github.com/geertsky/tuxifier
 ```
 
-Description: Partition and install a server from the initramfs built with dracut-tuxifier
+Description: Partition and install a server from the initramfs built with dracut-incubator
 
 ## Dependencies
 
 ### Initramfs image generation
-For using `tuxifier`, the machine has to be booted using an initramfs image with the [dracut-tuxifier](https://github.com/geertsky/dracut-tuxifier) module included.
-See: the [dracut-tuxifier](https://github.com/Geertsky/dracut-tuxifier) git repository for the steps to create the initramfs.
+For using `tuxifier`, the machine has to be booted using an initramfs image with the [dracut-incubator](https://github.com/geertsky/dracut-incubator) module included.
+See: the [dracut-incubator](https://github.com/Geertsky/dracut-incubator) git repository for the steps to create the initramfs.
 
 ## Role Variables
 ### host_vars

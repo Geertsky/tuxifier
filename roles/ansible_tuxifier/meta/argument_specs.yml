@@ -5,7 +5,7 @@ argument_specs:
     description:
       - "Partitions the selected installation disks."
       - "Creates filesystems and LVM logical volumes."
-      - "Installs a minimal operating system from an initramfs built with dracut-tuxifier."
+      - "Installs a minimal operating system from an initramfs built with dracut-incubator."
     author:
       - "Geert Geurts"
     options:

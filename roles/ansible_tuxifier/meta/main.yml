@@ -1,6 +1,6 @@
 galaxy_info:
   author: Geert Geurts <geert@verweggistan.eu>
-  description: Partition and install a server from the initramfs build with dracut-tuxifier
+  description: Partition and install a server from the initramfs build with dracut-incubator
   issue_tracker_url: https://github.com/Geertsky/ansible-install_initramfs/issues
   license: EUPL 1.2
 
