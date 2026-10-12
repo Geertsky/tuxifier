@@ -126,10 +126,17 @@ rpm_urls:
 
 urls:
   description:
-    - All resolved RPM URLs as a list.
+    - All resolved RPMs as a list of dicts.
   returned: always
   type: list
-  elements: str
+  elements: dict
+  contains:
+    name:
+      description: Name of the package.
+      type: str
+    url:
+      description: URL of the RPM.
+      type: str
 
 package_count:
   description:
@@ -284,6 +291,7 @@ def generate_urls(distribution):
 
             urls = []
             for package in transaction_packages:
+                name = package.name
                 url = package.remote_location()
                 if not url:
                     raise RuntimeError(
@@ -291,10 +299,10 @@ def generate_urls(distribution):
                             package
                         )
                     )
-                urls.append(url)
+                urls.append({'name':name,'url':url})
 
     # Preserve order while removing accidental duplicates.
-    return list(dict.fromkeys(urls))
+    return list({u["url"]: u for u in urls}.values())
 
 
 def run_module():
@@ -359,7 +367,7 @@ def run_module():
 
     module.exit_json(
         changed=False,
-        rpm_urls=" ".join(urls),
+        rpm_urls=" ".join(u["url"] for u in urls),
         urls=urls,
         package_count=len(urls),
     )
