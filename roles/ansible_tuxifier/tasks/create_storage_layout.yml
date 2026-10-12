@@ -1,0 +1,37 @@
+---
+
+- name: Make /tuxifier-sysroot a private namespace
+  ansible.builtin.shell: |
+    mkdir /root/namespaces
+    mount --bind /root/namespaces /root/namespaces
+    mount --make-private /root/namespaces
+    touch /root/namespaces/tuxifier-sysroot
+    unshare --mount=/root/namespaces/tuxifier-sysroot sh -c 'sleep 1'
+  changed_when: false
+
+- name: Create /tuxifier-sysroot mountpoint
+  ansible.builtin.file:
+    path: "/tuxifier-sysroot"
+    state: directory
+    mode: "0755"
+  changed_when: false
+
+- name: Create the storage
+  ansible.builtin.include_role:
+    name: linux-system-roles.storage
+  vars:
+    storage_safe_mode: false
+    storage_skip_checks:
+      - blivet_available
+      - packages_installed
+      - cryptsetup_services
+    storage_pools: "{{ installdisk }}"
+    storage_volumes: []
+    ansible_shell_executable: /tmp/namespaced-ansible-shell
+
+- name: "Update message"
+  ansible.builtin.copy:
+    dest: /tmp/message
+    content: Installdisk partitioned and mounted
+    mode: "0644"
+  changed_when: false

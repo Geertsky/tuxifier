@@ -55,23 +55,15 @@
         grub_target: "{% if _efi.stat.exists %}x86_64-efi{% else %}i386-pc{% endif %}"
       changed_when: false
 
-- name: Set_fact boot_disk when not in hosts_vars
+- name: Set_fact boot_disk
   ansible.builtin.set_fact:
-    boot_disk: "{{ installdisk.boot_disk | default(installdisk.disks[0].device) }}"
-  when:
-    - installdisk.disks | default([]) | length == 1
-
-- name: Set_fact boot_disk when multiple disks in installdisk in hosts_vars
-  ansible.builtin.set_fact:
-    boot_disk: "{{ installdisk_boot_disk | default('') }}"
-  when:
-    - installdisk.disks | default([]) | length >= 2
+    boot_disk: "{{ installdisk_boot_disk | default(installdisk_disks[0] if installdisk_disks | length == 1 else '') }}"
 
 - name: Validate boot_disk
   ansible.builtin.assert:
     that:
       - boot_disk | default('', true) | string | trim != ''
-    fail_msg: "boot_disk in not defined. Set this in hosts_vars when there are more then one disks in installdisk."
+    fail_msg: "boot_disk in not defined. Set installdisk_boot_disk in hosts_vars when there are more then one disks in installdisk."
 
 - name: Install grub2 to boot_disk for BIOS
   when: grub_target == "i386-pc"
@@ -85,11 +77,12 @@
       ansible.builtin.set_fact:
         efi_partitionnr: >-
           {{
-          installdisk.disks
-          | map(attribute='partitions')
+          installdisk
+          | selectattr('name', 'equalto', boot_disk)
+          | map(attribute='volumes')
           | flatten
-          | selectattr('id', 'equalto', 'efi')
-          | map(attribute='number')
+          | selectattr('fs_type', 'equalto', 'efi')
+          | map(attribute='name')
           | first
           }}
 

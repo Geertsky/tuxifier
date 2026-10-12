@@ -9,137 +9,53 @@ argument_specs:
     author:
       - "Geert Geurts"
     options:
+      tuxifier_reinstall:
+        type: bool
+        default: false
+        description:
+          - "Wipe the signatures of all disks in O(installdisk) before the storage layout is created."
+          - "By default the layout is only made to match, so re-running the role changes nothing."
+          - "Intended to be passed on the command line, for example V(-e tuxifier_reinstall=true)."
+      installdisk_boot_disk:
+        type: str
+        description:
+          - "The disk to install the boot loader on."
+          - "Optional when O(installdisk) has exactly one partition pool."
       installdisk:
-        type: dict
+        type: list
+        elements: dict
         required: true
         description:
-          - "Describes the storage layout of the installation target."
-          - "WARNING: All specified disks are destroyed without confirmation."
+          - "The storage of the installation target, as a list of storage_pools of the linux-system-roles.storage role."
+          - "Only pools of type partition and lvm are supported."
+          - "The pools are created in the order listed and mounted in reverse order; mount_point is given below /tuxifier-sysroot."
+          - "WARNING: Existing storage on the specified disks is removed without confirmation."
         options:
+          name:
+            type: str
+            required: true
+            description:
+              - "Name of the pool. For a partition pool the disk, for an lvm pool the volume group."
+          type:
+            type: str
+            required: true
+            choices:
+              - partition
+              - lvm
+            description:
+              - "Type of the pool."
           disks:
+            type: list
+            elements: str
+            required: true
+            description:
+              - "Disks of the pool; for an lvm pool the partitions to use as physical volumes."
+          volumes:
             type: list
             elements: dict
             required: true
             description:
-              - "Disks used as installation targets."
-            options:
-              device:
-                type: str
-                required: true
-                description:
-                  - "Full path to the block device."
-              label:
-                type: str
-                required: true
-                description:
-                  - "Partition-table type supported by O(community.general.parted#module:label)."
-              partitions:
-                type: list
-                elements: dict
-                required: true
-                description:
-                  - "Partitions to create on the disk."
-                options:
-                  id:
-                    type: str
-                    required: true
-                    description:
-                      - "Unique partition identifier across all disks."
-                      - "Used to resolve LVM physical volumes, as the default GPT partition name, and to identify special partitions such as efi."
-                  number:
-                    type: int
-                    required: true
-                    description:
-                      - "Partition number passed to O(community.general.parted#module:number)."
-                  part_start:
-                    type: str
-                    required: true
-                    description:
-                      - "Start of the partition, passed to O(community.general.parted#module:part_start)."
-                  part_end:
-                    type: str
-                    required: true
-                    description:
-                      - "End of the partition, passed to O(community.general.parted#module:part_end)."
-                  flags:
-                    type: list
-                    elements: str
-                    description:
-                      - "Partition flags passed to O(community.general.parted#module:flags), for example lvm or bios_grub."
-                  fstype:
-                    type: str
-                    description:
-                      - "Filesystem type passed to O(community.general.filesystem#module:fstype)."
-                  mkfs_opts:
-                    type: str
-                    description:
-                      - "Filesystem creation options passed as opts to O(community.general.filesystem#module:mkfs_opts)."
-                  mountpoint:
-                    type: str
-                    description:
-                      - "Mount path passed to ansible.posix.mount."
-                  mount_opts:
-                    type: str
-                    description:
-                      - "Mount options passed as opts to ansible.posix.mount."
-                  mount_order:
-                    type: int
-                    description:
-                      - "Mount order; filesystems are mounted from the lowest value to the highest."
-          lvm_layout:
-            type: list
-            elements: dict
-            description:
-              - "LVM volume groups and logical volumes to create."
-            options:
-              vg:
-                type: str
-                required: true
-                description:
-                  - "Volume-group name passed to O(community.general.lvg#module:mountpoint)."
-              pvs:
-                type: list
-                elements: str
-                required: true
-                description:
-                  - "Partition identifiers used as physical volumes."
-              lvs:
-                type: list
-                elements: dict
-                required: true
-                description:
-                  - "Logical volumes to create in the volume group."
-                options:
-                  lv:
-                    type: str
-                    required: true
-                    description:
-                      - "Logical-volume name passed to O(community.general.lvol#module:lv)."
-                  size:
-                    type: str
-                    required: true
-                    description:
-                      - "Logical-volume size passed to O(community.general.lvol#module:size)."
-                  fstype:
-                    type: str
-                    description:
-                      - "Filesystem type passed to O(community.general.filesystem#module:fstype)."
-                  mkfs_opts:
-                    type: str
-                    description:
-                      - "Filesystem creation options passed as opts to O(community.general.filesystem#module:mkfs_opts)."
-                  mountpoint:
-                    type: str
-                    description:
-                      - "Mount path passed to O(ansible.posix.mount#module:mountpoint)."
-                  mount_opts:
-                    type: str
-                    description:
-                      - "Mount options passed as opts to O(ansible.posix.mount#module:mount_opts)."
-                  mount_order:
-                    type: int
-                    description:
-                      - "Mount order; filesystems are mounted from the lowest value to the highest."
+              - "Volumes of the pool, as described for the storage role."
 
       installdistribution:
         type: dict

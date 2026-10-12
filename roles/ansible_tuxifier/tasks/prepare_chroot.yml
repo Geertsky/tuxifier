@@ -14,18 +14,18 @@
     state: directory
     mode: '0755'
 
-- name: Correct fstab entries
-  ansible.builtin.replace:
-    path: /tmp/fstab
-    regexp: "/tuxifier-sysroot"
-    replace: ""
-
 - name: "Write /etc/fstab"
   ansible.builtin.copy:
     remote_src: true
-    src: /tmp/fstab
+    src: /etc/fstab
     dest: /tuxifier-sysroot/etc/fstab
     mode: '0644'
+
+- name: Correct fstab entries
+  ansible.builtin.replace:
+    path: /tuxifier-sysroot/etc/fstab
+    regexp: "/tuxifier-sysroot"
+    replace: ""
 
 - name: "Mkdirs /dev /sys and /proc"
   ansible.builtin.file:

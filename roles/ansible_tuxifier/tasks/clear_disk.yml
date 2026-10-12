@@ -10,14 +10,21 @@
 
 - name: "Zero MBR"
   ansible.builtin.shell: |
-    wipefs -af "{{ item.device }}"
-  loop: "{{ installdisk.disks }}"
+    wipefs -af "{{ item }}"
+  loop: "{{ installdisk_disks }}"
   register: clean_installdisk__dd
   failed_when: clean_installdisk__dd.rc != 0
 
 - name: "Reload partitions"
   ansible.builtin.shell: |
-    blockdev --rereadpt {{ item.device }}
-  loop: "{{ installdisk.disks }}"
+    blockdev --rereadpt {{ item }}
+  loop: "{{ installdisk_disks }}"
   register: clean_installdisk__blockdev
   failed_when: clean_installdisk__blockdev.rc != 0
+
+- name: "Update message"
+  ansible.builtin.copy:
+    dest: /tmp/message
+    content: Installdisk destroyed
+    mode: "0644"
+  changed_when: false

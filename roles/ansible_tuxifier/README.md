@@ -12,6 +12,11 @@ Description: Partition and install a server from the initramfs built with dracut
 
 ## Dependencies
 
+### Roles
+The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage) has to be installed as a role (not as the `fedora.linux_system_roles` collection),
+for example with `ansible-galaxy role install linux-system-roles.storage` or from a git checkout in the `roles_path`. It is not a collection,
+so it can not be listed in the `dependencies` of `galaxy.yml`.
+
 ### Initramfs image generation
 For using `tuxifier`, the machine has to be booted using an initramfs image with the [dracut-incubator](https://github.com/geertsky/dracut-incubator) module included.
 See: the [dracut-incubator](https://github.com/Geertsky/dracut-incubator) git repository for the steps to create the initramfs.
@@ -21,31 +26,9 @@ See: the [dracut-incubator](https://github.com/Geertsky/dracut-incubator) git re
 
 | Variable                                         | Type | Description                                                                                                                                                                                   |
 |--------------------------------------------------|------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `installdisk`                                    | dict | Dict to describe the install target                                                                                                                                                           |
-| `installdisk.disks`                              | list | List of dicts describing the disks for the install target                                                                                                                                     |
-| `installdisk.disks[0]`                           | dict | Dictionary describing one installation disk.                                                                                                                                                  |
-| `installdisk.disks[0].device`                    | str  | The full-path to the block device.                                                                                                                                                            |
-| `installdisk.disks[0].label`                     | str  | Disk label type supported by parted                                                                                                                                                           |
-| `installdisk.disks[0].partitions`                | list | list of dictionaries describing the partitions on this disk                                                                                                                                   |
-| `installdisk.disks[0].partitions[0].id`          | str  | Unique partition identifier across all disks. Used to resolve entries in `installdisk.lvm_layout[].pvs`, as the default GPT partition name, and to identify special partitions such as `efi`. |
-| `installdisk.disks[0].partitions[0].number`      | int  | argument to the same named parameter of the [community.general.parted](https://docs.ansible.com/projects/ansible/latest/collections/community/general/parted_module.html) module              |
-| `installdisk.disks[0].partitions[0].part_start`  | str  | argument to the same named parameter of the [community.general.parted](https://docs.ansible.com/projects/ansible/latest/collections/community/general/parted_module.html) module              |
-| `installdisk.disks[0].partitions[0].part_end`    | str  | argument to the same named parameter of the [community.general.parted](https://docs.ansible.com/projects/ansible/latest/collections/community/general/parted_module.html) module              |
-| `installdisk.disks[0].partitions[0].fstype`      | str  | argument to the same named parameter of the [community.general.filesystem](https://docs.ansible.com/projects/ansible/latest/collections/community/general/filesystem_module.html)             |
-| `installdisk.disks[0].partitions[0].mkfs_opts`   | str  | argument to the `opts` parameter of the [community.general.filesystem](https://docs.ansible.com/projects/ansible/latest/collections/community/general/filesystem_module.html)                 |
-| `installdisk.disks[0].partitions[0].mountpoint`  | str  | argument to the `path` parameter of the [ansible.posix.mount](https://docs.ansible.com/projects/ansible/latest/collections/ansible/posix/mount_module.html) module                            |
-| `installdisk.disks[0].partitions[0].mount_opts`  | str  | argument to the `opts` parameter of the [ansible.posix.mount](https://docs.ansible.com/projects/ansible/latest/collections/ansible/posix/mount_module.html) module                            |
-| `installdisk.disks[0].partitions[0].mount_order` | int  | mount order. Mount order, filesystems are mounted from lowest to highest.                                                                                                                     |
-| `installdisk.lvm_layout`                         | list | list of dicts describing the lvm layout of the disks                                                                                                                                          |
-| `installdisk.lvm_layout[0].vg`                   | str  | argument to the same named parameter of the [community.general.lvg](https://docs.ansible.com/projects/ansible/latest/collections/community/general/lvg_module.html) module                    |
-| `installdisk.lvm_layout[0].pvs`                  | list | argument to the same named parameter of the [community.general.lvg](https://docs.ansible.com/projects/ansible/latest/collections/community/general/lvg_module.html) module                    |
-| `installdisk.lvm_layout[0].lvs`                  | list | list of dicts describing the logical volumes for this volume group                                                                                                                            |
-| `installdisk.lvm_layout[0].lvs[0].lv`            | str  | argument to the same named parameter of the [community.general.lvol](https://docs.ansible.com/projects/ansible/latest/collections/community/general/lvol_module.html) module                  |
-| `installdisk.lvm_layout[0].lvs[0].size`          | str  | argument to the same named parameter of the [community.general.lvol](https://docs.ansible.com/projects/ansible/latest/collections/community/general/lvol_module.html) module                  |
-| `installdisk.lvm_layout[0].lvs[0].fstype`        | str  | argument to the same named parameter of the [community.general.filesystem](https://docs.ansible.com/projects/ansible/latest/collections/community/general/filesystem_module.html)             |
-| `installdisk.lvm_layout[0].lvs[0].mkfs_opts`     | str  | argument to the `opts` parameter of the [community.general.filesystem](https://docs.ansible.com/projects/ansible/latest/collections/community/general/filesystem_module.html)                 |
-| `installdisk.lvm_layout[0].lvs[0].mount_opts`    | str  | argument to the `opts` parameter of the [ansible.posix.mount](https://docs.ansible.com/projects/ansible/latest/collections/ansible/posix/mount_module.html) module                            |
-| `installdisk.lvm_layout[0].lvs[0].mount_order`   | int  | order indication. mount order goes from low to high                                                                                                                                           |
+| `installdisk`                                    | list | The storage of the install target: a list of `storage_pools` exactly as accepted by the [linux-system-roles.storage](https://github.com/linux-system-roles/storage) role (`type: partition` or `lvm`). `mount_point`s are given below `/tuxifier-sysroot`. |
+| `installdisk_boot_disk`                          | str  | The disk to install the boot loader on. Optional when `installdisk` has exactly one `partition` pool.                                                                                         |
+| `storage_disklabel_type`                         | str  | Variable of the storage role, e.g. `gpt`. Can be set in the host_vars as usual.                                                                                                              |
 | `installdistribution`                            | dict | Dict describing the distribution to be installed.                                                                                                                                             |
 | `installdistribution.name`                       | str  | The name of the distribution. The combination `name` and `version` corresponds to the distribution file in `vars/`                                                                            |
 | `installdistribution.version`                    | str  | The version of the distribution. The combination `name` and `version` corresponds to the distribution file in `vars/`                                                                         |
@@ -54,59 +37,74 @@ See: the [dracut-incubator](https://github.com/Geertsky/dracut-incubator) git re
 | `installdistribution.repo.url`                   | str  | URL for the repository. This should be a BaseOS repository.                                                                                                                                   |
 | `rootpw`                                         | str  | The root password for the installed OS. Should be set in a vault...                                                                                                                           |
 > :warning:
-By using this role, the disks specified by `installdisk` will be destroyed without asking for confirmation!!!
+The storage is managed by the [linux-system-roles.storage](https://github.com/linux-system-roles/storage) role in
+`storage_safe_mode: false`. Existing partitions, volume groups and filesystems on the disks specified by `installdisk` that
+do not match the layout are removed without asking for confirmation, and `tuxifier_reinstall: true` wipes the disks first!!!
+
+`installdisk` is passed as `storage_pools` to the storage role, so everything that role supports for partition and LVM pools
+can be used. The storage role needs `python3-blivet` and its dependencies in the initramfs; its checks `blivet_available`,
+`packages_installed` and `cryptsetup_services` are skipped (`storage_skip_checks`).
+
+The storage role is called twice:
+
+1. to create the storage, without the `mount_*` options, with the pools in the order listed. A pool that uses a partition
+   (`disks: [/dev/vda4]`) has to be listed after the `partition` pool that creates it.
+2. to mount the filesystems, inside the private namespace of `/tuxifier-sysroot`, with the pools in **reverse** order. The
+   storage role mounts in the order of the pools and of the volumes in them, so list the volumes of a pool in the order they have
+   to be mounted (`/boot` before `/boot/efi`).
+
+The resulting `/etc/fstab` of the initramfs is copied to the installed system with `/tuxifier-sysroot` removed from every line.
+
+For the boot loader of an EFI system, `installdisk_boot_disk` needs a `partition` pool with the name of that disk and a volume with
+`fs_type: efi`; its `name` is used as the partition number.
 
 #### Example installdisk:
 ```
+storage_disklabel_type: gpt
 installdisk:
-  disks:
-    - device: /dev/vda
-      label: gpt
-      partitions:
-        - id: boot
-          number: 1
-          part_start: 1MiB
-          part_end: 1024MiB
-          fstype: ext4
-          mkfs_opts: "-L boot -O ^orphan_file"
-          mountpoint: /boot
-          mount_opts: defaults
-          mount_order: 20
+  - name: /dev/vda
+    type: partition
+    disks: [/dev/vda]
+    volumes:
+      - name: "1"
+        size: 1MiB
+        fs_type: biosboot
 
-        - id: efi
-          number: 2
-          part_start: 1024MiB
-          part_end: 2GiB
-          fstype: fat32
-          mkfs_opts: "-n EFI"
-          mountpoint: /boot/efi
-          mount_opts: "umask=0077,shortname=winnt"
-          mount_order: 30
+      - name: "2"
+        size: 1GiB
+        fs_type: ext4
+        fs_label: boot
+        fs_create_options: "-O ^orphan_file"
+        mount_point: /tuxifier-sysroot/boot
+        mount_options: defaults
 
-        - id: pv.01
-          number: 3
-          part_start: 2GiB
-          part_end: 100%
-          flags:
-            - lvm
+      - name: "3"
+        size: 1GiB
+        fs_type: efi
+        fs_label: EFI
+        mount_point: /tuxifier-sysroot/boot/efi
+        mount_options: "umask=0077,shortname=winnt"
 
-  lvm_layout:
-    - vg: vg.rh
-      pvs:
-        - pv.01
-      lvs:
-        - lv: swap
-          size: 512M
-          fstype: swap
-          mkfs_opts: "-L swap"
+      - name: "4"
+        size: "0"     # the rest of the disk
+        fs_type: lvmpv
 
-        - lv: root
-          size: 100%FREE
-          fstype: ext4
-          mkfs_opts: "-L root -O ^orphan_file"
-          mountpoint: /
-          mount_opts: defaults
-          mount_order: 10
+  - name: vg.rh
+    type: lvm
+    disks: [/dev/vda4]
+    volumes:
+      - name: swap
+        size: 512M
+        fs_type: swap
+        fs_label: swap
+
+      - name: root
+        size: 100%
+        fs_type: ext4
+        fs_label: root
+        fs_create_options: "-O ^orphan_file"
+        mount_point: /tuxifier-sysroot
+        mount_options: defaults
 ```
 
 #### example installdistribution
@@ -129,6 +127,16 @@ Below the list of Optional `host_vars`, followed by more extensive explanation a
 | `root_authorized_keys` | list | A list of ssh pub keys to be added to the `authorized_keys` file of the root user. This list is added to the list off ssh keys of [dracut-sshd](https://github.com/gsauthof/dracut-sshd)|
 | `strict_selinux`       | bool | To indicate if the installed system should have SELinux enabled.                                                                                                                        |
 | `continue_install`     | bool | To indicate what the initramfs is supposed to do after install is finished.                                                                                                             |
+| `tuxifier_reinstall`   | bool | Wipe the install disks before creating the storage layout. Default `false`.                                                                                                             |
+
+### tuxifier_reinstall
+
+When `true` (default `false`) the signatures of all disks of the `partition` pools in `installdisk` are wiped before the storage is created.
+Without it the layout is only made to match, so re-running the role changes nothing. Meant to be passed on the command line:
+
+```
+ansible-playbook -e tuxifier_reinstall=true ...
+```
 
 ### root_authorized_keys
 The `root_authorized_keys` variable is a list of public ssh keys that are added for the root user of the installed system. This list is added to the authorized_keys that are installed in the initramfs by `dracut-sshd`.
@@ -197,51 +205,39 @@ strict_selinux: true # Touches /.autorelabel
 continue_install: false # When true, then it needs kernel version == installed kernel version. This is forced by tuxifier.
 
 rootpw: rootpw
+storage_disklabel_type: gpt
 installdisk:
-  disks:
-    - device: /dev/vda
-      label: gpt
-      partitions:
-        - id: bios_grub
-          number: 1
-          part_start: 1MiB
-          part_end: 2MiB
-          flags:
-            - bios_grub
-        - id: boot
-          number: 2
-          part_start: 2MiB
-          part_end: 1024MiB
-          fstype: ext3
-          mkfs_opts: "-L boot -O ^orphan_file"
-          mountpoint: /boot
-          mount_opts: defaults
-          mount_order: 20
+  - name: /dev/vda
+    type: partition
+    disks: [/dev/vda]
+    volumes:
+      - name: "1"
+        size: 1MiB
+        fs_type: biosboot
+      - name: "2"
+        size: 1GiB
+        fs_type: ext3
+        fs_label: boot
+        fs_create_options: "-O ^orphan_file"
+        mount_point: /tuxifier-sysroot/boot
+      - name: "3"
+        size: "0"
+        fs_type: lvmpv
 
-        - id: pv.01
-          number: 3
-          part_start: 2GiB
-          part_end: 100%
-          flags:
-            - lvm
-
-  lvm_layout:
-    - vg: vg.rh
-      pvs:
-        - pv.01
-      lvs:
-        - lv: swap
-          size: 512M
-          fstype: swap
-          mkfs_opts: "-L swap"
-
-        - lv: root
-          size: 100%FREE
-          fstype: ext4
-          mkfs_opts: "-L root -O ^orphan_file"
-          mountpoint: /
-          mount_opts: defaults
-          mount_order: 10
+  - name: vg.rh
+    type: lvm
+    disks: [/dev/vda3]
+    volumes:
+      - name: swap
+        size: 512M
+        fs_type: swap
+        fs_label: swap
+      - name: root
+        size: 100%
+        fs_type: ext4
+        fs_label: root
+        fs_create_options: "-O ^orphan_file"
+        mount_point: /tuxifier-sysroot
 ```
 
 ## License
