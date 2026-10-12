@@ -16,6 +16,15 @@
     mode: "0755"
   changed_when: false
 
+- name: Activate the existing volume groups of the install layout
+  community.general.lvg:
+    vg: "{{ item }}"
+    state: active
+  loop: "{{ installdisk | selectattr('type', 'equalto', 'lvm') | map(attribute='name') | list }}"
+  when:
+    - not (tuxifier_reinstall | bool)
+    - item in (ansible_facts['lvm']['vgs'] | default({}))
+
 - name: Create the storage
   ansible.builtin.include_role:
     name: linux-system-roles.storage
