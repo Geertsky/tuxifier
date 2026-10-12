@@ -1,0 +1,16 @@
+---
+
+# The mount point does not exist in a freshly mounted parent filesystem.
+- name: "Create mountpoint {{ _mount_path }}"
+  ansible.builtin.file:
+    path: "{{ _mount_path }}"
+    state: directory
+    mode: "0755"
+  changed_when: false
+
+- name: "Mount {{ _mount_path }}"
+  ansible.builtin.command:
+    argv:
+      - mount
+      - "{{ _mount_path }}"
+  changed_when: false

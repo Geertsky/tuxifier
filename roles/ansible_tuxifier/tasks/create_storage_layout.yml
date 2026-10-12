@@ -29,6 +29,39 @@
     storage_volumes: []
     ansible_shell_executable: /tmp/namespaced-ansible-shell
 
+- name: Read the mounts of the namespace
+  ansible.builtin.slurp:
+    src: /proc/self/mountinfo
+  register: _mountinfo
+  vars:
+    ansible_shell_executable: /tmp/namespaced-ansible-shell
+
+- name: Set_fact sysroot mounts in creation order
+  ansible.builtin.set_fact:
+    _sysroot_mounts: >-
+      {{ (_mountinfo.content | b64decode).splitlines()
+         | map('split', ' ')
+         | map(attribute=4)
+         | select('match', '^/tuxifier-sysroot(/|$)')
+         | list }}
+
+- name: Umount the sysroot mounts newest first
+  ansible.posix.mount:
+    path: "{{ item }}"
+    state: unmounted
+  loop: "{{ _sysroot_mounts | reverse | list }}"
+  vars:
+    ansible_shell_executable: /tmp/namespaced-ansible-shell
+  changed_when: false
+
+- name: Mount the sysroot mounts parent first
+  ansible.builtin.include_tasks: mount_one.yml
+  loop: "{{ _sysroot_mounts | unique | sort }}"
+  loop_control:
+    loop_var: _mount_path
+  vars:
+    ansible_shell_executable: /tmp/namespaced-ansible-shell
+
 - name: "Update message"
   ansible.builtin.copy:
     dest: /tmp/message

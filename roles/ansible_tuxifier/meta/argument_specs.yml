@@ -28,7 +28,7 @@ argument_specs:
         description:
           - "The storage of the installation target, as a list of storage_pools of the linux-system-roles.storage role."
           - "Only pools of type partition and lvm are supported."
-          - "The pools are created in the order listed and mounted in reverse order; mount_point is given below /tuxifier-sysroot."
+          - "The pools are created in the order listed and mounted parent first (sorted by mount point), independent of the pool order; mount_point is given below /tuxifier-sysroot."
           - "WARNING: Existing storage on the specified disks is removed without confirmation."
         options:
           name:
