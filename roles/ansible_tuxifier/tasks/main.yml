@@ -8,6 +8,7 @@
     path: /tmp/message
     state: touch
     mode: "0644"
+  changed_when: false
 
 - name: "Set the install distribution vars"
   ansible.builtin.include_vars: "{{ installdistribution['name'] ~ installdistribution['version'] }}.yml"
@@ -41,6 +42,7 @@
     mode: "0755"
     owner: root
     group: root
+  changed_when: false
 
 - name: Make /tuxifier-sysroot a private namespace
   ansible.builtin.shell: |
@@ -49,12 +51,14 @@
     mount --make-private /root/namespaces
     touch /root/namespaces/tuxifier-sysroot
     unshare --mount=/root/namespaces/tuxifier-sysroot sh -c 'sleep 1'
+  changed_when: false
 
 - name: Create /tuxifier-sysroot mountpoint
   ansible.builtin.file:
     path: "/tuxifier-sysroot"
     state: directory
     mode: "0755"
+  changed_when: false
 
 - name: "Mount Partitions"
   ansible.builtin.import_tasks: mount_partitions.yml
@@ -67,6 +71,7 @@
     dest: /tmp/message
     content: Installdisk partitioned and mounted
     mode: "0644"
+  changed_when: false
 
 - name: "Prepare chroot"
   ansible.builtin.import_tasks: prepare_chroot.yml
@@ -79,6 +84,7 @@
     dest: /tmp/message
     content: Installing...
     mode: "0644"
+  changed_when: false
 
 - name: "Minimal Install"
   ansible.builtin.import_tasks: minimal_install.yml
@@ -97,20 +103,24 @@
     dest: /tmp/message
     content: Installation finished
     mode: "0644"
+  changed_when: false
 
 - name: Umount /tuxifier-sysroot
   ansible.builtin.command:
     cmd: umount -R -A /tuxifier-sysroot
   vars:
     ansible_shell_executable: /tmp/namespaced-ansible-shell
+  changed_when: false
 
 - name: Umount /root/namespaces
   ansible.builtin.command:
     cmd: umount /root/namespaces/tuxifier-sysroot
+  changed_when: false
 
 - name: Umount /root/namespaces
   ansible.builtin.command:
     cmd: umount /root/namespaces
+  changed_when: false
 
 - name: "Continue install"
   ansible.builtin.import_tasks: continue_install.yml

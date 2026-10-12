@@ -5,6 +5,8 @@
     src: etc/ssl/certs/ca-bundle.crt
     dest: /etc/pki/tls/certs/
     mode: '0644'
+  changed_when: false
+
 
 - name: "Create /etc"
   ansible.builtin.file:
@@ -39,6 +41,7 @@
   ansible.builtin.stat:
     path: /sys/firmware/efi
   register: _efi
+  changed_when: false
 
 - name: Determine virtual_filesystems to mount
   ansible.builtin.set_fact:
@@ -59,6 +62,8 @@
     opts: "{{ item.opts }}"
     state: ephemeral
   loop: "{{ virtual_filesystems_to_mount }}"
+  changed_when: false
+
 
 - name: "Copy resolv.conf to chroot"
   ansible.builtin.copy:

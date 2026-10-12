@@ -6,10 +6,12 @@
       ansible.builtin.stat:
         path: "{{ '/tuxifier-sysroot/boot/vmlinuz-' ~ ansible_facts['kernel'] }}"
       register: _vmlinuz
+      changed_when: false
 
     - name: Set_fact current_version_installed
       ansible.builtin.set_fact:
         current_version_installed: "{{ _vmlinuz.stat.exists }}"
+      changed_when: false
 
 - name: "Set root password"
   ansible.builtin.command:
@@ -46,10 +48,12 @@
       ansible.builtin.stat:
         path: "/sys/firmware/efi"
       register: _efi
+      changed_when: false
 
     - name: Set_fact grub_target
       ansible.builtin.set_fact:
         grub_target: "{% if _efi.stat.exists %}x86_64-efi{% else %}i386-pc{% endif %}"
+      changed_when: false
 
 - name: Set_fact boot_disk when not in hosts_vars
   ansible.builtin.set_fact:
@@ -73,7 +77,6 @@
   when: grub_target == "i386-pc"
   ansible.builtin.command:
     cmd: "chroot /tuxifier-sysroot grub2-install --target=i386-pc --recheck {{ boot_disk }}"
-  changed_when: true
 
 - name: Install grub2 at efi
   when: grub_target == "x86_64-efi"
@@ -93,6 +96,7 @@
     - name: Set_fact _efibootmgr
       ansible.builtin.set_fact:
         _efibootmgr: "{{ efibootmgr | default('/usr/sbin/efibootmgr') }}"
+      changed_when: false
 
     - name: Read existing EFI boot entries
       ansible.builtin.command: "chroot /tuxifier-sysroot {{ _efibootmgr }}"
@@ -115,7 +119,6 @@
         --part {{ efi_partitionnr }}
         --label {{ installdistribution.name | capitalize }}
         --loader '\EFI\{{ installdistribution.name }}\shimx64.efi'
-      changed_when: false
 
     - name: "Install grub2 at /boot/efi/EFI/<distribution.name>/grub.cfg for RHEL8"
       when: distribution.version == "8"
@@ -134,11 +137,13 @@
   ansible.builtin.find:
     path: "/etc/ssh/"
   register: etc_ssh
+  changed_when: false
 
 - name: Set_fact ssh_keys and ssh_pubs
   ansible.builtin.set_fact:
     ssh_keys: "{{ etc_ssh.files | map(attribute='path') | select('match', '.*key$') }}"
     ssh_pubs: "{{ etc_ssh.files | map(attribute='path') | select('match', '.*pub$') }}"
+  changed_when: false
 
 - name: "Install ssh host keys"
   ansible.builtin.copy:
@@ -155,7 +160,7 @@
     remote_src: true
     mode: '0644'
   loop: "{{ ssh_pubs }}"
-  tags: debug
+  changed_when: false
 
 - name: "Relabel /bambini-sysroot"
   ansible.builtin.command:

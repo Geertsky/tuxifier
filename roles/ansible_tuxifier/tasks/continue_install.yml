@@ -10,15 +10,18 @@
         content: |
           #!/bin/sh
           systemctl poweroff
+      changed_when: false
 
     - name: "Trigger continuation of boot process"
       ansible.builtin.file:
         path: "/tmp/ansible-finished"
         state: touch
         mode: '0644'
+      changed_when: false
 
     - name: End play
       ansible.builtin.meta: end_host
+      changed_when: false
 
 - name: Continue install
   when: continue_install is defined and continue_install and current_version_installed
@@ -28,6 +31,8 @@
         path: "/tmp/ansible-finished"
         state: touch
         mode: '0644'
+      changed_when: false
 
     - name: Clear gathered facts from all currently targeted hosts
       ansible.builtin.meta: clear_facts
+      changed_when: false
