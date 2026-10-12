@@ -2,3 +2,4 @@
 # defaults file for tuxifier role
 continue_install: false
 root_authorized_keys: []
+tuxifier_reinstall: false # When true, wipe the signatures of all installdisk disks before the storage layout is created
