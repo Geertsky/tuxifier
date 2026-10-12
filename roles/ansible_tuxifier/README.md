@@ -27,7 +27,7 @@ See: the [dracut-incubator](https://github.com/Geertsky/dracut-incubator) git re
 | Variable                                         | Type | Description                                                                                                                                                                                   |
 |--------------------------------------------------|------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `installdisk`                                    | list | The storage of the install target: a list of `storage_pools` exactly as accepted by the [linux-system-roles.storage](https://github.com/linux-system-roles/storage) role (`type: partition` or `lvm`). `mount_point`s are given below `/tuxifier-sysroot`. |
-| `installdisk_boot_disk`                          | str  | The disk to install the boot loader on. Optional when `installdisk` has exactly one `partition` pool.                                                                                         |
+| `installdisk_boot_disk`                          | str  | The disk to install the boot loader on. Optional. Defaults to the disk of the `partition` pool with the volume mounted at `/tuxifier-sysroot/boot`, or else at `/tuxifier-sysroot/boot/efi`.                                                                                         |
 | `storage_disklabel_type`                         | str  | Variable of the storage role, e.g. `gpt`. Can be set in the host_vars as usual.                                                                                                              |
 | `installdistribution`                            | dict | Dict describing the distribution to be installed.                                                                                                                                             |
 | `installdistribution.name`                       | str  | The name of the distribution. The combination `name` and `version` corresponds to the distribution file in `vars/`                                                                            |
@@ -55,7 +55,7 @@ The storage role is called twice:
 
 The resulting `/etc/fstab` of the initramfs is copied to the installed system with `/tuxifier-sysroot` removed from every line.
 
-For the boot loader of an EFI system, `installdisk_boot_disk` needs a `partition` pool with the name of that disk and a volume with
+For the boot loader of an EFI system the boot disk needs a `partition` pool with a volume with
 `fs_type: efi`; its `name` is used as the partition number.
 
 #### Example installdisk:
@@ -131,7 +131,7 @@ Below the list of Optional `host_vars`, followed by more extensive explanation a
 
 ### tuxifier_reinstall
 
-When `true` (default `false`) the signatures of all disks of the `partition` pools in `installdisk` are wiped before the storage is created.
+When `true` (default `false`) the signatures of all disks in `installdisk` (the disks of the `partition` pools and the whole disks used by other pools) are wiped before the storage is created.
 Without it the layout is only made to match, so re-running the role changes nothing. Meant to be passed on the command line:
 
 ```

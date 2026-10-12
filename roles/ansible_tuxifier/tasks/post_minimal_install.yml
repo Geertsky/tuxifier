@@ -55,15 +55,32 @@
         grub_target: "{% if _efi.stat.exists %}x86_64-efi{% else %}i386-pc{% endif %}"
       changed_when: false
 
+# The boot loader goes on the disk with the /boot partition or, when /boot is
+# not a partition, on the disk with the ESP (/boot/efi).
+- name: Set_fact _boot_disk_candidates
+  ansible.builtin.set_fact:
+    _boot_disk_candidates: >-
+      {%- set ns = namespace(disks=[]) -%}
+      {%- for mountpoint in ['/tuxifier-sysroot/boot', '/tuxifier-sysroot/boot/efi'] -%}
+      {%- for pool in installdisk if pool.type == 'partition' -%}
+      {%- for volume in pool.volumes | default([]) if (volume.mount_point | default('')) == mountpoint -%}
+      {%- set ns.disks = ns.disks + [pool.name] -%}
+      {%- endfor -%}
+      {%- endfor -%}
+      {%- endfor -%}
+      {{ ns.disks }}
+
 - name: Set_fact boot_disk
   ansible.builtin.set_fact:
-    boot_disk: "{{ installdisk_boot_disk | default(installdisk_disks[0] if installdisk_disks | length == 1 else '') }}"
+    boot_disk: "{{ installdisk_boot_disk | default(_boot_disk_candidates | first | default('')) }}"
 
 - name: Validate boot_disk
   ansible.builtin.assert:
     that:
       - boot_disk | default('', true) | string | trim != ''
-    fail_msg: "boot_disk in not defined. Set installdisk_boot_disk in hosts_vars when there are more then one disks in installdisk."
+    fail_msg: >-
+      boot_disk is not defined. The boot loader needs a partition pool with a volume mounted at /tuxifier-sysroot/boot
+      (or, if there is none, at /tuxifier-sysroot/boot/efi). Alternatively set installdisk_boot_disk.
 
 - name: Install grub2 to boot_disk for BIOS
   when: grub_target == "i386-pc"
