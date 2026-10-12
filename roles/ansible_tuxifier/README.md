@@ -45,13 +45,14 @@ do not match the layout are removed without asking for confirmation, and `tuxifi
 can be used. The storage role needs `python3-blivet` and its dependencies in the initramfs; its checks `blivet_available`,
 `packages_installed` and `cryptsetup_services` are skipped (`storage_skip_checks`).
 
-The storage role is called twice:
+The storage role is called once, inside the private namespace of `/tuxifier-sysroot`, with the pools in the order listed. A pool
+that uses a partition (`disks: [/dev/vda4]`) has to be listed after the `partition` pool that creates it. Existing volume groups
+of `installdisk` are activated first, because the storage role does not activate them and would otherwise format the logical
+volumes again on every run.
 
-1. to create the storage, without the `mount_*` options, with the pools in the order listed. A pool that uses a partition
-   (`disks: [/dev/vda4]`) has to be listed after the `partition` pool that creates it.
-2. to mount the filesystems, inside the private namespace of `/tuxifier-sysroot`, with the pools in **reverse** order. The
-   storage role mounts in the order of the pools and of the volumes in them, so list the volumes of a pool in the order they have
-   to be mounted (`/boot` before `/boot/efi`).
+The storage role mounts in the order of the pools and of the volumes in them, which can leave the root filesystem mounted over
+`/boot`. Therefore all mounts below `/tuxifier-sysroot` are unmounted again, newest first, and mounted again sorted by mount
+point, so parents are mounted before their children. The order of the pools and volumes does not matter for the mounts.
 
 The resulting `/etc/fstab` of the initramfs is copied to the installed system with `/tuxifier-sysroot` removed from every line.
 
