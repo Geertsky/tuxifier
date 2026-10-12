@@ -72,4 +72,4 @@
       - -c
       - 'rpmdb --exportdb >/tmp/rpmdb&&mv /var/lib/rpm/rpmdb* /tmp/&&cat /tmp/rpmdb|rpmdb --importdb'
   register: rpmdb_import
-  failed_when: '(rpmdb_reimport is defined and rpmdb_reimport) and rpmdb_import.rc != 0'
+  changed_when: '(rpmdb_reimport is defined and rpmdb_reimport) and rpmdb_import.rc == 0'

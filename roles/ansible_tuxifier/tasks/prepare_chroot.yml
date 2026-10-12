@@ -7,35 +7,66 @@
     mode: '0644'
   changed_when: false
 
+- name: "Stat /etc"
+  ansible.builtin.stat:
+    path: /tuxifier-sysroot/etc
+  register: _stat_etc
 
 - name: "Create /etc"
+  when: not _stat_etc.stat.exists
   ansible.builtin.file:
     path: /tuxifier-sysroot/etc
     state: directory
     mode: '0755'
 
+- name: "Stat /etc/fstab"
+  ansible.builtin.stat:
+    path: /tuxifier-sysroot/etc/fstab
+  register: _stat_etc_fstab
+
 - name: "Write /etc/fstab"
+  when: not _stat_etc_fstab.stat.exists
   ansible.builtin.copy:
     remote_src: true
     src: /etc/fstab
     dest: /tuxifier-sysroot/etc/fstab
     mode: '0644'
 
+- name: Read content of fstab
+  ansible.builtin.slurp:
+    path: /tuxifier-sysroot/etc/fstab
+  register: _etc_fstab_slurp
+
+- name: Set_fact _etc_fstab_content
+  ansible.builtin.set_fact:
+    _etc_fstab_content: "{{ _etc_fstab_slurp.content | b64decode }}"
+
 - name: Correct fstab entries
+  when: "'/tuxifier-sysroot' in _etc_fstab_content"
   ansible.builtin.replace:
     path: /tuxifier-sysroot/etc/fstab
     regexp: "/tuxifier-sysroot"
     replace: ""
+
+- name: "Stat /dev /sys and /proc"
+  ansible.builtin.stat:
+    path: "/tuxifier-sysroot{{ item }}"
+  loop:
+    - "/dev"
+    - "/proc"
+    - "/sys"
+  register: _dev_proc_sys
+
+- name: GGDebug
+  ansible.builtin.debug:
+    var: _dev_proc_sys
 
 - name: "Mkdirs /dev /sys and /proc"
   ansible.builtin.file:
     path: "/tuxifier-sysroot{{ item }}"
     state: directory
     mode: '0755'
-  loop:
-    - "/dev"
-    - "/proc"
-    - "/sys"
+  loop: "{{ _dev_proc_sys.results | rejectattr('stat.exists') | map(attribute='item') | list }}"
 
 - name: See if we're boot with efi
   ansible.builtin.stat:
@@ -64,8 +95,13 @@
   loop: "{{ virtual_filesystems_to_mount }}"
   changed_when: false
 
+- name: Stat resolv.conf
+  ansible.builtin.stat:
+    path: /tuxifier-sysroot/etc/resolv.conf
+  register: _etc_resolv_conf
 
 - name: "Copy resolv.conf to chroot"
+  when: not _etc_resolv_conf.stat.exists
   ansible.builtin.copy:
     remote_src: true
     src: /etc/resolv.conf

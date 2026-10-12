@@ -35,11 +35,19 @@
       ansible.builtin.set_fact:
         authorized_keys: "{{ _authorized_keys['content'] | b64decode | split('\n') | reject('equalto', '') }}"
 
+    - name: Create .ssh dir
+      ansible.builtin.file:
+        path: /tuxifier-sysroot/root/.ssh/
+        state: directory
+        mode: "0700"
+
     - name: Write authorized_keys
-      ansible.posix.authorized_key:
-        key: "{{ item }}"
+      ansible.builtin.lineinfile:
         path: /tuxifier-sysroot/root/.ssh/authorized_keys
-        user: root
+        line: "{{ item }}"
+        create: true
+        mode: "0600"
+        owner: root
       loop: "{{ (authorized_keys + root_authorized_keys) | unique | reject('equalto', '') }}"
 
 - name: Detect EFI
@@ -69,10 +77,12 @@
       {%- endfor -%}
       {%- endfor -%}
       {{ ns.disks }}
+  changed_when: false
 
 - name: Set_fact boot_disk
   ansible.builtin.set_fact:
     boot_disk: "{{ installdisk_boot_disk | default(_boot_disk_candidates | first | default('')) }}"
+  changed_when: false
 
 - name: Validate boot_disk
   ansible.builtin.assert:
@@ -102,6 +112,7 @@
           | map(attribute='name')
           | first
           }}
+      changed_when: false
 
     - name: Set_fact _efibootmgr
       ansible.builtin.set_fact:
@@ -123,6 +134,7 @@
           - -b
           - "{{ item }}"
       loop: "{{ efibootmgr_entries.stdout_lines | select('match', '.*' ~ (installdistribution.name | capitalize) ) | map('replace', 'Boot', '') | map('replace', '* ' ~ (installdistribution.name | capitalize),'')}}"
+
     - name: Install grub2 at efi
       ansible.builtin.command: >
         chroot /tuxifier-sysroot {{ _efibootmgr }} --remove-dups --create --disk {{ boot_disk }}
@@ -156,6 +168,7 @@
   changed_when: false
 
 - name: "Install ssh host keys"
+  when:
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: /tuxifier-sysroot/etc/ssh/
