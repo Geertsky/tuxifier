@@ -37,7 +37,7 @@
   changed_when: false
 
 - name: "Check/create storage layout"
-  ansible.builtin.import_tasks: create_storage_layout.yml
+  ansible.builtin.import_tasks: check_or_create_storage_layout.yml
 
 - name: "Prepare chroot"
   ansible.builtin.import_tasks: prepare_chroot.yml
