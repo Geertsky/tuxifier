@@ -1,6 +1,6 @@
 ---
 
-- name: "De-activate any volume groups"
+- name: De-activate any volume groups
   ansible.builtin.shell: |
     for VG in $(lvm vgs --noheadings -o vg_name); do
       lvm lvchange --activate n $VG;
@@ -8,21 +8,21 @@
   register: clean_installdisk__vgscript
   changed_when: clean_installdisk__vgscript.rc != 0
 
-- name: "Zero MBR"
+- name: Zero MBR
   ansible.builtin.shell: |
     wipefs -af "{{ item }}"
   loop: "{{ installdisk_disks }}"
   register: clean_installdisk__dd
   failed_when: clean_installdisk__dd.rc != 0
 
-- name: "Reload partitions"
+- name: Reload partitions
   ansible.builtin.shell: |
     blockdev --rereadpt {{ item }}
   loop: "{{ installdisk_disks }}"
   register: clean_installdisk__blockdev
   failed_when: clean_installdisk__blockdev.rc != 0
 
-- name: "Update message"
+- name: Update message
   ansible.builtin.copy:
     dest: /tmp/message
     content: Installdisk destroyed

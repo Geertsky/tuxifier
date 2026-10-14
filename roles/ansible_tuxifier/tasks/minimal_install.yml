@@ -35,7 +35,7 @@
     ansible_shell_executable: /bin/sh
   changed_when: false
 
-- name: "Query the installed packages"
+- name: Query the installed packages
   ansible.builtin.command:
     argv:
       - rpm
@@ -47,7 +47,7 @@
   changed_when: false
   failed_when: _installed_rpms.rc != 0
 
-- name: "Determine the missing packages"
+- name: Determine the missing packages
   ansible.builtin.set_fact:
     _missing_rpm_urls: >-
       {{ generate_minimal_install.urls
@@ -62,7 +62,7 @@
   register: rpm_output
   changed_when: rpm_output.rc == 0
 
-- name: "Resolve relocated rpmdb"
+- name: Resolve relocated rpmdb
   when: '(rpmdb_reimport is defined and rpmdb_reimport) or False'
   ansible.builtin.command:
     argv:

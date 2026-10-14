@@ -1,30 +1,30 @@
 ---
 
-- name: "Copy a /certs/ca-bundle.trust.crt"
+- name: Copy a /certs/ca-bundle.trust.crt
   ansible.builtin.copy:
     src: etc/ssl/certs/ca-bundle.crt
     dest: /etc/pki/tls/certs/
     mode: '0644'
   changed_when: false
 
-- name: "Stat /etc"
+- name: Stat /etc
   ansible.builtin.stat:
     path: /tuxifier-sysroot/etc
   register: _stat_etc
 
-- name: "Create /etc"
+- name: Create /etc
   when: not _stat_etc.stat.exists
   ansible.builtin.file:
     path: /tuxifier-sysroot/etc
     state: directory
     mode: '0755'
 
-- name: "Stat /etc/fstab"
+- name: Stat /etc/fstab
   ansible.builtin.stat:
     path: /tuxifier-sysroot/etc/fstab
   register: _stat_etc_fstab
 
-- name: "Write /etc/fstab"
+- name: Write /etc/fstab
   when: not _stat_etc_fstab.stat.exists
   ansible.builtin.copy:
     remote_src: true
@@ -48,7 +48,7 @@
     regexp: "/tuxifier-sysroot"
     replace: ""
 
-- name: "Stat /dev /sys and /proc"
+- name: Stat /dev /sys and /proc
   ansible.builtin.stat:
     path: "/tuxifier-sysroot{{ item }}"
   loop:
@@ -61,7 +61,7 @@
   ansible.builtin.debug:
     var: _dev_proc_sys
 
-- name: "Mkdirs /dev /sys and /proc"
+- name: Mkdirs /dev /sys and /proc
   ansible.builtin.file:
     path: "/tuxifier-sysroot{{ item }}"
     state: directory
@@ -100,7 +100,7 @@
     path: /tuxifier-sysroot/etc/resolv.conf
   register: _etc_resolv_conf
 
-- name: "Copy resolv.conf to chroot"
+- name: Copy resolv.conf to chroot
   when: not _etc_resolv_conf.stat.exists
   ansible.builtin.copy:
     remote_src: true

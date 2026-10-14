@@ -12,7 +12,7 @@
           systemctl poweroff
       changed_when: false
 
-    - name: "Trigger continuation of boot process"
+    - name: Trigger continuation of boot process
       ansible.builtin.file:
         path: "/tmp/ansible-finished"
         state: touch
@@ -26,7 +26,7 @@
 - name: Continue install
   when: continue_install is defined and continue_install and current_version_installed
   block:
-    - name: "Trigger continuation of boot process"
+    - name: Trigger continuation of boot process
       ansible.builtin.file:
         path: "/tmp/ansible-finished"
         state: touch

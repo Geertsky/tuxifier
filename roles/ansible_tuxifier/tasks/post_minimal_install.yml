@@ -13,7 +13,7 @@
         current_version_installed: "{{ _vmlinuz.stat.exists }}"
       changed_when: false
 
-- name: "Set root password"
+- name: Set root password
   ansible.builtin.command:
     argv:
       - chroot
@@ -24,7 +24,7 @@
   register: postminimallinstall__passwd
   failed_when: postminimallinstall__passwd.rc != 0
 
-- name: "Add root authorized_keys to chroot"
+- name: Add root authorized_keys to chroot
   block:
     - name: Read authorized_keys
       ansible.builtin.slurp:
@@ -69,7 +69,7 @@
   ansible.builtin.set_fact:
     _boot_disk_candidates: >-
       {%- set ns = namespace(disks=[]) -%}
-      {%- for mountpoint in ['/tuxifier-sysroot/boot', '/tuxifier-sysroot/boot/efi'] -%}
+      {%- for mountpoint in ['/boot', '/boot/efi'] -%}
       {%- for pool in installdisk if pool.type == 'partition' -%}
       {%- for volume in pool.volumes | default([]) if (volume.mount_point | default('')) == mountpoint -%}
       {%- set ns.disks = ns.disks + [pool.name] -%}
@@ -89,8 +89,8 @@
     that:
       - boot_disk | default('', true) | string | trim != ''
     fail_msg: >-
-      boot_disk is not defined. The boot loader needs a partition pool with a volume mounted at /tuxifier-sysroot/boot
-      (or, if there is none, at /tuxifier-sysroot/boot/efi). Alternatively set installdisk_boot_disk.
+      boot_disk is not defined. The boot loader needs a partition pool with a volume mounted at /boot
+      (or, if there is none, at /boot/efi). Alternatively set installdisk_boot_disk.
 
 - name: Install grub2 to boot_disk for BIOS
   when: grub_target == "i386-pc"
@@ -124,6 +124,10 @@
       register: efibootmgr_entries
       changed_when: false
 
+    - name: GGDefault
+      ansible.builtin.debug:
+        var: efibootmgr_entries
+
     - name: Remove existing efi entries
       ansible.builtin.command:
         argv:
@@ -142,20 +146,20 @@
         --label {{ installdistribution.name | capitalize }}
         --loader '\EFI\{{ installdistribution.name }}\shimx64.efi'
 
-    - name: "Install grub2 at /boot/efi/EFI/<distribution.name>/grub.cfg for RHEL8"
+    - name: Install grub2 at /boot/efi/EFI/<distribution.name>/grub.cfg for RHEL8
       when: distribution.version == "8"
       ansible.builtin.command:
         cmd: "chroot /tuxifier-sysroot /usr/sbin/grub2-mkconfig -o /boot/efi/EFI/{{ distribution.name }}/grub.cfg"
       register: finalize__grub2_mkconfig
       failed_when: finalize__grub2_mkconfig.rc != 0
 
-- name: "Install grub2 /boot/grub2/grub.cfg"
+- name: Install grub2 /boot/grub2/grub.cfg
   ansible.builtin.command:
     cmd: "chroot /tuxifier-sysroot /usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg"
   register: finalize__grub2_mkconfig
   failed_when: finalize__grub2_mkconfig.rc != 0
 
-- name: "Discover host keys"
+- name: Discover host keys
   ansible.builtin.find:
     path: "/etc/ssh/"
   register: etc_ssh
@@ -167,7 +171,7 @@
     ssh_pubs: "{{ etc_ssh.files | map(attribute='path') | select('match', '.*pub$') }}"
   changed_when: false
 
-- name: "Install ssh host keys"
+- name: Install ssh host keys
   when:
   ansible.builtin.copy:
     src: "{{ item }}"
@@ -176,7 +180,7 @@
     mode: '0600'
   loop: "{{ ssh_keys }}"
 
-- name: "Install ssh host pub keys"
+- name: Install ssh host pub keys
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: /tuxifier-sysroot/etc/ssh/
@@ -185,7 +189,7 @@
   loop: "{{ ssh_pubs }}"
   changed_when: false
 
-- name: "Relabel /bambini-sysroot"
+- name: Relabel /bambini-sysroot
   ansible.builtin.command:
     cmd: chroot /tuxifier-sysroot /usr/sbin/fixfiles -F onboot
   when: '(strict_selinux | default(false) | bool) and not (continue_install | default(false) | bool)'
