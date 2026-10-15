@@ -1,0 +1,9 @@
+---
+
+# Notified by the tasks that write to /tuxifier-sysroot; flushed at the end of post_minimal_install.yml.
+- name: Relabel sysroot
+  ansible.builtin.command:
+    cmd: chroot /tuxifier-sysroot /usr/sbin/fixfiles -F onboot
+  when: '(strict_selinux | default(false) | bool) and not (continue_install | default(false) | bool)'
+  vars:
+    ansible_shell_executable: /tmp/namespaced-ansible-shell

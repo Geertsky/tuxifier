@@ -13,6 +13,7 @@
   register: _stat_etc
 
 - name: Create /etc
+  notify: Relabel sysroot
   when: not _stat_etc.stat.exists
   ansible.builtin.file:
     path: /tuxifier-sysroot/etc
@@ -22,6 +23,7 @@
 # The storage role does not write an fstab entry, as the filesystems are not
 # mounted by it. The entries are written to the fstab of the installed system.
 - name: Create /etc/fstab
+  notify: Relabel sysroot
   ansible.builtin.copy:
     content: ""
     dest: /tuxifier-sysroot/etc/fstab
@@ -29,6 +31,7 @@
     mode: '0644'
 
 - name: Write the fstab entries of the block device filesystems
+  notify: Relabel sysroot
   ansible.posix.mount:
     path: "{{ item.path }}"
     src: "{{ item.src }}"
@@ -50,6 +53,7 @@
   register: _dev_proc_sys
 
 - name: Mkdirs /dev /sys and /proc
+  notify: Relabel sysroot
   ansible.builtin.file:
     path: "/tuxifier-sysroot{{ item }}"
     state: directory
@@ -89,6 +93,7 @@
   register: _etc_resolv_conf
 
 - name: Copy resolv.conf to chroot
+  notify: Relabel sysroot
   when: not _etc_resolv_conf.stat.exists
   ansible.builtin.copy:
     remote_src: true

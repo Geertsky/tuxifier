@@ -46,6 +46,7 @@
   no_log: true
 
 - name: Set root password
+  notify: Relabel sysroot
   ansible.builtin.command:
     argv: [chroot, /tuxifier-sysroot, chpasswd]
     stdin: "root:{{ rootpw }}"
@@ -64,12 +65,14 @@
         authorized_keys: "{{ _authorized_keys['content'] | b64decode | split('\n') | reject('equalto', '') }}"
 
     - name: Create .ssh dir
+      notify: Relabel sysroot
       ansible.builtin.file:
         path: /tuxifier-sysroot/root/.ssh/
         state: directory
         mode: "0700"
 
     - name: Write authorized_keys
+      notify: Relabel sysroot
       ansible.builtin.lineinfile:
         path: /tuxifier-sysroot/root/.ssh/authorized_keys
         line: "{{ item }}"
@@ -252,6 +255,7 @@
   changed_when: false
 
 - name: Install grub config when it differs
+  notify: Relabel sysroot
   ansible.builtin.copy:
     src: /tuxifier-sysroot/tmp/grub.cfg
     dest: "/tuxifier-sysroot{{ grub_cfg_path }}"
@@ -279,7 +283,7 @@
   changed_when: false
 
 - name: Install ssh host keys
-  when:
+  notify: Relabel sysroot
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: /tuxifier-sysroot/etc/ssh/
@@ -288,15 +292,16 @@
   loop: "{{ ssh_keys }}"
 
 - name: Install ssh host pub keys
+  notify: Relabel sysroot
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: /tuxifier-sysroot/etc/ssh/
     remote_src: true
     mode: '0644'
   loop: "{{ ssh_pubs }}"
-  changed_when: false
 
-- name: Relabel /bambini-sysroot
-  ansible.builtin.command:
-    cmd: chroot /tuxifier-sysroot /usr/sbin/fixfiles -F onboot
-  when: '(strict_selinux | default(false) | bool) and not (continue_install | default(false) | bool)'
+# The initramfs has no SELinux policy loaded, so everything that is installed or
+# rewritten here has no label. The tasks that change files in /tuxifier-sysroot
+# notify "Relabel sysroot", which only runs when one of them changed something.
+- name: Relabel /tuxifier-sysroot when something changed
+  ansible.builtin.meta: flush_handlers

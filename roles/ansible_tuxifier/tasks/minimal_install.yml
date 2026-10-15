@@ -56,6 +56,7 @@
          | list }}
 
 - name: Install the rpms
+  notify: Relabel sysroot
   when: _missing_rpm_urls | length > 0
   ansible.builtin.command:
     argv: "{{ rpm_argv + _missing_rpm_urls }}"
@@ -63,6 +64,7 @@
   changed_when: rpm_output.rc == 0
 
 - name: Resolve relocated rpmdb
+  notify: Relabel sysroot
   when: '(rpmdb_reimport is defined and rpmdb_reimport) or False'
   ansible.builtin.command:
     argv:
