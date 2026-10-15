@@ -123,10 +123,34 @@
       boot_disk is not defined. The boot loader needs a partition pool with a volume mounted at /boot
       (or, if there is none, at /boot/efi). Alternatively set installdisk_boot_disk.
 
+# grub2-install is not idempotent. It is run when the boot code is missing: the
+# text of boot.img in the MBR of boot_disk, or the text of diskboot.img, the start
+# of core.img, in the bios_grub partition (GPT) or in sector 1 (msdos).
 - name: Install grub2 to boot_disk for BIOS
   when: grub_target == "i386-pc"
-  ansible.builtin.command:
-    cmd: "chroot /tuxifier-sysroot grub2-install --target=i386-pc --recheck {{ boot_disk }}"
+  block:
+    - name: Set_fact _biosboot_device
+      ansible.builtin.set_fact:
+        _biosboot_device: >-
+          {%- set partitions = installdisk | selectattr('name', 'equalto', boot_disk) | map(attribute='volumes') | flatten
+              | selectattr('fs_type', 'defined') | selectattr('fs_type', 'equalto', 'biosboot') | map(attribute='name') | list -%}
+          {{ (boot_disk ~ ('p' if boot_disk[-1] is match('[0-9]') else '') ~ partitions[0]) if partitions | length > 0 else '' }}
+      changed_when: false
+
+    # The result of a pipeline is the result of grep; a missing device gives no input, so grep fails.
+    - name: Check if grub2 is installed to boot_disk for BIOS
+      ansible.builtin.shell: |
+        dd if={{ boot_disk }} bs=440 count=1 2>/dev/null | grep -aq 'GRUB ' &&
+        dd if={{ _biosboot_device if _biosboot_device else boot_disk }} bs=512 count=1 {{ '' if _biosboot_device else 'skip=1' }} 2>/dev/null | grep -aq 'loading'
+      register: _grub_bios_installed
+      changed_when: false
+      failed_when: _grub_bios_installed.rc > 1
+
+    - name: Run grub2-install for BIOS
+      ansible.builtin.command:
+        cmd: "chroot /tuxifier-sysroot grub2-install --target=i386-pc --recheck {{ boot_disk }}"
+      when: _grub_bios_installed.rc == 1
+      notify: Relabel sysroot
 
 - name: Install grub2 at efi
   when: grub_target == "x86_64-efi"
