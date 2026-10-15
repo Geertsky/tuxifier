@@ -26,8 +26,8 @@ See: the [dracut-incubator](https://github.com/Geertsky/dracut-incubator) git re
 
 | Variable                                         | Type | Description                                                                                                                                                                                   |
 |--------------------------------------------------|------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `installdisk`                                    | list | The storage of the install target: a list of `storage_pools` exactly as accepted by the [linux-system-roles.storage](https://github.com/linux-system-roles/storage) role (`type: partition` or `lvm`). `mount_point`s are given below `/tuxifier-sysroot`. |
-| `installdisk_boot_disk`                          | str  | The disk to install the boot loader on. Optional. Defaults to the disk of the `partition` pool with the volume mounted at `/tuxifier-sysroot/boot`, or else at `/tuxifier-sysroot/boot/efi`.                                                                                         |
+| `installdisk`                                    | list | The storage of the install target: a list of `storage_pools` exactly as accepted by the [linux-system-roles.storage](https://github.com/linux-system-roles/storage) role (`type: partition` or `lvm`). `mount_point`s are given as seen from the installed system (`/`, `/boot`, `/boot/efi`). |
+| `installdisk_boot_disk`                          | str  | The disk to install the boot loader on. Optional. Defaults to the disk of the `partition` pool with the volume mounted at `/boot`, or else at `/boot/efi`.                                                                                         |
 | `storage_disklabel_type`                         | str  | Variable of the storage role, e.g. `gpt`. Can be set in the host_vars as usual.                                                                                                              |
 | `installdistribution`                            | dict | Dict describing the distribution to be installed.                                                                                                                                             |
 | `installdistribution.name`                       | str  | The name of the distribution. The combination `name` and `version` corresponds to the distribution file in `vars/`                                                                            |
@@ -50,11 +50,13 @@ that uses a partition (`disks: [/dev/vda4]`) has to be listed after the `partiti
 of `installdisk` are activated first, because the storage role does not activate them and would otherwise format the logical
 volumes again on every run.
 
-The storage role mounts in the order of the pools and of the volumes in them, which can leave the root filesystem mounted over
-`/boot`. Therefore all mounts below `/tuxifier-sysroot` are unmounted again, newest first, and mounted again sorted by mount
-point, so parents are mounted before their children. The order of the pools and volumes does not matter for the mounts.
+The storage role is given the pools without `mount_point`, so it only creates the block devices and neither mounts them nor
+writes `/etc/fstab`. Tuxifier mounts the filesystems itself below `/tuxifier-sysroot`, sorted by mount point, so parents are
+mounted before their children. The order of the pools and volumes does not matter for the mounts. These mounts are not written
+to the `/etc/fstab` of the initramfs.
 
-The resulting `/etc/fstab` of the initramfs is copied to the installed system with `/tuxifier-sysroot` removed from every line.
+The `/etc/fstab` of the installed system, `/tuxifier-sysroot/etc/fstab`, gets an entry for every volume with a `mount_point`
+and for every swap volume. The filesystems are identified as the storage role reports them, normally by `UUID=`.
 
 For the boot loader of an EFI system the boot disk needs a `partition` pool with a volume with
 `fs_type: efi`; its `name` is used as the partition number.
@@ -76,14 +78,14 @@ installdisk:
         fs_type: ext4
         fs_label: boot
         fs_create_options: "-O ^orphan_file"
-        mount_point: /tuxifier-sysroot/boot
+        mount_point: /boot
         mount_options: defaults
 
       - name: "3"
         size: 1GiB
         fs_type: efi
         fs_label: EFI
-        mount_point: /tuxifier-sysroot/boot/efi
+        mount_point: /boot/efi
         mount_options: "umask=0077,shortname=winnt"
 
       - name: "4"
@@ -104,7 +106,7 @@ installdisk:
         fs_type: ext4
         fs_label: root
         fs_create_options: "-O ^orphan_file"
-        mount_point: /tuxifier-sysroot
+        mount_point: /
         mount_options: defaults
 ```
 
@@ -224,7 +226,7 @@ installdisk:
         fs_type: ext3
         fs_label: boot
         fs_create_options: "-O ^orphan_file"
-        mount_point: /tuxifier-sysroot/boot
+        mount_point: /boot
       - name: "3"
         size: "0"
         fs_type: lvmpv
@@ -242,7 +244,7 @@ installdisk:
         fs_type: ext4
         fs_label: root
         fs_create_options: "-O ^orphan_file"
-        mount_point: /tuxifier-sysroot
+        mount_point: /
 ```
 
 ## License

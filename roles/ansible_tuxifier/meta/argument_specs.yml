@@ -20,7 +20,7 @@ argument_specs:
         type: str
         description:
           - "The disk to install the boot loader on."
-          - "Optional. Defaults to the disk of the partition pool with the volume mounted at /tuxifier-sysroot/boot, or else at /tuxifier-sysroot/boot/efi."
+          - "Optional. Defaults to the disk of the partition pool with the volume mounted at /boot, or else at /boot/efi."
           - "The disk needs a partition pool, because the ESP or BIOS boot partition has to be a partition."
       installdisk:
         type: list
@@ -30,7 +30,8 @@ argument_specs:
           - "The storage of the installation target, as a list of storage_pools of the linux-system-roles.storage role."
           - "Only pools of type partition and lvm are supported; the disks of a pool can be partitions or whole disks."
           - "Every disk in O(installdisk) is wiped when O(tuxifier_reinstall) is true."
-          - "The pools are created in the order listed and mounted parent first (sorted by mount point), independent of the pool order; mount_point is given below /tuxifier-sysroot."
+          - "The pools are created in the order listed and mounted parent first (sorted by mount point), independent of the pool order."
+          - "mount_point is given as seen from the installed system, for example /, /boot or /boot/efi. The storage role is called without mount_point; tuxifier mounts the filesystems below /tuxifier-sysroot and writes the fstab of the installed system."
           - "WARNING: Existing storage on the specified disks is removed without confirmation."
         options:
           name:

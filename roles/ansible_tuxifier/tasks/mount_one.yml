@@ -1,16 +1,19 @@
 ---
 
 # The mount point does not exist in a freshly mounted parent filesystem.
-- name: "Create mountpoint {{ _mount_path }}"
+- name: "Create mountpoint {{ _mount.mountpath }}"
   ansible.builtin.file:
-    path: "{{ _mount_path }}"
+    path: "{{ _mount.mountpath }}"
     state: directory
     mode: "0755"
   changed_when: false
 
-- name: "Mount {{ _mount_path }}"
-  ansible.builtin.command:
-    argv:
-      - mount
-      - "{{ _mount_path }}"
+# ephemeral: only mount, the fstab is written to /tuxifier-sysroot/etc/fstab by prepare_chroot.yml
+- name: "Mount {{ _mount.mountpath }}"
+  ansible.posix.mount:
+    path: "{{ _mount.mountpath }}"
+    src: "{{ _mount.src }}"
+    fstype: "{{ _mount.fstype }}"
+    opts: "{{ _mount.opts }}"
+    state: ephemeral
   changed_when: false

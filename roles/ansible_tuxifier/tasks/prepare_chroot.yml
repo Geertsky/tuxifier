@@ -19,34 +19,26 @@
     state: directory
     mode: '0755'
 
-- name: Stat /etc/fstab
-  ansible.builtin.stat:
-    path: /tuxifier-sysroot/etc/fstab
-  register: _stat_etc_fstab
-
-- name: Write /etc/fstab
-  when: not _stat_etc_fstab.stat.exists
+# The storage role does not write an fstab entry, as the filesystems are not
+# mounted by it. The entries are written to the fstab of the installed system.
+- name: Create /etc/fstab
   ansible.builtin.copy:
-    remote_src: true
-    src: /etc/fstab
+    content: ""
     dest: /tuxifier-sysroot/etc/fstab
+    force: false
     mode: '0644'
 
-- name: Read content of fstab
-  ansible.builtin.slurp:
-    path: /tuxifier-sysroot/etc/fstab
-  register: _etc_fstab_slurp
-
-- name: Set_fact _etc_fstab_content
-  ansible.builtin.set_fact:
-    _etc_fstab_content: "{{ _etc_fstab_slurp.content | b64decode }}"
-
-- name: Correct fstab entries
-  when: "'/tuxifier-sysroot' in _etc_fstab_content"
-  ansible.builtin.replace:
-    path: /tuxifier-sysroot/etc/fstab
-    regexp: "/tuxifier-sysroot"
-    replace: ""
+- name: Write the fstab entries of the block device filesystems
+  ansible.posix.mount:
+    path: "{{ item.path }}"
+    src: "{{ item.src }}"
+    fstype: "{{ item.fstype }}"
+    opts: "{{ item.opts }}"
+    dump: "{{ item.dump }}"
+    passno: "{{ item.passno }}"
+    fstab: /tuxifier-sysroot/etc/fstab
+    state: present
+  loop: "{{ _sysroot_volumes }}"
 
 - name: Stat /dev /sys and /proc
   ansible.builtin.stat:
@@ -56,10 +48,6 @@
     - "/proc"
     - "/sys"
   register: _dev_proc_sys
-
-- name: GGDebug
-  ansible.builtin.debug:
-    var: _dev_proc_sys
 
 - name: Mkdirs /dev /sys and /proc
   ansible.builtin.file:

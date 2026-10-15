@@ -24,18 +24,18 @@
   when:
     - not (tuxifier_reinstall | bool)
     - item in (ansible_facts['lvm']['vgs'] | default({}))
+  changed_when: false
 
-- name: Prepend mountpoints
+# The storage role only creates the block devices. Mounting the filesystems
+# (below) and writing /tuxifier-sysroot/etc/fstab (prepare_chroot.yml) is done
+# here, so the role gets the pools without mount_point.
+- name: Remove the mountpoints from the pools for the storage role
   ansible.builtin.set_fact:
-    prepended_installdisks: >-
+    storage_pools_without_mounts: >-
       {%- set ns = namespace(disks=[]) -%}
       {%- for disk in installdisk -%}{%- set vols = namespace(items=[]) -%}
         {%- for vol in disk.volumes -%}
-          {%- if vol.mount_point | default('', true) -%}
-            {%- set vols.items = vols.items + [vol | combine({'mount_point': '/tuxifier-sysroot' ~ vol.mount_point})] -%}
-          {%- else -%}
-            {%- set vols.items = vols.items + [vol] -%}
-          {%- endif -%}
+          {%- set vols.items = vols.items + [vol | dict2items | rejectattr('key', 'equalto', 'mount_point') | items2dict] -%}
         {%- endfor -%}
         {%- set ns.disks = ns.disks + [disk | combine({'volumes': vols.items})] -%}
       {%- endfor -%}
@@ -50,40 +50,47 @@
       - blivet_available
       - packages_installed
       - cryptsetup_services
-    storage_pools: "{{ prepended_installdisks }}"
+    storage_pools: "{{ storage_pools_without_mounts }}"
     storage_volumes: []
     ansible_shell_executable: /tmp/namespaced-ansible-shell
 
-- name: Read the mounts of the namespace
-  ansible.builtin.slurp:
-    src: /proc/self/mountinfo
-  register: _mountinfo
-  vars:
-    ansible_shell_executable: /tmp/namespaced-ansible-shell
-
-- name: Set_fact sysroot mounts in creation order
+# The block device filesystems of installdisk with the identifiers the storage
+# role found (_mount_id, e.g. UUID=...), in mount order: parent first.
+# Swap has no mountpoint, but does get an fstab entry.
+- name: Set_fact _sysroot_volumes
   ansible.builtin.set_fact:
-    _sysroot_mounts: >-
-      {{ (_mountinfo.content | b64decode).splitlines()
-         | map('split', ' ')
-         | map(attribute=4)
-         | select('match', '^/tuxifier-sysroot(/|$)')
-         | list }}
+    _sysroot_volumes: >-
+      {%- set ns = namespace(items=[]) -%}
+      {%- for pool in installdisk -%}
+      {%- set bpool = _storage_pools_list | selectattr('name', 'equalto', pool.name) | first -%}
+      {%- for vol in pool.volumes | default([]) -%}
+      {%- set bvol = bpool.volumes | selectattr('name', 'equalto', vol.name) | first -%}
+      {%- if (vol.mount_point | default('', true)) != '' or bvol.fs_type == 'swap' -%}
+      {%- set ns.items = ns.items + [{
+            'path': 'none' if bvol.fs_type == 'swap' else vol.mount_point,
+            'mountpath': '/tuxifier-sysroot' ~ ('' if vol.mount_point | default('') in ['', '/'] else vol.mount_point),
+            'src': bvol._mount_id,
+            'fstype': 'vfat' if bvol.fs_type == 'efi' else bvol.fs_type,
+            'opts': bvol.mount_options | default('defaults'),
+            'dump': bvol.mount_check | default(0),
+            'passno': bvol.mount_passno | default(0)
+          }] -%}
+      {%- endif -%}
+      {%- endfor -%}
+      {%- endfor -%}
+      {{ ns.items | sort(attribute='path') | to_json | from_json }}
 
-- name: Umount the sysroot mounts newest first
-  ansible.posix.mount:
-    path: "{{ item }}"
-    state: unmounted
-  loop: "{{ _sysroot_mounts | reverse | list }}"
-  vars:
-    ansible_shell_executable: /tmp/namespaced-ansible-shell
-  changed_when: false
+- name: Assert the storage role found the devices
+  ansible.builtin.assert:
+    that:
+      - _sysroot_volumes | map(attribute='src') | reject('match', '.+') | list | length == 0
+    fail_msg: "The storage role did not return an fstab identifier for every volume that has to be mounted: {{ _sysroot_volumes }}"
 
-- name: Mount the sysroot mounts parent first
+- name: Mount the filesystems parent first
   ansible.builtin.include_tasks: mount_one.yml
-  loop: "{{ _sysroot_mounts | unique | sort }}"
+  loop: "{{ _sysroot_volumes | rejectattr('fstype', 'equalto', 'swap') | list }}"
   loop_control:
-    loop_var: _mount_path
+    loop_var: _mount
   vars:
     ansible_shell_executable: /tmp/namespaced-ansible-shell
 
