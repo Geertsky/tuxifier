@@ -13,45 +13,22 @@
         current_version_installed: "{{ _vmlinuz.stat.exists }}"
       changed_when: false
 
-# Idempotent without changing the hash method of the distribution: the password
-# is verified against the hash in /etc/shadow with the libcrypt of the installed
-# system (any method it supports) and only set, by chpasswd with the defaults of
-# the distribution, when it does not match.
+# chpasswd hashes with the method of the installed system (login.defs/PAM). The
+# password is only set while root has none, as chpasswd uses a new salt on every
+# run and the installation has no update path.
 - name: Read root shadow entry
-  ansible.builtin.command: chroot /tuxifier-sysroot getent shadow root
+  ansible.builtin.command:
+    argv: [chroot, /tuxifier-sysroot, getent, shadow, root]
   register: _root_shadow
   changed_when: false
-  failed_when: false
-  no_log: true
-
-- name: Check root password
-  ansible.builtin.command:
-    argv:
-      - chroot
-      - /tuxifier-sysroot
-      - python3
-      - -c
-      - |
-        import ctypes, ctypes.util, sys
-        lib = ctypes.CDLL(ctypes.util.find_library("crypt") or "libcrypt.so.1")
-        lib.crypt.restype = ctypes.c_char_p
-        lib.crypt.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-        current = sys.argv[1].encode()
-        sys.exit(0 if current and lib.crypt(sys.stdin.read().rstrip("\n").encode(), current) == current else 1)
-      - "{{ _root_shadow.stdout.split(':')[1] if _root_shadow.rc == 0 else '' }}"
-    stdin: "{{ rootpw }}"
-  register: _root_pw_check
-  changed_when: false
-  failed_when: _root_pw_check.rc not in [0, 1]
-  no_log: true
 
 - name: Set root password
-  notify: Relabel sysroot
   ansible.builtin.command:
     argv: [chroot, /tuxifier-sysroot, chpasswd]
     stdin: "root:{{ rootpw }}"
-  when: _root_pw_check.rc == 1
+  when: _root_shadow.stdout.split(':')[1] is match('^[!*]*$')
   no_log: true
+  notify: Relabel sysroot
 
 - name: Add root authorized_keys to chroot
   block:
