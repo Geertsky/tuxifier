@@ -142,50 +142,129 @@
           }}
       changed_when: false
 
+    - name: Set_fact efi_mountpoint
+      ansible.builtin.set_fact:
+        efi_mountpoint: >-
+          {{ installdisk | map(attribute='volumes') | flatten
+             | selectattr('fs_type', 'defined')
+             | selectattr('fs_type', 'equalto', 'efi')
+             | map(attribute='mount_point') | first }}
+      changed_when: false
+
+    # The ESP is mounted at this point: take its device from the mounts of the namespace
+    - name: Read the mounts of the namespace
+      ansible.builtin.slurp:
+        src: /proc/self/mountinfo
+      register: _mountinfo
+
+    # mountinfo: <id> <parent> <major:minor> <root> <mountpoint> <opts> [optional...] - <fstype> <source> <superopts>
+    - name: Set_fact _esp_device
+      ansible.builtin.set_fact:
+        _esp_device: >-
+          {{ (_mountinfo.content | b64decode).splitlines()
+             | map('regex_search', '^\S+ \S+ \S+ \S+ ' ~ (('/tuxifier-sysroot' ~ efi_mountpoint) | regex_escape) ~ ' .* - \S+ (\S+) ', '\1')
+             | select | map('first') | list | last | default('') }}
+      changed_when: false
+
+    - name: Assert the ESP is mounted
+      ansible.builtin.assert:
+        that: _esp_device is match('^/dev/')
+        fail_msg: "No device found mounted at /tuxifier-sysroot{{ efi_mountpoint }}"
+
+    # -p probes the device itself, so no dependency on the udev database
+    - name: Read PARTUUID of the ESP
+      ansible.builtin.command:
+        cmd: "blkid -p -s PART_ENTRY_UUID -o value {{ _esp_device }}"
+      register: _esp_blkid
+      changed_when: false
+
+    - name: Set_fact _esp_partuuid
+      ansible.builtin.set_fact:
+        _esp_partuuid: "{{ _esp_blkid.stdout | trim | lower }}"
+      changed_when: false
+
     - name: Set_fact _efibootmgr
       ansible.builtin.set_fact:
         _efibootmgr: "{{ efibootmgr | default('/usr/sbin/efibootmgr') }}"
       changed_when: false
 
     - name: Read existing EFI boot entries
-      ansible.builtin.command: "chroot /tuxifier-sysroot {{ _efibootmgr }}"
+      ansible.builtin.command: "chroot /tuxifier-sysroot {{ _efibootmgr }} -v"
       register: efibootmgr_entries
       changed_when: false
 
-    - name: GGDefault
-      ansible.builtin.debug:
-        var: efibootmgr_entries
+    - name: Set_fact entries and bootorder
+      ansible.builtin.set_fact:
+        entries: "{{ efibootmgr_entries.stdout_lines | select('search', _esp_partuuid) | list }}"
+        bootorder: >-
+          {{ efibootmgr_entries.stdout_lines | select('match', '^BootOrder:') | first | default('')
+             | regex_replace('^BootOrder:\s*', '') | split(',') }}
+      changed_when: false
 
-    - name: Remove existing efi entries
-      ansible.builtin.command:
-        argv:
-          - chroot
-          - /tuxifier-sysroot
-          - "{{ _efibootmgr }}"
-          - --delete-bootnum
-          - -b
-          - "{{ item }}"
-      loop: "{{ efibootmgr_entries.stdout_lines | select('match', '.*' ~ (installdistribution.name | capitalize) ) | map('replace', 'Boot', '') | map('replace', '* ' ~ (installdistribution.name | capitalize),'')}}"
+    - name: Set_fact bootnr efiloader
+      ansible.builtin.set_fact:
+        bootnr: "{{ (entries | first | default('')) | regex_replace('^Boot([0-9A-Fa-f]{4}).*', '\\1') }}"
+        efiloader: "{{ (entries | first | default('')) | regex_replace('.*File\\((.*)\\).*', '\\1') | regex_replace('\\\\', '/') if entries | length > 0 else '' }}"
+      changed_when: false
 
-    - name: Install grub2 at efi
-      ansible.builtin.command: >
-        chroot /tuxifier-sysroot {{ _efibootmgr }} --remove-dups --create --disk {{ boot_disk }}
-        --part {{ efi_partitionnr }}
-        --label {{ installdistribution.name | capitalize }}
-        --loader '\EFI\{{ installdistribution.name }}\shimx64.efi'
+    - name: Stat efiloader
+      ansible.builtin.stat:
+        path: "{{ '/tuxifier-sysroot' ~ efi_mountpoint ~ efiloader }}"
+      register: _stat_efiloader
 
-    - name: Install grub2 at /boot/efi/EFI/<distribution.name>/grub.cfg for RHEL8
-      when: distribution.version == "8"
-      ansible.builtin.command:
-        cmd: "chroot /tuxifier-sysroot /usr/sbin/grub2-mkconfig -o /boot/efi/EFI/{{ distribution.name }}/grub.cfg"
-      register: finalize__grub2_mkconfig
-      failed_when: finalize__grub2_mkconfig.rc != 0
+    - name: Remove an install efi entries
+      when: (entries | length != 1) or (not _stat_efiloader.stat.exists) or (bootnr not in bootorder)
+      block:
+        - name: Remove existing efi entries
+          ansible.builtin.command:
+            argv:
+              - chroot
+              - /tuxifier-sysroot
+              - "{{ _efibootmgr }}"
+              - --delete-bootnum
+              - -b
+              - "{{ item }}"
+          loop: >-
+            {{ efibootmgr_entries.stdout_lines
+               | select('match', '^Boot[0-9A-Fa-f]{4}\*? +' ~ (installdistribution.name | capitalize) ~ '\s')
+               | map('regex_replace', '^Boot([0-9A-Fa-f]{4}).*', '\1') | list }}
 
-- name: Install grub2 /boot/grub2/grub.cfg
+        - name: Install grub2 at efi
+          ansible.builtin.command: >
+            chroot /tuxifier-sysroot {{ _efibootmgr }} --remove-dups --create --disk {{ boot_disk }}
+            --part {{ efi_partitionnr }}
+            --label {{ installdistribution.name | capitalize }}
+            --loader '\EFI\{{ distribution.efi_vendor_dir }}\{{ distribution.efi_loader }}'
+
+# On RHEL 8 the grub.cfg on the ESP is the full config; elsewhere it is a stub
+# that points to distribution.grub_cfg, which must be left untouched on the ESP.
+- name: Set_fact grub_cfg_path
+  ansible.builtin.set_fact:
+    grub_cfg_path: >-
+      {{ '/boot/efi/EFI/' ~ distribution.efi_vendor_dir ~ '/grub.cfg'
+         if (grub_target == 'x86_64-efi' and distribution.grub_cfg_full_on_esp | bool)
+         else distribution.grub_cfg }}
+  changed_when: false
+
+- name: Generate grub config in a temporary file
   ansible.builtin.command:
-    cmd: "chroot /tuxifier-sysroot /usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg"
-  register: finalize__grub2_mkconfig
-  failed_when: finalize__grub2_mkconfig.rc != 0
+    cmd: "chroot /tuxifier-sysroot /usr/sbin/grub2-mkconfig -o /tmp/grub.cfg"
+  changed_when: false
+
+- name: Install grub config when it differs
+  ansible.builtin.copy:
+    src: /tuxifier-sysroot/tmp/grub.cfg
+    dest: "/tuxifier-sysroot{{ grub_cfg_path }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Remove temporary grub config
+  ansible.builtin.file:
+    path: /tuxifier-sysroot/tmp/grub.cfg
+    state: absent
+  changed_when: false
 
 - name: Discover host keys
   ansible.builtin.find:
