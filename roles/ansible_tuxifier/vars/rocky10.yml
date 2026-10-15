@@ -4,6 +4,10 @@ distribution:
   name: 'rocky'
   arch: 'x86_64'
   version: '10'
+  efi_vendor_dir: 'rocky'
+  efi_loader: 'shimx64.efi'
+  grub_cfg: '/boot/grub2/grub.cfg'
+  grub_cfg_full_on_esp: false
   repo: "{{ installdistribution.repo | default({'type': 'mirrorlist', 'url': 'https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-10'}) }}"
   minimalpackages:
     - '@Core'

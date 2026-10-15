@@ -4,6 +4,10 @@ distribution:
   name: 'fedora'
   arch: 'x86_64'
   version: '44'
+  efi_vendor_dir: 'fedora'
+  efi_loader: 'shimx64.efi'
+  grub_cfg: '/boot/grub2/grub.cfg'
+  grub_cfg_full_on_esp: false
   repo:
     type: 'metalink'
     url: 'https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch'

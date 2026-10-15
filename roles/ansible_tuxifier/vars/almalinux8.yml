@@ -4,6 +4,10 @@ distribution:
   name: 'almalinux'
   arch: 'x86_64'
   version: '8'
+  efi_vendor_dir: 'almalinux'
+  efi_loader: 'shimx64.efi'
+  grub_cfg: '/boot/grub2/grub.cfg'
+  grub_cfg_full_on_esp: true
   repo: "{{ installdistribution.repo | default({'type': 'mirrorlist', 'url': 'https://mirrors.almalinux.org/mirrorlist/8/baseos'}) }}"
   minimalpackages:
     - '@Core'

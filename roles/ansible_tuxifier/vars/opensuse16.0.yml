@@ -4,7 +4,10 @@ distribution:
   name: 'opensuse'
   arch: 'x86_64'
   version: '16.0'
-  #efi_loader: 'shim.efi'
+  efi_vendor_dir: 'opensuse'
+  efi_loader: 'shim.efi'
+  grub_cfg: '/boot/grub2/grub.cfg'
+  grub_cfg_full_on_esp: false
   repo:
     type: 'baseurl'
     url: 'https://download.opensuse.org/distribution/leap/16.0/repo/oss/'

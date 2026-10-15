@@ -184,6 +184,10 @@ In such a distribution file the following variable are set:
 | distribution.name            | str  | The `name` of the distribution.                                                                |
 | distribution.version         | str  | The `version` of the distribution.                                                             |
 | distribution.arch            | str  | The `architecture` to install.                                                                 |
+| distribution.efi_vendor_dir  | str  | The directory below `EFI/` on the ESP with the boot loader of the distribution (e.g. `redhat`, `rocky`, `opensuse`). |
+| distribution.efi_loader      | str  | The file name of the shim EFI binary in `distribution.efi_vendor_dir` (e.g. `shimx64.efi`).     |
+| distribution.grub_cfg        | str  | The path of the grub configuration read at boot, relative to the root of the installed system.  |
+| distribution.grub_cfg_full_on_esp | bool | `true` when the grub.cfg on the ESP is the full configuration (RHEL 8 family); `false` when it is a stub referring to `distribution.grub_cfg`. |
 | distribution.repo            | dict | The `repo` dictionary is describes the repository where the packages can be retrieved.         |
 | distribution.repo.type       | str  | The `type` of URL used for this repository.                                                    |
 | distribution.repo.url        | str  | The `url` to the repository.                                                                   |

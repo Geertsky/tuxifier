@@ -1,9 +1,13 @@
 ---
 rpmdb_reimport: False
 distribution:
-  name: 'rocky'
+  name: 'rhel'
   arch: 'x86_64'
   version: '9'
+  efi_vendor_dir: 'redhat'
+  efi_loader: 'shimx64.efi'
+  grub_cfg: '/boot/grub2/grub.cfg'
+  grub_cfg_full_on_esp: false
   repo: "{{ installdistribution.repo | default({'type': 'mirrorlist', 'url': 'https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-9'}) }}"
   minimalpackages:
     - '@Core'
