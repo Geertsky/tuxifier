@@ -20,16 +20,6 @@
     state: directory
     mode: '0755'
 
-# The storage role does not write an fstab entry, as the filesystems are not
-# mounted by it. The entries are written to the fstab of the installed system.
-- name: Create /etc/fstab
-  notify: Relabel sysroot
-  ansible.builtin.copy:
-    content: ""
-    dest: /tuxifier-sysroot/etc/fstab
-    force: false
-    mode: '0644'
-
 - name: Write the fstab entries of the block device filesystems
   notify: Relabel sysroot
   ansible.posix.mount:
@@ -66,17 +56,6 @@
   register: _efi
   changed_when: false
 
-- name: Determine virtual_filesystems to mount
-  ansible.builtin.set_fact:
-    virtual_filesystems_to_mount: >-
-      {{
-        virtual_filesystems
-        if _efi.stat.exists
-        else virtual_filesystems
-        | rejectattr('src', 'equalto', 'efivarfs')
-        | list
-      }}
-
 - name: Mount all virtual_filesystems
   ansible.posix.mount:
     path: "{{ '/tuxifier-sysroot' ~ item.path }}"
@@ -84,7 +63,7 @@
     fstype: "{{ item.src }}"
     opts: "{{ item.opts }}"
     state: ephemeral
-  loop: "{{ virtual_filesystems_to_mount }}"
+  loop: "{{ virtual_filesystems }}"
   changed_when: false
 
 - name: Stat resolv.conf
