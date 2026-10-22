@@ -42,7 +42,6 @@
     python_interpreter: "{{ (_chroot_python.stdout | trim) or '/local/conda/envs/python-nest/bin/python3' }}"
   changed_when: false
 
-
 - name: Record installed kernel version == current kernel version
   block:
     - name: Stat vmlinuz
@@ -56,50 +55,62 @@
         current_version_installed: "{{ _vmlinuz.stat.exists }}"
       changed_when: false
 
-# chpasswd hashes with the method of the installed system (login.defs/PAM). The
-# password is only set while root has none, as chpasswd uses a new salt on every
-# run and the installation has no update path.
-- name: Read root shadow entry
-  ansible.builtin.command:
-    argv: [chroot, /tuxifier-sysroot, getent, shadow, root]
-  register: _root_shadow
-  changed_when: false
-
 - name: Set root password
-  ansible.builtin.command:
-    argv: [chroot, /tuxifier-sysroot, chpasswd]
-    stdin: "root:{{ rootpw }}"
-  when: _root_shadow.stdout.split(':')[1] is match('^[!*]*$')
-  no_log: true
-  notify: Relabel sysroot
+  block:
+    - name: Read root shadow entry
+      ansible.builtin.command:
+        argv:
+          - getent
+          - shadow
+          - root
+      register: _root_shadow
+      changed_when: false
+      vars:
+        ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
+        ansible_python_interpreter: "{{ python_interpreter }}"
+
+    - name: Set root password
+      ansible.builtin.command:
+        argv:
+          - chpasswd
+        stdin: "root:{{ rootpw }}"
+      when: _root_shadow.stdout.split(':')[1] is match('^[!*]*$')
+      no_log: true
+      notify: Relabel sysroot
+  vars:
+    ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
+    ansible_python_interpreter: "{{ python_interpreter }}"
+
+- name: Read authorized_keys from initrd
+  ansible.builtin.slurp:
+    src: /root/.ssh/authorized_keys
+  register: _authorized_keys
+
+- name: Set_fact authorized_keys
+  ansible.builtin.set_fact:
+    authorized_keys: "{{ _authorized_keys['content'] | b64decode | split('\n') | reject('equalto', '') }}"
 
 - name: Add root authorized_keys to chroot
   block:
-    - name: Read authorized_keys
-      ansible.builtin.slurp:
-        src: /root/.ssh/authorized_keys
-      register: _authorized_keys
-
-    - name: Set_fact authorized_keys
-      ansible.builtin.set_fact:
-        authorized_keys: "{{ _authorized_keys['content'] | b64decode | split('\n') | reject('equalto', '') }}"
-
     - name: Create .ssh dir
       notify: Relabel sysroot
       ansible.builtin.file:
-        path: /tuxifier-sysroot/root/.ssh/
+        path: /root/.ssh/
         state: directory
         mode: "0700"
 
     - name: Write authorized_keys
       notify: Relabel sysroot
       ansible.builtin.lineinfile:
-        path: /tuxifier-sysroot/root/.ssh/authorized_keys
+        path: /root/.ssh/authorized_keys
         line: "{{ item }}"
         create: true
         mode: "0600"
         owner: root
       loop: "{{ (authorized_keys + root_authorized_keys) | unique | reject('equalto', '') }}"
+  vars:
+    ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
+    ansible_python_interpreter: "{{ python_interpreter }}"
 
 - name: Detect EFI
   block:
@@ -114,8 +125,6 @@
         grub_target: "{% if _efi.stat.exists %}x86_64-efi{% else %}i386-pc{% endif %}"
       changed_when: false
 
-# The boot loader goes on the disk with the /boot partition or, when /boot is
-# not a partition, on the disk with the ESP (/boot/efi).
 - name: Set_fact _boot_disk_candidates
   ansible.builtin.set_fact:
     _boot_disk_candidates: >-
@@ -143,9 +152,6 @@
       boot_disk is not defined. The boot loader needs a partition pool with a volume mounted at /boot
       (or, if there is none, at /boot/efi). Alternatively set installdisk_boot_disk.
 
-# grub2-install is not idempotent. It is run when the boot code is missing: the
-# text of boot.img in the MBR of boot_disk, or the text of diskboot.img, the start
-# of core.img, in the bios_grub partition (GPT) or in sector 1 (msdos).
 - name: Install grub2 to boot_disk for BIOS
   when: grub_target == "i386-pc"
   block:
@@ -157,7 +163,6 @@
           {{ (boot_disk ~ ('p' if boot_disk[-1] is match('[0-9]') else '') ~ partitions[0]) if partitions | length > 0 else '' }}
       changed_when: false
 
-    # The result of a pipeline is the result of grep; a missing device gives no input, so grep fails.
     - name: Check if grub2 is installed to boot_disk for BIOS
       ansible.builtin.shell: |
         dd if={{ boot_disk }} bs=440 count=1 2>/dev/null | grep -aq 'GRUB ' &&
@@ -168,9 +173,17 @@
 
     - name: Run grub2-install for BIOS
       ansible.builtin.command:
-        cmd: "chroot /tuxifier-sysroot grub2-install --target=i386-pc --recheck {{ boot_disk }}"
+        argv:
+          - grub2-install
+          - --target
+          - i386-pc
+          - --recheck
+          - "{{ boot_disk }}"
       when: _grub_bios_installed.rc == 1
       notify: Relabel sysroot
+      vars:
+        ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
+        ansible_python_interpreter: "{{ python_interpreter }}"
 
 - name: Install grub2 at efi
   when: grub_target == "x86_64-efi"
@@ -218,7 +231,6 @@
         that: _esp_device is match('^/dev/')
         fail_msg: "No device found mounted at /tuxifier-sysroot{{ efi_mountpoint }}"
 
-    # -p probes the device itself, so no dependency on the udev database
     - name: Read PARTUUID of the ESP
       ansible.builtin.command:
         cmd: "blkid -p -s PART_ENTRY_UUID -o value {{ _esp_device }}"
@@ -230,15 +242,16 @@
         _esp_partuuid: "{{ _esp_blkid.stdout | trim | lower }}"
       changed_when: false
 
-    - name: Set_fact _efibootmgr
-      ansible.builtin.set_fact:
-        _efibootmgr: "{{ efibootmgr | default('/usr/sbin/efibootmgr') }}"
-      changed_when: false
-
     - name: Read existing EFI boot entries
-      ansible.builtin.command: "chroot /tuxifier-sysroot {{ _efibootmgr }} -v"
+      ansible.builtin.command:
+        argv:
+          - efibootmgr
+          - -v
       register: efibootmgr_entries
       changed_when: false
+      vars:
+        ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
+        ansible_python_interpreter: "{{ python_interpreter }}"
 
     - name: Set_fact entries and bootorder
       ansible.builtin.set_fact:
@@ -259,15 +272,13 @@
         path: "{{ '/tuxifier-sysroot' ~ efi_mountpoint ~ efiloader }}"
       register: _stat_efiloader
 
-    - name: Remove an install efi entries
+    - name: Remove and install efi entries
       when: (entries | length != 1) or (not _stat_efiloader.stat.exists) or (bootnr not in bootorder)
       block:
         - name: Remove existing efi entries
           ansible.builtin.command:
             argv:
-              - chroot
-              - /tuxifier-sysroot
-              - "{{ _efibootmgr }}"
+              - efibootmgr
               - --delete-bootnum
               - -b
               - "{{ item }}"
@@ -277,12 +288,22 @@
                | map('regex_replace', '^Boot([0-9A-Fa-f]{4}).*', '\1') | list }}
 
         - name: Install grub2 at efi
-          ansible.builtin.command: >
-            chroot /tuxifier-sysroot {{ _efibootmgr }} --remove-dups --create --disk {{ boot_disk }}
-            --part {{ efi_partitionnr }}
-            --label {{ installdistribution.name | capitalize }}
-            --loader '\EFI\{{ distribution.efi_vendor_dir }}\{{ distribution.efi_loader }}'
-
+          ansible.builtin.command:
+            argv:
+              - efibootmgr
+              - --remove-dups
+              - --create
+              - --disk
+              - "{{ boot_disk }}"
+              - --part
+              - "{{ efi_partitionnr }}"
+              - --label
+              - "{{ installdistribution.name | capitalize }}"
+              - --loader
+              - '\EFI\{{ distribution.efi_vendor_dir }}\{{ distribution.efi_loader }}'
+      vars:
+        ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
+        ansible_python_interpreter: "{{ python_interpreter }}"
 # On RHEL 8 the grub.cfg on the ESP is the full config; elsewhere it is a stub
 # that points to distribution.grub_cfg, which must be left untouched on the ESP.
 - name: Set_fact grub_cfg_path
@@ -295,8 +316,11 @@
 
 - name: Generate grub config in a temporary file
   ansible.builtin.command:
-    cmd: "chroot /tuxifier-sysroot /usr/sbin/grub2-mkconfig -o /tmp/grub.cfg"
+    cmd: "/usr/sbin/grub2-mkconfig -o /tmp/grub.cfg"
   changed_when: false
+  vars:
+    ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
+    ansible_python_interpreter: "{{ python_interpreter }}"
 
 - name: Install grub config when it differs
   notify: Relabel sysroot
@@ -314,7 +338,7 @@
     state: absent
   changed_when: false
 
-- name: Discover host keys
+- name: Discover host keys from initrd
   ansible.builtin.find:
     path: "/etc/ssh/"
   register: etc_ssh
@@ -344,8 +368,5 @@
     mode: '0644'
   loop: "{{ ssh_pubs }}"
 
-# The initramfs has no SELinux policy loaded, so everything that is installed or
-# rewritten here has no label. The tasks that change files in /tuxifier-sysroot
-# notify "Relabel sysroot", which only runs when one of them changed something.
 - name: Relabel /tuxifier-sysroot when something changed
   ansible.builtin.meta: flush_handlers

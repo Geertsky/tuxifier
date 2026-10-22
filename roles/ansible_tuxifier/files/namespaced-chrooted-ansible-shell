@@ -1,0 +1,5 @@
+#!/bin/sh
+
+exec /local/conda/envs/python-nest/bin/nsenter \
+    --mount=/root/namespaces/tuxifier-sysroot \
+    chroot /tuxifier-sysroot /bin/sh "$@"

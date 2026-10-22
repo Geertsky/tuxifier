@@ -29,12 +29,15 @@
 
 - name: Deploy namespaced ansible_shell_wrapper
   ansible.builtin.copy:
-    src: namespaced-ansible-shell
+    src: "{{ item }}"
     dest: /tmp/
     mode: "0755"
     owner: root
     group: root
   changed_when: false
+  loop:
+    - namespaced-chrooted-ansible-shell
+    - namespaced-ansible-shell
 
 - name: Check/create storage layout
   ansible.builtin.import_tasks: check_or_create_storage_layout.yml
