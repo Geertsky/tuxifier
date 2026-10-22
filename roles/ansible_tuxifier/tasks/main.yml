@@ -94,13 +94,13 @@
   changed_when: false
 
 - name: Umount /root/namespaces
-  ansible.builtin.command:
-    cmd: umount /root/namespaces/tuxifier-sysroot
-  changed_when: false
-
-- name: Umount /root/namespaces
-  ansible.builtin.command:
-    cmd: umount /root/namespaces
+  ansible.builtin.shell: |
+    while mountpoint -q /root/namespaces/tuxifier-sysroot; do
+      umount /root/namespaces/tuxifier-sysroot || exit 1
+    done
+    while mountpoint -q /root/namespaces; do
+      umount /root/namespaces || exit 1
+    done
   changed_when: false
 
 - name: Continue install

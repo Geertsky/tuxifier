@@ -2,11 +2,14 @@
 
 - name: Make /tuxifier-sysroot a private namespace
   ansible.builtin.shell: |
-    mkdir /root/namespaces
-    mount --bind /root/namespaces /root/namespaces
-    mount --make-private /root/namespaces
-    touch /root/namespaces/tuxifier-sysroot
-    unshare --mount=/root/namespaces/tuxifier-sysroot sh -c 'sleep 1'
+    mkdir -p /root/namespaces
+    mountpoint -q /root/namespaces || {
+      mount --bind /root/namespaces /root/namespaces &&
+      mount --make-private /root/namespaces
+    }
+    [ -e /root/namespaces/tuxifier-sysroot ] || touch /root/namespaces/tuxifier-sysroot
+    mountpoint -q /root/namespaces/tuxifier-sysroot ||
+      unshare --mount=/root/namespaces/tuxifier-sysroot sh -c 'sleep 1'
   changed_when: false
 
 - name: Create /tuxifier-sysroot mountpoint
