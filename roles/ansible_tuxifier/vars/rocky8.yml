@@ -12,6 +12,7 @@ distribution:
   minimalpackages:
     - '@Core'
     - 'util-linux'
+    - 'coreutils'
     - "{{ 'kernel-' ~ ansible_facts['kernel'] if (continue_install | default(false) | bool) else 'kernel' }}"
     - 'grub2-efi-x64'
     - 'grub2-tools-efi'

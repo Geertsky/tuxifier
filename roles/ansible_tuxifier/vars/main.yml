@@ -1,3 +1,5 @@
+ansible_pipelining: true
+
 ansible_interpreter_python_fallback:
   - /local/conda/envs/python-nest/bin/python3
   - /local/conda/envs/python-nest/bin/python
