@@ -44,6 +44,21 @@
       {%- endfor -%}
       {{ ns.disks | to_json | from_json }}
 
+- name: Rerfesh swap usage
+  ansible.builtin.setup:
+    gather_subset:
+      - '!all'
+      - '!min'
+      - hardware
+
+- name: Make certain swap is not active
+  when: ansible_facts['swaptotal_mb'] > 0
+  ansible.builtin.command:
+    argv:
+      - swapoff
+      - --all
+  changed_when: false
+
 - name: Create the storage
   ansible.builtin.include_role:
     name: linux-system-roles.storage
