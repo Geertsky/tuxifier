@@ -14,13 +14,14 @@ Description: Partition and install a server from the initramfs built with dracut
 
 ### Roles
 The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage) has to be installed as a role (not as the `fedora.linux_system_roles` collection),
-from a git checkout of the [Geertsky/storage](https://github.com/Geertsky/storage) fork in the `roles_path`
-(for example `git clone https://github.com/Geertsky/storage ~/.ansible/roles/linux-system-roles.storage`). It is not a collection,
+from a git checkout in the `roles_path`
+(for example `git clone https://github.com/linux-system-roles/storage ~/.ansible/roles/linux-system-roles.storage`). It is not a collection,
 so it can not be listed in the `dependencies` of `galaxy.yml`.
 
 >[!IMPORTANT]
->The fork carries fixes that `tuxifier` relies on: the `storage_destroy_partition_device` variable and the handling of a partition that is planned but not created yet.
->With the stock role (for instance from `ansible-galaxy role install`) the storage step fails on a fresh disk with `device is not in the tree`.
+>The version matters. `tuxifier` needs the `main` branch of the role, at commit `579d32a` or newer, and not the latest release (1.22.1) that `ansible-galaxy role install` fetches.
+>The release lacks the `storage_destroy_partition_device` variable and the handling of a partition that is planned but not created yet.
+>Without them the storage step fails on a fresh disk with `device is not in the tree`.
 >If the checkout is linked or bind mounted into the `roles_path`, check that the link is still there after a reboot.
 
 ### Initramfs image generation
