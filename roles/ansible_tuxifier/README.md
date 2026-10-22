@@ -162,7 +162,7 @@ Either:
 
 `continue_install: true` : When we choose to let dracut continue its normal flow of  operation after the minimal install is finished, first of all we need the same kernel version available in the freshly installed system.
 For this, the currently active kernel version, the one used to boot the initramfs, is added to the kernel package in the `minimalpackages` list of the `distribution` var.
-This can cause the `geertsky.tuxifier.generate_minimal_install_urls_info` module to fail in resolving the URLs to the `minimalpackages` when the major version of the distribution used to generate the initramfs is not the same as the major version of the distribution that is being installed.
+This can cause the `geertsky.tuxifier.generate_minimal_install_info` module to fail in resolving the URLs to the `minimalpackages` when the major version of the distribution used to generate the initramfs is not the same as the major version of the distribution that is being installed.
 Additionally, it can be that the kernel version used to generate the initramfs is not the latest available for this distribution. When that happens it means that the installation performed is not the latest available.
 
 ## role vars
@@ -172,7 +172,7 @@ In the role a number of variables are defined in different var files.
 | Variable                                       | Type | Description                                                                                                                                                                      |
 |------------------------------------------------|------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | ansible_interpreter_python_fallback | list | The `ansible_interpreter_python_fallback` var is extended with the python interpreter of the python-nest environment available in the initramfs                                         |
-| rpm_argv | list | The arguments list to the rpm commands executed by `tuxifier`                                                                                                                                                          |
+| rpm_macros | dict | The rpm macros defined for the rpm commands executed by `tuxifier`, as macro name and macro value, for example `_dbpath: /var/lib/rpm`. Macros named `_` followed by letters with an absolute path as value are created as directories in `/tuxifier-sysroot`                                                                                                                                                          |
 | virtual_filesystems | list | The list of virtual filesystems mounted in the `/tuxifier-sysroot` for the installation.                                                                                                                    |
 
 ### {{ distribution.name + distribution.version }}.yml Distribution vars
@@ -181,7 +181,7 @@ The distribution variable are set in a file named `{{distribution.name + distrib
 In such a distribution file the following variable are set:
 | Var                          | Type | Value                                                                                          |
 |------------------------------|------|------------------------------------------------------------------------------------------------|
-| rpmdb_reimport               | bool | `rpmdb_reimport` controls if the rpmdb is reimported after installation.                       |
+| rpmdb_reimport               | bool | `rpmdb_reimport` controls if the sqlite rpmdb, as written by the rpm of the initramfs, is exported and imported again with the rpm of the installed system. This gives distributions with another backend, such as bdb for version 8 of RHEL and its derivatives, an rpmdb in their own format.                       |
 | distribution                 | dict | The distribution dict describes the distribution to install.                                   |
 | distribution.name            | str  | The `name` of the distribution.                                                                |
 | distribution.version         | str  | The `version` of the distribution.                                                             |

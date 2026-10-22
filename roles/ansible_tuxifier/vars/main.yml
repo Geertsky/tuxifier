@@ -10,19 +10,13 @@ ansible_interpreter_python_fallback:
   - /usr/bin/python3
   - python3
 
-rpm_argv:
-  - rpm
-  - --dbpath=/var/lib/rpm
-  - --define
-  - "_var /var"
-  - --define
-  - "_tmppath /var/tmp"
-  - --define
-  - "__urlhelpercmd /local/conda/envs/python-nest/bin/curl"
-  - --define
-  - "__urlhelper_localopts --retry=10 --retry-all-errors --cacert=/etc/pki/tls/certs/ca-bundle.crt"
-  - --root=/tuxifier-sysroot
-  - --install
+  # Macros named _ followed by letters, with an absolute path as value, are directories that must exist in /tuxifier-sysroot
+rpm_macros:
+  _dbpath: /var/lib/rpm
+  _var: /var
+  _tmppath: /var/tmp
+  __urlhelpercmd: /local/conda/envs/python-nest/bin/curl
+  __urlhelper_localopts: --retry=10 --retry-all-errors --cacert=/local/conda/envs/python-nest/ssl/cacert.pem
 
 
 virtual_filesystems:

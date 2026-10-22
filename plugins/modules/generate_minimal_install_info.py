@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 # Copyright: (c) 2023, Geert Geurts <geert@verweggistan.eu>
@@ -7,29 +7,19 @@
 
 from __future__ import absolute_import, division, print_function
 
-import tempfile
-import traceback
-from pathlib import Path
-
-from ansible.module_utils.basic import AnsibleModule
-
-
 __metaclass__ = type
-
-VALID_REPO_URL_TYPES = ("metalink", "mirrorlist", "baseurl")
-GROUP_PACKAGE_TYPES = ("mandatory", "default")
 
 
 DOCUMENTATION = r"""
 ---
-module: generate_minimal_install_urls_info
+module: generate_minimal_install_info
 
-short_description: Resolve RPM URLs for a minimal distribution installation
+short_description: Resolve the RPM packages for a minimal distribution installation
 
 description:
   - Uses the Python DNF API to resolve packages, package groups, and dependencies.
   - Resolves against only the repository supplied in the distribution parameter.
-  - Returns both a whitespace-separated URL string and a URL list.
+  - Returns the resolved packages as a list of dicts with the name and the URL of every package, and the URLs as one whitespace-separated string.
 
 author:
   - Geert Geurts (@Geertsky)
@@ -37,13 +27,6 @@ author:
 version_added: "1.0.0"
 
 options:
-  rpmdb_reimport:
-    description:
-      - Makes it possible for the rpmdb to be reimported.
-    required: false
-    default: false
-    type: bool
-
   distribution:
     description:
       - Distribution and repository definition.
@@ -120,8 +103,8 @@ options:
 
 EXAMPLES = r"""
 ---
-- name: Resolve URLs for a Rocky Linux minimal installation
-  geertsky.tuxifier.generate_minimal_install_urls_info:
+- name: Resolve the packages for a Rocky Linux minimal installation
+  geertsky.tuxifier.generate_minimal_install_info:
     distribution:
       name: rocky
       version: "10"
@@ -135,9 +118,9 @@ EXAMPLES = r"""
         - lvm2
   register: result
 
-- name: Show resolved URLs
+- name: Show the resolved packages
   ansible.builtin.debug:
-    var: result.urls
+    var: result.packages
 """
 
 RETURN = r"""
@@ -148,9 +131,9 @@ rpm_urls:
   returned: always
   type: str
 
-urls:
+packages:
   description:
-    - All resolved RPMs as a list of dicts.
+    - All resolved RPMs as a list of dicts, sorted by package.
   returned: always
   type: list
   elements: dict
@@ -164,14 +147,24 @@ urls:
 
 package_count:
   description:
-    - Number of RPM URLs returned.
+    - Number of packages returned.
   returned: always
   type: int
 """
 
 
-def generate_urls(distribution):
-    """Resolve package/group specifications and return their RPM URLs."""
+import tempfile
+import traceback
+from pathlib import Path
+
+from ansible.module_utils.basic import AnsibleModule
+
+VALID_REPO_URL_TYPES = ("metalink", "mirrorlist", "baseurl")
+GROUP_PACKAGE_TYPES = ("mandatory", "default")
+
+
+def generate_packages(distribution):
+    """Resolve package/group specifications and return the name and URL of every package."""
     try:
         import dnf
     except ImportError as exc:
@@ -323,7 +316,7 @@ def generate_urls(distribution):
                             package
                         )
                     )
-                urls.append({'name':name,'url':url})
+                urls.append({"name": name, "url": url})
 
     # Preserve order while removing accidental duplicates.
     return list({u["url"]: u for u in urls}.values())
@@ -385,11 +378,6 @@ def run_module():
                 },
             },
         },
-        "rpmdb_reimport": {
-            "type": "bool",
-            "required": False,
-            "default": False,
-        },
     }
 
     module = AnsibleModule(
@@ -398,7 +386,7 @@ def run_module():
     )
 
     try:
-        urls = generate_urls(module.params["distribution"])
+        packages = generate_packages(module.params["distribution"])
     except Exception as exc:
         module.fail_json(
             msg=str(exc),
@@ -407,9 +395,9 @@ def run_module():
 
     module.exit_json(
         changed=False,
-        rpm_urls=" ".join(u["url"] for u in urls),
-        urls=urls,
-        package_count=len(urls),
+        rpm_urls=" ".join(package["url"] for package in packages),
+        packages=packages,
+        package_count=len(packages),
     )
 
 

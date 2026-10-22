@@ -1,77 +1,35 @@
 ---
 
-- name: Copy rpm gpg key for distribution
-  ansible.builtin.copy:
-    src: "{{ gpg_key }}"
-    dest: "/tmp/"
-    mode: "0644"
-    owner: root
-    group: root
-  changed_when: false
+- name: Make rpm required paths
+  ansible.builtin.file:
+    path: "/tuxifier-sysroot/{{ item }}"
+    state: directory
+  loop: >-
+    {{ rpm_macros | dict2items
+       | selectattr('key', 'match', '^_[a-zA-Z]+$')
+       | selectattr('value', 'match', '^/[a-zA-Z/-]*$')
+       | map(attribute='value') | sort }}
 
-- name: Import gpg key
-  ansible.builtin.command:
-    argv:
-      - rpmkeys
-      - --dbpath=/tuxifier-sysroot/var/lib/rpm
-      - --define
-      - "_var /tuxifier-sysroot/var"
-      - --define
-      - "_tmppath /var/tmp"
-      - --define
-      - "__urlhelpercmd /local/conda/envs/python-nest/bin/curl"
-      - --define
-      - "__urlhelper_localopts --retry=10 --retry-all-errors --cacert=/etc/pki/tls/certs/ca-bundle.crt"
-      - --import
-      - "/tmp/{{ gpg_key | basename }}"
-  changed_when: false
+- name: Read rpm gpg key of distribution
+  ansible.builtin.set_fact:
+    distro_gpg_key: "{{ lookup('file', gpg_key) }}"
 
-- name: Resolve install urls
-  geertsky.tuxifier.generate_minimal_install_urls_info:
+- name: Resolve install packages
+  geertsky.tuxifier.generate_minimal_install_info:
     distribution: "{{ distribution }}"
   register: generate_minimal_install
   delegate_to: localhost
   vars:
     ansible_shell_executable: /bin/sh
+    ansible_python_interpreter: /usr/bin/python3
   changed_when: false
 
-- name: Query the installed packages
-  ansible.builtin.command:
-    argv:
-      - rpm
-      - --dbpath=/tuxifier-sysroot/var/lib/rpm/
-      - -qa
-      - --queryformat
-      - "%{NAME}\n"
-  register: _installed_rpms
-  changed_when: false
-  failed_when: _installed_rpms.rc != 0
-
-- name: Determine the missing packages
-  ansible.builtin.set_fact:
-    _missing_rpm_urls: >-
-      {{ generate_minimal_install.urls
-         | rejectattr('name', 'in', _installed_rpms.stdout_lines)
-         | map(attribute='url')
-         | list }}
-
-- name: Install the rpms
+- name: Import the gpg key and install the missing rpms
+  geertsky.tuxifier.rpm_install:
+    root: /tuxifier-sysroot
+    macros: "{{ rpm_macros }}"
+    gpg_keys:
+      - "{{ distro_gpg_key }}"
+    packages: "{{ generate_minimal_install.packages }}"
+    reimport_rpmdb: "{{ rpmdb_reimport | default(false) | bool }}"
   notify: Relabel sysroot
-  when: _missing_rpm_urls | length > 0
-  ansible.builtin.command:
-    argv: "{{ rpm_argv + _missing_rpm_urls }}"
-  register: rpm_output
-  changed_when: rpm_output.rc == 0
-
-- name: Resolve relocated rpmdb
-  notify: Relabel sysroot
-  when: '(rpmdb_reimport is defined and rpmdb_reimport) or False'
-  ansible.builtin.command:
-    argv:
-      - chroot
-      - /tuxifier-sysroot
-      - /bin/sh
-      - -c
-      - 'rpmdb --exportdb >/tmp/rpmdb&&mv /var/lib/rpm/rpmdb* /tmp/&&cat /tmp/rpmdb|rpmdb --importdb'
-  register: rpmdb_import
-  changed_when: '(rpmdb_reimport is defined and rpmdb_reimport) and rpmdb_import.rc == 0'
