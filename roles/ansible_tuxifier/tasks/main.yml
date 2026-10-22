@@ -68,6 +68,21 @@
     mode: "0644"
   changed_when: false
 
+- name: Remove the python-nest bind mount and /local/conda from the chroot
+  when: python_interpreter == '/local/conda/envs/python-nest/bin/python3'
+  vars:
+    ansible_shell_executable: /tmp/namespaced-ansible-shell
+  block:
+    - name: Unmount python-nest from the chroot
+      ansible.posix.mount:
+        path: /tuxifier-sysroot/local/conda/envs/python-nest
+        state: unmounted
+
+    - name: Remove /local/conda from the chroot
+      ansible.builtin.file:
+        path: /tuxifier-sysroot/local/conda
+        state: absent
+
 - name: Umount /tuxifier-sysroot
   ansible.builtin.command:
     cmd: umount -R -A /tuxifier-sysroot
