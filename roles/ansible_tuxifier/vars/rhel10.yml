@@ -1,0 +1,24 @@
+---
+rpmdb_reimport: false
+distribution:
+  name: 'rhel'
+  arch: 'x86_64'
+  version: '10'
+  efi_vendor_dir: 'redhat'
+  efi_loader: 'shimx64.efi'
+  grub_cfg: '/boot/grub2/grub.cfg'
+  grub_cfg_full_on_esp: false
+  repo: "{{ installdistribution.repo | default({'type': 'mirrorlist', 'url': 'https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-10'}) }}"
+  minimalpackages:
+    - '@Core'
+    - 'util-linux'
+    - "{{ 'kernel-' ~ ansible_facts['kernel'] if (continue_install | default(false) | bool) else 'kernel' }}"
+    - 'grub2-efi-x64'
+    - 'grub2-tools-efi'
+    - 'grub2-pc'
+    - 'efibootmgr'
+    - 'lvm2'
+    - 'shim-x64'
+    - 'python3'
+    - 'selinux-policy-targeted'
+gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
