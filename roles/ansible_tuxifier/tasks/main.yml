@@ -3,6 +3,16 @@
 - name: Gather_facts
   ansible.builtin.setup:
 
+- name: See if we're boot with efi
+  ansible.builtin.stat:
+    path: /sys/firmware/efi
+  register: _efi
+  changed_when: false
+
+- name: Set_fact efi_booted
+  ansible.builtin.set_fact:
+    efi_booted: "{{ _efi.stat.exists }}"
+
 - name: Create message file
   ansible.builtin.file:
     path: /tmp/message
