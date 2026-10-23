@@ -91,9 +91,9 @@ After the storage is created and before the minimal install, tuxifier looks at t
 `/tuxifier-sysroot`:
 * `/etc/crypttab`, with an entry `luks-<uuid> UUID=<uuid> none <tuxifier_crypttab_options>` per LUKS device,
 * `/etc/mdadm.conf`, with an `ARRAY` line per md array,
-* `/etc/dracut.conf.d/10-tuxifier-storage.conf`, which adds the `crypt` and `mdraid` dracut modules.
 
 The initramfs of the installed system is built by the kernel package when it is installed, so no explicit rebuild is needed.
+dracut selects the `crypt` and `mdraid` modules itself, from the root device it finds in the chroot and the `crypttab` and `mdadm.conf` written above.
 
 The `crypttab` key field is `none`: the passphrase is asked at boot. Add `nofail` to `tuxifier_crypttab_options` and to the
 `mount_options` of the volume to let the boot continue without the encrypted volume.

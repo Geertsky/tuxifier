@@ -36,29 +36,6 @@
       {%- endfor -%}
       {{ ns.found | to_json | from_json }}
 
-- name: Create /etc/dracut.conf.d
-  when: _luks_devices | length > 0 or _md_arrays | length > 0
-  notify: Relabel sysroot
-  ansible.builtin.file:
-    path: /tuxifier-sysroot/etc/dracut.conf.d
-    state: directory
-    mode: '0755'
-
-# dracut detects the modules it needs from the system it runs on, which in the chroot is not the target.
-- name: Add the dracut modules for the LUKS and md RAID devices to the initramfs of the installed system
-  when: _luks_devices | length > 0 or _md_arrays | length > 0
-  notify: Relabel sysroot
-  ansible.builtin.copy:
-    dest: /tuxifier-sysroot/etc/dracut.conf.d/10-tuxifier-storage.conf
-    content: |
-      {% if _luks_devices | length > 0 %}
-      add_dracutmodules+=" crypt "
-      {% endif %}
-      {% if _md_arrays | length > 0 %}
-      add_dracutmodules+=" mdraid "
-      {% endif %}
-    mode: '0644'
-
 - name: Write the crypttab of the installed system
   when: _luks_devices | length > 0
   notify: Relabel sysroot
