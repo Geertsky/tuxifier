@@ -13,14 +13,13 @@ distribution:
     - '@Core'
     - 'util-linux'
     - "{{ 'kernel-' ~ ansible_facts['kernel'] if (continue_install | default(false) | bool) else 'kernel' }}"
-    - 'grub2-efi-x64'
-    - 'grub2-tools-efi'
-    - 'grub2-pc'
-    - 'efibootmgr'
+    - "{{ 'grub2-efi-x64' if efi_booted else 'grub2-pc' }}"
+    - "{{ 'grub2-tools-efi' if efi_booted else '' }}"
+    - "{{ 'efibootmgr' if efi_booted else '' }}"
     - 'lvm2'
     - 'cryptsetup'
     - 'mdadm'
-    - 'shim-x64'
+    - "{{ 'shim-x64' if efi_booted else '' }}"
     - 'python3'
     - 'selinux-policy-targeted'
 gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release

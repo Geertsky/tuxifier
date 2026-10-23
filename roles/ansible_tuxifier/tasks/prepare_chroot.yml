@@ -50,12 +50,6 @@
     mode: '0755'
   loop: "{{ _dev_proc_sys.results | rejectattr('stat.exists') | map(attribute='item') | list }}"
 
-- name: See if we're boot with efi
-  ansible.builtin.stat:
-    path: /sys/firmware/efi
-  register: _efi
-  changed_when: false
-
 - name: Mount all virtual_filesystems
   ansible.posix.mount:
     path: "{{ '/tuxifier-sysroot' ~ item.path }}"

@@ -14,14 +14,13 @@ distribution:
     - 'util-linux'
     - 'coreutils'
     - "{{ 'kernel-' ~ ansible_facts['kernel'] if (continue_install | default(false) | bool) else 'kernel' }}"
-    - 'grub2-efi-x64'
-    - 'grub2-tools-efi'
-    - 'grub2-pc'
-    - 'shim-x64'
+    - "{{ 'grub2-efi-x64' if efi_booted else 'grub2-pc' }}"
+    - "{{ 'grub2-tools-efi' if efi_booted else '' }}"
+    - "{{ 'shim-x64' if efi_booted else '' }}"
     - 'lvm2'
     - 'cryptsetup'
     - 'mdadm'
-    - 'efibootmgr'
+    - "{{ 'efibootmgr' if efi_booted else '' }}"
     - 'sqlite'
 
 gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-Rocky-8
