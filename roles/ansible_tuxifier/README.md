@@ -31,7 +31,7 @@ so it can not be listed in the `dependencies` of `galaxy.yml`.
 | Rocky Linux  | 8, 9, 10 | installed in the BIOS and UEFI test VMs |
 | AlmaLinux    | 9, 10    | installed in the BIOS and UEFI test VMs |
 | RHEL         | 9        | `vars/rhel9.yml` exists, not part of the regular test |
-| Fedora, openSUSE | 38, 44, 16.0 | `vars/` files exist, untested |
+| Fedora       | 38, 44   | `vars/` files exist, untested |
 
 AlmaLinux 8 is not supported. Part of its packages (for example `setup`, `filesystem` and `crypto-policies`) are still signed with the older AlmaLinux key `51D6647EC21AD6EA`.
 The binding signatures of that key use SHA1, which the `rpm` in the initramfs (rpm-sequoia) rejects: `Policy rejects 488FCF7C3ABB34F8 ... SHA1 is not considered secure`. The install can only continue by weakening the signature policy, which is not done.
