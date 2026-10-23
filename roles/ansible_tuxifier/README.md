@@ -24,6 +24,18 @@ so it can not be listed in the `dependencies` of `galaxy.yml`.
 >Without them the storage step fails on a fresh disk with `device is not in the tree`.
 >If the checkout is linked or bind mounted into the `roles_path`, check that the link is still there after a reboot.
 
+## Supported distributions
+
+| distribution | versions | status |
+|--------------|----------|--------|
+| Rocky Linux  | 8, 9, 10 | installed in the BIOS and UEFI test VMs |
+| AlmaLinux    | 9, 10    | installed in the BIOS and UEFI test VMs |
+| RHEL         | 9        | `vars/rhel9.yml` exists, not part of the regular test |
+| Fedora, openSUSE | 38, 44, 16.0 | `vars/` files exist, untested |
+
+AlmaLinux 8 is not supported. Part of its packages (for example `setup`, `filesystem` and `crypto-policies`) are still signed with the older AlmaLinux key `51D6647EC21AD6EA`.
+The binding signatures of that key use SHA1, which the `rpm` in the initramfs (rpm-sequoia) rejects: `Policy rejects 488FCF7C3ABB34F8 ... SHA1 is not considered secure`. The install can only continue by weakening the signature policy, which is not done.
+
 ### Initramfs image generation
 For using `tuxifier`, the machine has to be booted using an initramfs image with the [dracut-incubator](https://github.com/geertsky/dracut-incubator) module included.
 See: the [dracut-incubator](https://github.com/Geertsky/dracut-incubator) git repository for the steps to create the initramfs.
