@@ -47,6 +47,11 @@
   vars:
     ansible_shell_executable: /tmp/namespaced-ansible-shell
 
+- name: Prepare the storage configuration of the installed system
+  ansible.builtin.import_tasks: prepare_storage_config.yml
+  vars:
+    ansible_shell_executable: /tmp/namespaced-ansible-shell
+
 - name: Update message
   ansible.builtin.copy:
     dest: /tmp/message

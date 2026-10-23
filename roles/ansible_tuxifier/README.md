@@ -68,6 +68,46 @@ and for every swap volume. The filesystems are identified as the storage role re
 For the boot loader of an EFI system the boot disk needs a `partition` pool with a volume with
 `fs_type: efi`; its `name` is used as the partition number.
 
+#### Encrypted volumes and RAID
+
+Volumes with `encryption: true` and `encryption_password` become LUKS devices, and an `lvm` pool with `raid_level` (plus the
+optional `raid_device_count`, `raid_spare_count`, `raid_metadata_version` and `raid_chunk_size`) is created on an md RAID array
+of its `disks`. The initramfs needs the dracut modules `crypt` and `mdraid` for this, and the installed system the packages
+`cryptsetup` and `mdadm` (part of `minimalpackages`).
+
+After the storage is created and before the minimal install, tuxifier looks at the device facts and writes in
+`/tuxifier-sysroot`:
+* `/etc/crypttab`, with an entry `luks-<uuid> UUID=<uuid> none <tuxifier_crypttab_options>` per LUKS device,
+* `/etc/mdadm.conf`, with an `ARRAY` line per md array,
+* `/etc/dracut.conf.d/10-tuxifier-storage.conf`, which adds the `crypt` and `mdraid` dracut modules.
+
+The initramfs of the installed system is built by the kernel package when it is installed, so no explicit rebuild is needed.
+
+The `crypttab` key field is `none`: the passphrase is asked at boot. Add `nofail` to `tuxifier_crypttab_options` and to the
+`mount_options` of the volume to let the boot continue without the encrypted volume.
+
+`encryption_password` is stored in the LUKS header and is visible in the host_vars, so keep it in a variable in an Ansible Vault:
+```
+luks_passphrase: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  ...
+installdisk:
+  - name: vg.data
+    type: lvm
+    disks: [/dev/vdb, /dev/vdc]
+    raid_level: raid1
+    raid_device_count: 2
+    volumes:
+      - name: secure
+        size: 1GiB
+        fs_type: ext4
+        encryption: true
+        encryption_password: "{{ luks_passphrase }}"
+        mount_point: /secure
+        mount_options: defaults,nofail
+```
+Working examples are in the `tuxifier-playbook` host_vars `rocky9-uefi-raid1.yml`, `rocky9-uefi-luks.yml` and `rocky9-uefi-raid1-luks.yml`.
+
 #### Example installdisk:
 ```
 storage_disklabel_type: gpt
@@ -138,6 +178,7 @@ Below the list of Optional `host_vars`, followed by more extensive explanation a
 | `strict_selinux`       | bool | To indicate if the installed system should have SELinux enabled.                                                                                                                        |
 | `continue_install`     | bool | To indicate what the initramfs is supposed to do after install is finished.                                                                                                             |
 | `tuxifier_reinstall`   | bool | Wipe the install disks before creating the storage layout. Default `false`.                                                                                                             |
+| `tuxifier_crypttab_options` | str | The options field of the `/etc/crypttab` entries of the LUKS devices. Default `luks`.                                                                                             |
 
 ### tuxifier_reinstall
 
@@ -147,6 +188,11 @@ Without it the layout is only made to match, so re-running the role changes noth
 ```
 ansible-playbook -e tuxifier_reinstall=true ...
 ```
+
+### tuxifier_crypttab_options
+
+The options field written to `/etc/crypttab` for every LUKS device of `installdisk` (default `luks`), for example `luks,nofail`.
+See [Encrypted volumes and RAID](#encrypted-volumes-and-raid).
 
 ### root_authorized_keys
 The `root_authorized_keys` variable is a list of public ssh keys that are added for the root user of the installed system. This list is added to the authorized_keys that are installed in the initramfs by `dracut-sshd`.

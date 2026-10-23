@@ -18,6 +18,8 @@ distribution:
     - 'grub2-pc'
     - 'efibootmgr'
     - 'lvm2'
+    - 'cryptsetup'
+    - 'mdadm'
     - 'shim-x64'
     - 'python3'
     - 'selinux-policy-targeted'

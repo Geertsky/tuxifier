@@ -18,6 +18,8 @@ distribution:
     - 'grub2-pc'
     - 'shim-x64'
     - 'lvm2'
+    - 'cryptsetup'
+    - 'mdadm'
     - 'efibootmgr'
     - 'sqlite'
   pre_pivot_cmds:

@@ -20,6 +20,8 @@ distribution:
     - 'grub2-tools-efi'
     - 'grub2-pc'
     - 'lvm2'
+    - 'cryptsetup'
+    - 'mdadm'
     - 'shim-x64'
     - 'efibootmgr'
     - 'python3'

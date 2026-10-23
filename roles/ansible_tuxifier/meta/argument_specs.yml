@@ -16,6 +16,12 @@ argument_specs:
           - "Wipe the signatures of all disks in O(installdisk) before the storage layout is created."
           - "By default the layout is only made to match, so re-running the role changes nothing."
           - "Intended to be passed on the command line, for example V(-e tuxifier_reinstall=true)."
+      tuxifier_crypttab_options:
+        type: str
+        default: luks
+        description:
+          - "The options field of the /etc/crypttab entries that are written for the LUKS devices of O(installdisk)."
+          - "The key field is none, so the passphrase is asked at boot."
       installdisk_boot_disk:
         type: str
         description:
@@ -53,6 +59,27 @@ argument_specs:
             required: true
             description:
               - "Disks of the pool; for an lvm pool the partitions to use as physical volumes."
+          raid_level:
+            type: str
+            description:
+              - "For an lvm pool: the volume group is created on an md RAID array of this level, with the disks as members."
+              - "Example values are raid0, raid1, raid5, raid6 and raid10."
+          raid_device_count:
+            type: int
+            description:
+              - "The number of active members of the md RAID array of the pool."
+          raid_spare_count:
+            type: int
+            description:
+              - "The number of spare members of the md RAID array of the pool."
+          raid_metadata_version:
+            type: str
+            description:
+              - "The md RAID metadata version of the pool, for example 1.2."
+          raid_chunk_size:
+            type: str
+            description:
+              - "The md RAID chunk size of the pool, for example 512 KiB."
           volumes:
             type: list
             elements: dict

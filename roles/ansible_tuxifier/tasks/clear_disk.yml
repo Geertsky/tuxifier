@@ -1,12 +1,21 @@
 ---
 
-- name: De-activate any volume groups
+# Layers can be stacked in any order (LUKS on a logical volume, a volume group on LUKS or on md RAID),
+# so peel them off until nothing changes anymore.
+- name: Tear down the existing LUKS devices, volume groups and md RAID arrays
   ansible.builtin.shell: |
-    for VG in $(lvm vgs --noheadings -o vg_name); do
-      lvm lvchange --activate n $VG;
+    for pass in 1 2 3 4; do
+      for dm in /sys/block/dm-*; do
+        case "$(cat $dm/dm/uuid 2>/dev/null)" in CRYPT-LUKS*) cryptsetup close "$(cat $dm/dm/name)" ;; esac
+      done
+      for VG in $(lvm vgs --noheadings -o vg_name); do
+        lvm lvchange --activate n $VG;
+      done
+      mdadm --stop --scan
     done
+    exit 0
   register: clean_installdisk__vgscript
-  changed_when: clean_installdisk__vgscript.rc != 0
+  changed_when: false
 
 - name: Zero MBR
   ansible.builtin.shell: |

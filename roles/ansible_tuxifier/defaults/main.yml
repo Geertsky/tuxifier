@@ -3,3 +3,4 @@
 continue_install: false
 root_authorized_keys: []
 tuxifier_reinstall: false # When true, wipe the signatures of all installdisk disks before the storage layout is created
+tuxifier_crypttab_options: luks # The options field of the crypttab entries. The key field is always none: the passphrase is asked at boot

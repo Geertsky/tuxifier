@@ -1,0 +1,82 @@
+---
+
+# Runs before minimal_install.yml: the kernel package builds the initramfs of the
+# installed system when it is installed, so the files below have to be in place by then.
+
+# The devices of the install layout exist by now, refresh the facts to see them.
+- name: Refresh the device facts
+  ansible.builtin.setup:
+    gather_subset:
+      - '!all'
+      - '!min'
+      - hardware
+
+# An opened LUKS mapping has the dm uuid CRYPT-LUKS<version>-<luks uuid without dashes>-<name>.
+- name: Find the LUKS devices and md RAID arrays of the install layout
+  ansible.builtin.set_fact:
+    _luks_devices: >-
+      {%- set ns = namespace(found=[]) -%}
+      {%- for dev in ansible_facts['devices'].values() -%}
+        {%- for id in dev['links']['ids'] if id is match('dm-uuid-CRYPT-LUKS') -%}
+          {%- set u = id | regex_replace('^dm-uuid-CRYPT-LUKS\\d-([0-9a-f]{32})-.*$', '\\1') -%}
+          {%- set ns.found = ns.found + [{
+                'name': id | regex_replace('^dm-uuid-CRYPT-LUKS\\d-[0-9a-f]{32}-', ''),
+                'uuid': [u[0:8], u[8:12], u[12:16], u[16:20], u[20:32]] | join('-')}] -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ ns.found | to_json | from_json }}
+    _md_arrays: >-
+      {%- set ns = namespace(found=[]) -%}
+      {%- for dev in ansible_facts['devices'].values() -%}
+        {%- for id in dev['links']['ids'] if id is match('md-name-') -%}
+          {%- set ns.found = ns.found + [{
+                'name': id | regex_replace('^md-name-[^:]*:', ''),
+                'uuid': dev['links']['ids'] | select('match', 'md-uuid-') | first | regex_replace('^md-uuid-', '')}] -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ ns.found | to_json | from_json }}
+
+- name: Create /etc/dracut.conf.d
+  when: _luks_devices | length > 0 or _md_arrays | length > 0
+  notify: Relabel sysroot
+  ansible.builtin.file:
+    path: /tuxifier-sysroot/etc/dracut.conf.d
+    state: directory
+    mode: '0755'
+
+# dracut detects the modules it needs from the system it runs on, which in the chroot is not the target.
+- name: Add the dracut modules for the LUKS and md RAID devices to the initramfs of the installed system
+  when: _luks_devices | length > 0 or _md_arrays | length > 0
+  notify: Relabel sysroot
+  ansible.builtin.copy:
+    dest: /tuxifier-sysroot/etc/dracut.conf.d/10-tuxifier-storage.conf
+    content: |
+      {% if _luks_devices | length > 0 %}
+      add_dracutmodules+=" crypt "
+      {% endif %}
+      {% if _md_arrays | length > 0 %}
+      add_dracutmodules+=" mdraid "
+      {% endif %}
+    mode: '0644'
+
+- name: Write the crypttab of the installed system
+  when: _luks_devices | length > 0
+  notify: Relabel sysroot
+  ansible.builtin.copy:
+    dest: /tuxifier-sysroot/etc/crypttab
+    content: |
+      {% for luks in _luks_devices %}
+      {{ luks['name'] }} UUID={{ luks['uuid'] }} none {{ tuxifier_crypttab_options }}
+      {% endfor %}
+    mode: '0600'
+
+- name: Write the mdadm.conf of the installed system
+  when: _md_arrays | length > 0
+  notify: Relabel sysroot
+  ansible.builtin.copy:
+    dest: /tuxifier-sysroot/etc/mdadm.conf
+    content: |
+      {% for md in _md_arrays %}
+      ARRAY /dev/md/{{ md['name'] }} UUID={{ md['uuid'] }}
+      {% endfor %}
+    mode: '0644'
