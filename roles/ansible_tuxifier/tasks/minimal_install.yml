@@ -24,6 +24,63 @@
     ansible_python_interpreter: /usr/bin/python3
   changed_when: false
 
+- name: Stat rpm of the installed system
+  ansible.builtin.stat:
+    path: /tuxifier-sysroot/usr/bin/rpm
+  register: _chroot_rpm
+
+# The chroot gets its own inventory host: the facts of the modules below are stored on the host they run for,
+# and must not replace the facts of the installer.
+# add_host runs once for all hosts of the play, so it loops over them.
+- name: Add the chroot as a host
+  ansible.builtin.add_host:
+    name: "{{ item }}_chroot"
+    groups: "{{ hostvars[item]['group_names'] }}"
+    ansible_host: "{{ hostvars[item]['ansible_host'] | default(item) }}"
+    ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
+    ansible_python_interpreter: "{{ python_interpreter }}"
+  loop: "{{ ansible_play_hosts }}"
+  changed_when: false
+
+- name: Gather the facts of the installed system
+  ansible.builtin.setup:
+    gather_subset: min
+  delegate_to: "{{ inventory_hostname }}_chroot"
+  delegate_facts: true
+  vars:
+    ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
+    ansible_python_interpreter: "{{ python_interpreter }}"
+  when: _chroot_rpm.stat.exists
+
+- name: Gather the packages of the installed system
+  ansible.builtin.package_facts:
+    manager: rpm
+  environment:
+    # The rpm of the installed system, not the one of python-nest that is first in the PATH of the shell.
+    PATH: /usr/sbin:/usr/bin:/sbin:/bin
+  delegate_to: "{{ inventory_hostname }}_chroot"
+  delegate_facts: true
+  vars:
+    ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
+    ansible_python_interpreter: "{{ python_interpreter }}"
+  when: _chroot_rpm.stat.exists
+
+- name: Set_fact _chroot_facts
+  ansible.builtin.set_fact:
+    _chroot_facts: "{{ hostvars[inventory_hostname ~ '_chroot']['ansible_facts'] }}"
+  when: _chroot_rpm.stat.exists
+
+- name: Check that the installed system is the distribution to install
+  ansible.builtin.assert:
+    that:
+      - _chroot_facts['distribution'] | lower | replace('redhat', 'rhel') == distribution.name
+      - _chroot_facts['distribution_major_version'] == distribution.version
+    fail_msg: >-
+      /tuxifier-sysroot holds {{ _chroot_facts['distribution'] }} {{ _chroot_facts['distribution_version'] }},
+      this host is configured for {{ distribution.name }} {{ distribution.version }}.
+      Run the playbook with -e tuxifier_reinstall=true to install it over the existing system.
+  when: _chroot_rpm.stat.exists
+
 - name: Import the gpg key and install the missing rpms
   geertsky.tuxifier.rpm_install:
     root: /tuxifier-sysroot
@@ -31,5 +88,6 @@
     gpg_keys:
       - "{{ distro_gpg_key }}"
     packages: "{{ generate_minimal_install.packages }}"
+    installed_packages: "{{ _chroot_facts['packages'].keys() | list if _chroot_rpm.stat.exists else omit }}"
     reimport_rpmdb: "{{ rpmdb_reimport | default(false) | bool }}"
   notify: Relabel sysroot
