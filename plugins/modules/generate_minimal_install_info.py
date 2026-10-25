@@ -101,8 +101,8 @@ options:
         elements: str
 
 notes:
-  - Runs where the Python dnf module is available. In the role this is the system Python (C(/usr/bin/python3)) of the
-    initramfs on C(localhost), not the python-nest environment.
+  - Runs where the Python dnf module is available. The role delegates it to C(localhost), the Ansible controller,
+    with C(/usr/bin/python3) as interpreter, so the controller needs python3-dnf. It does not run in the initramfs.
   - Needs network access to the repository, but does not change the host it runs on.
 
 requirements:
