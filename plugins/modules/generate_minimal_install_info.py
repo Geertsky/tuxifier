@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Copyright: (c) 2023, Geert Geurts <geert@verweggistan.eu>
-# GNU General Public License v3.0+ (see COPYING or
-# https://www.gnu.org/licenses/gpl-3.0.txt)
+# European Union Public Licence v. 1.2 (see LICENSE or
+# https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12)
 
 from __future__ import absolute_import, division, print_function
 
@@ -99,6 +99,14 @@ options:
         required: true
         type: list
         elements: str
+
+notes:
+  - Runs where the Python dnf module is available. In the role this is the system Python (C(/usr/bin/python3)) of the
+    initramfs on C(localhost), not the python-nest environment.
+  - Needs network access to the repository, but does not change the host it runs on.
+
+requirements:
+  - Python C(dnf) module (python3-dnf)
 """
 
 EXAMPLES = r"""

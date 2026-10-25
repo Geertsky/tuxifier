@@ -1,13 +1,5 @@
 # ansible-tuxifier
 
-```
-Role belongs to geertsky/tuxifier
-Namespace - geertsky
-Collection - tuxifier
-Version - 1.0.0
-Repository - http://github.com/geertsky/tuxifier
-```
-
 Description: Partition and install a server from the initramfs built with dracut-incubator
 
 ## Dependencies
@@ -16,7 +8,7 @@ Description: Partition and install a server from the initramfs built with dracut
 The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage) has to be installed as a role (not as the `fedora.linux_system_roles` collection),
 from a git checkout in the `roles_path`
 (for example `git clone https://github.com/linux-system-roles/storage ~/.ansible/roles/linux-system-roles.storage`). It is not a collection,
-so it can not be listed in the `dependencies` of `galaxy.yml`.
+so it can not be listed in the `dependencies` of `galaxy.yml` (`ansible-galaxy collection build` rejects a role name there); `galaxy.yml` names it in a comment.
 
 >[!IMPORTANT]
 >The version matters. `tuxifier` needs the `main` branch of the role, at commit `579d32a` or newer, and not the latest release (1.22.1) that `ansible-galaxy role install` fetches.
@@ -30,8 +22,10 @@ so it can not be listed in the `dependencies` of `galaxy.yml`.
 |--------------|----------|--------|
 | Rocky Linux  | 8, 9, 10 | installed in the BIOS and UEFI test VMs |
 | AlmaLinux    | 9, 10    | installed in the BIOS and UEFI test VMs |
-| RHEL         | 9        | `vars/rhel9.yml` exists, not part of the regular test |
-| Fedora       | 38, 44   | `vars/` files exist, untested |
+| RHEL         | 8, 9, 10 | `vars/` files exist (`rhel8.yml`, `rhel9.yml`, `rhel10.yml`), not part of the regular test |
+| Fedora       | 38, 44   | `vars/` files exist (`fedora38.yml`, `fedora44.yml`), untested |
+
+The version of a distribution is the major version, given as a string (`installdistribution.version: "9"`).
 
 AlmaLinux 8 is not supported. Part of its packages (for example `setup`, `filesystem` and `crypto-policies`) are still signed with the older AlmaLinux key `51D6647EC21AD6EA`.
 The binding signatures of that key use SHA1, which the `rpm` in the initramfs (rpm-sequoia) rejects: `Policy rejects 488FCF7C3ABB34F8 ... SHA1 is not considered secure`. The install can only continue by weakening the signature policy, which is not done.
@@ -77,8 +71,14 @@ to the `/etc/fstab` of the initramfs.
 The `/etc/fstab` of the installed system, `/tuxifier-sysroot/etc/fstab`, gets an entry for every volume with a `mount_point`
 and for every swap volume. The filesystems are identified as the storage role reports them, normally by `UUID=`.
 
+The `name` of a volume in a `partition` pool is its partition number (`"1"`, `"2"`, ...). Tuxifier uses it to find the partition
+of the boot loader.
+
+For the boot loader of a BIOS system the boot disk needs a `partition` pool with a volume with `fs_type: biosboot`, grub is
+installed in that partition. Without one, grub is installed in the gap after the MBR.
+
 For the boot loader of an EFI system the boot disk needs a `partition` pool with a volume with
-`fs_type: efi`; its `name` is used as the partition number.
+`fs_type: efi`; its `name` is used as the partition number of the boot entry created with `efibootmgr`.
 
 #### Encrypted volumes and RAID
 
@@ -187,8 +187,8 @@ Below the list of Optional `host_vars`, followed by more extensive explanation a
 | Variable               | Type |                                                                         Description                                                                                                     |
 |------------------------|------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `root_authorized_keys` | list | A list of ssh pub keys to be added to the `authorized_keys` file of the root user. This list is added to the list off ssh keys of [dracut-sshd](https://github.com/gsauthof/dracut-sshd)|
-| `strict_selinux`       | bool | To indicate if the installed system should have SELinux enabled.                                                                                                                        |
-| `continue_install`     | bool | To indicate what the initramfs is supposed to do after install is finished.                                                                                                             |
+| `strict_selinux`       | bool | Relabel the installed system at its first boot, see [strict_selinux](#strict_selinux).                                                                                                                     |
+| `continue_install`     | bool | Continue booting the installed system (`true`) or power off (`false`, default) after the install, see [continue_install](#continue_install).                                                                                                          |
 | `tuxifier_reinstall`   | bool | Wipe the install disks before creating the storage layout. Default `false`.                                                                                                             |
 | `tuxifier_crypttab_options` | str | The options field of the `/etc/crypttab` entries of the LUKS devices. Default `luks`.                                                                                             |
 
@@ -216,17 +216,29 @@ root_authorized_keys:
 - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILsoXSAw7Gfqfk9tMQiAmSLRMXI1jZ/tpOjQ6OMRzd5J rocky@localhost.localdomain'
 ```
 
-### strict_selinux & continue_install
-`strict_selinux: true` : When `strict_selinux` has been chosen, then for the first boot of the system, independently of our choice for `continue_install`, we have to bear in mind the `strict_selinux` setting we have choosen.
-Depending on the distribution, it might be required to have the first boot in a `selinux` `permissive` mode. To realize this we can add `enforcing=0` to the kernel arguments of grub.
+### strict_selinux
+`strict_selinux: true` makes tuxifier relabel the installed system at its first boot: everything tuxifier writes to `/tuxifier-sysroot` notifies
+the `Relabel sysroot` handler, which runs `fixfiles -F onboot` in the chroot. It does not enable or disable SELinux; that is up to the
+installed packages (`selinux-policy-targeted`) and their configuration.
+The relabel is skipped when `continue_install` is `true`.
 
-With the `continue_install` host_var we can control what should happen after the minimal install is finished.<br>
+Depending on the distribution, it might be required to have the first boot in a `selinux` `permissive` mode. Tuxifier does not set
+this: add `enforcing=0` to the kernel arguments of grub yourself if needed.
+
+### continue_install
+With the `continue_install` host_var (default `false`) we can control what should happen after the minimal install is finished.<br>
 Either:
-* power-off the machine and wait for the admin to detach the initramfs to boot the freshly installed system.
-* tell dracut to continue its normal flow of operation and finish the boot of the freshly installed system. After the boot is finished, we can continue our setup using Ansible.
+* `false`: power off the machine and wait for the admin to detach the initramfs to boot the freshly installed system.
+* `true`: tell dracut to continue its normal flow of operation and finish the boot of the freshly installed system. After the boot is finished, we can continue our setup using Ansible.
 
-`continue_install: true` : When we choose to let dracut continue its normal flow of  operation after the minimal install is finished, first of all we need the same kernel version available in the freshly installed system.
+Both are done by `continue_install.yml`: it creates `/tmp/ansible-finished`, which lets the initramfs continue its boot, and for the
+power off it first installs a `pre-pivot` hook that runs `systemctl poweroff`.
+
+`continue_install: true` needs the same kernel version in the freshly installed system as the one running the initramfs.
 For this, the currently active kernel version, the one used to boot the initramfs, is added to the kernel package in the `minimalpackages` list of the `distribution` var.
+Tuxifier checks that `/boot/vmlinuz-<running kernel>` exists in the installed system. When it does not, the machine is powered off as if
+`continue_install` was `false`.
+
 This can cause the `geertsky.tuxifier.generate_minimal_install_info` module to fail in resolving the URLs to the `minimalpackages` when the major version of the distribution used to generate the initramfs is not the same as the major version of the distribution that is being installed.
 Additionally, it can be that the kernel version used to generate the initramfs is not the latest available for this distribution. When that happens it means that the installation performed is not the latest available.
 
@@ -251,7 +263,7 @@ In such a distribution file the following variable are set:
 | distribution.name            | str  | The `name` of the distribution.                                                                |
 | distribution.version         | str  | The `version` of the distribution.                                                             |
 | distribution.arch            | str  | The `architecture` to install.                                                                 |
-| distribution.efi_vendor_dir  | str  | The directory below `EFI/` on the ESP with the boot loader of the distribution (e.g. `redhat`, `rocky`, `opensuse`). |
+| distribution.efi_vendor_dir  | str  | The directory below `EFI/` on the ESP with the boot loader of the distribution (e.g. `redhat`, `rocky`, `almalinux`, `fedora`). |
 | distribution.efi_loader      | str  | The file name of the shim EFI binary in `distribution.efi_vendor_dir` (e.g. `shimx64.efi`).     |
 | distribution.grub_cfg        | str  | The path of the grub configuration read at boot, relative to the root of the installed system.  |
 | distribution.grub_cfg_full_on_esp | bool | `true` when the grub.cfg on the ESP is the full configuration (RHEL 8 family); `false` when it is a stub referring to `distribution.grub_cfg`. |

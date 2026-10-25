@@ -32,6 +32,10 @@ tags:
 # collection label 'namespace.name'. The value is a version range
 # L(specifiers,https://python-semanticversion.readthedocs.io/en/latest/#requirement-specification). Multiple version
 # range specifiers can be set and are separated by ','
+#
+# Not listed here: the role linux-system-roles.storage. It is a role, not a collection, and a role name is not a valid
+# entry in 'dependencies' (ansible-galaxy collection build fails on it). It has to be installed from the main branch
+# of https://github.com/linux-system-roles/storage, see roles/ansible_tuxifier/README.md.
 dependencies:
   community.general: ">=1.3.0"
   ansible.posix: ">=1.0.0"

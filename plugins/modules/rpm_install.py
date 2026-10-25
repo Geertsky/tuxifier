@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Copyright: (c) 2026, Geert Geurts <geert@verweggistan.eu>
-# GNU General Public License v3.0+ (see COPYING or
-# https://www.gnu.org/licenses/gpl-3.0.txt)
+# European Union Public Licence v. 1.2 (see LICENSE or
+# https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12)
 
 from __future__ import absolute_import, division, print_function
 
