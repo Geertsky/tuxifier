@@ -89,16 +89,13 @@ For the boot loader of an EFI system the boot disk needs a `partition` pool with
 
 Volumes with `encryption: true` and `encryption_password` become LUKS devices, and an `lvm` pool with `raid_level` (plus the
 optional `raid_device_count`, `raid_spare_count`, `raid_metadata_version` and `raid_chunk_size`) is created on an md RAID array
-of its `disks`. The initramfs needs the dracut modules `crypt` and `mdraid` for this, and the installed system the packages
+of its `disks`. The initramfs needs the dracut modules `crypt` and `mdraid` for this (These are included as dependency of dracut-incubator), and the installed system the packages
 `cryptsetup` and `mdadm` (part of `minimalpackages`).
 
 After the storage is created and before the minimal install, tuxifier looks at the device facts and writes in
 `/tuxifier-sysroot`:
 * `/etc/crypttab`, with an entry `luks-<uuid> UUID=<uuid> none <tuxifier_crypttab_options>` per LUKS device,
-* `/etc/mdadm.conf`, with an `ARRAY` line per md array,
-
-The initramfs of the installed system is built by the kernel package when it is installed, so no explicit rebuild is needed.
-dracut selects the `crypt` and `mdraid` modules itself, from the root device it finds in the chroot and the `crypttab` and `mdadm.conf` written above.
+* `/etc/mdadm.conf`, with an `ARRAY` line per md array.
 
 The `crypttab` key field is `none`: the passphrase is asked at boot. Add `nofail` to `tuxifier_crypttab_options` and to the
 `mount_options` of the volume to let the boot continue without the encrypted volume.
