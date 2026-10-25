@@ -35,7 +35,9 @@ tags:
 #
 # Not listed here: the role linux-system-roles.storage. It is a role, not a collection, and a role name is not a valid
 # entry in 'dependencies' (ansible-galaxy collection build fails on it). It has to be installed from the main branch
-# of https://github.com/linux-system-roles/storage, see roles/ansible_tuxifier/README.md.
+# of https://github.com/linux-system-roles/storage. Install it with the requirements.yml next to this file:
+#   ansible-galaxy role install -r requirements.yml
+# See roles/ansible_tuxifier/README.md.
 dependencies:
   community.general: ">=1.3.0"
   ansible.posix: ">=1.0.0"

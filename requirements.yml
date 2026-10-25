@@ -1,0 +1,9 @@
+---
+# The role linux-system-roles.storage is not a collection, so it can not be a dependency in galaxy.yml.
+# It has to come from the main branch (commit 579d32a or newer), not from the latest release.
+# Install it with: ansible-galaxy role install -r requirements.yml
+roles:
+  - name: linux-system-roles.storage
+    src: https://github.com/linux-system-roles/storage
+    scm: git
+    version: main

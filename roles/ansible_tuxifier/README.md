@@ -6,9 +6,14 @@ Description: Partition and install a server from the initramfs built with dracut
 
 ### Roles
 The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage) has to be installed as a role (not as the `fedora.linux_system_roles` collection),
-from a git checkout in the `roles_path`
+from the `main` branch. The `requirements.yml` in the root of this repository does that:
+```
+ansible-galaxy role install -r requirements.yml
+```
+This installs `linux-system-roles.storage` in the first directory of the `roles_path` (by default `~/.ansible/roles`), add `-p <dir>` to choose another one.
+Alternatively use a git checkout in the `roles_path`
 (for example `git clone https://github.com/linux-system-roles/storage ~/.ansible/roles/linux-system-roles.storage`). It is not a collection,
-so it can not be listed in the `dependencies` of `galaxy.yml` (`ansible-galaxy collection build` rejects a role name there); `galaxy.yml` names it in a comment.
+so it can not be listed in the `dependencies` of `galaxy.yml` (`ansible-galaxy collection build` rejects a role name there); `galaxy.yml` names it in a comment and points to `requirements.yml`.
 
 >[!IMPORTANT]
 >The version matters. `tuxifier` needs the `main` branch of the role, at commit `579d32a` or newer, and not the latest release (1.22.1) that `ansible-galaxy role install` fetches.
