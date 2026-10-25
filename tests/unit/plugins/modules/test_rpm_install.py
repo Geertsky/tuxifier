@@ -88,6 +88,16 @@ def test_missing_key_and_packages_are_imported_and_installed_once(run_module, ke
     assert install_call[1][-2:] == ["--install", "http://m/bash.rpm"]
 
 
+def test_installed_packages_replace_the_query_of_rpm(run_module):
+    result, calls = run_module(
+        dict(root="/sysroot", packages=PACKAGES, installed_packages=["glibc"]),
+        {"rpmkeys": [(0, "", "")], "rpm": [(0, "", "")]})
+    assert result["packages_installed"] == ["bash"]
+    assert result["packages_present"] == ["glibc"]
+    assert [call[0] for call in calls] == ["rpmkeys", "rpm"]
+    assert calls[1][1][-2:] == ["--install", "http://m/bash.rpm"]
+
+
 def test_check_mode_runs_no_command_that_changes_anything(run_module, key):
     result, calls = run_module(
         dict(root="/sysroot", gpg_keys=[key], packages=PACKAGES, _ansible_check_mode=True),

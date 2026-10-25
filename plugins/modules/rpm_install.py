@@ -71,6 +71,14 @@ options:
         required: true
         aliases: [source]
 
+  installed_packages:
+    description:
+      - Names of the packages that are installed in O(root), for example from the C(packages) of C(package_facts) run in the chroot.
+      - When given, the module does not query rpm for the installed packages to decide which packages are missing.
+      - Presence is decided by package name, like for O(packages).
+    type: list
+    elements: str
+
   reimport_rpmdb:
     description:
       - Make the rpm database use the database backend of the rpm of the installed system.
@@ -297,6 +305,7 @@ def main():
                     url=dict(type="str", required=True, aliases=["source"]),
                 ),
             ),
+            installed_packages=dict(type="list", elements="str"),
             reimport_rpmdb=dict(type="bool", default=False),
             dbpath=dict(type="path"),
         ),
@@ -316,7 +325,9 @@ def main():
     keys_to_import = [(key, fingerprints) for key, fingerprints in parsed_keys if not imported.issuperset(fingerprints)]
     keys_imported = sorted({fingerprint for _key, fingerprints in keys_to_import for fingerprint in fingerprints} - imported)
 
-    installed_before = runner.installed_names()
+    installed_before = params["installed_packages"]
+    if installed_before is None:
+        installed_before = runner.installed_names()
     packages = params["packages"]
     to_install = missing_packages(packages, installed_before)
     names_to_install = [package["name"] for package in to_install]
