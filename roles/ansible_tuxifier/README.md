@@ -4,6 +4,14 @@ Description: Partition and install a server from the initramfs built with dracut
 
 ## Dependencies
 
+### ansible-core
+ansible-core 2.21 or newer. The role gathers the packages of an already installed system with `package_facts` in the chroot.
+Up to ansible-core 2.20 the rpm backend of that module uses the Python `rpm` bindings, and it can not be given rpm macros. The `rpm` of the
+python-nest environment looks for its database in the python-nest prefix by default (`_dbpath` is `/local/conda/envs/python-nest/var/lib/rpm`),
+not in `/var/lib/rpm` of the installed system, which is why `rpm_macros` sets `_var` and `_dbpath`. The module fails with
+`Failed to retrieve packages with rpm: rpmdb open failed`, and a second run of the role without `tuxifier_reinstall` then fails with `package ... is already installed`.
+From 2.21 the module runs the `rpm` command, and the role puts the `rpm` of the installed system first in the `PATH` for it.
+
 ### Roles
 The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage) has to be installed as a role (not as the `fedora.linux_system_roles` collection),
 from the `main` branch. The `requirements.yml` in the root of this repository does that:

@@ -36,7 +36,9 @@ The role uses `generate_minimal_install_info` to find the packages to install, a
 
 ## Requirements
 
-* An ansible-core that satisfies `requires_ansible` in [meta/runtime.yml](meta/runtime.yml), and the collections `community.general` and `ansible.posix`. These are installed with this collection.
+* ansible-core 2.21 or newer (`requires_ansible` in [meta/runtime.yml](meta/runtime.yml)), and the collections `community.general` and `ansible.posix`. The collections are installed with this collection.
+
+  Why 2.21: when the installed system already exists (a second run without `tuxifier_reinstall`), the role reads its packages with `package_facts` inside the chroot. Up to ansible-core 2.20 the rpm backend of that module uses the Python `rpm` bindings, and it can not be given rpm macros. The `rpm` of the python-nest environment looks for its database in the python-nest prefix by default (`_dbpath` is `/local/conda/envs/python-nest/var/lib/rpm`), not in `/var/lib/rpm` of the installed system. That is why the role passes `--define _var /var --define _dbpath /var/lib/rpm` on every `rpm` command line. The module then fails with `Failed to retrieve packages with rpm: rpmdb open failed`, so the role installs every package again and fails with `package ... is already installed`. From 2.21 the module runs the `rpm` command, and the role puts the `rpm` of the installed system first in the `PATH` for it, which finds its own database. A first install, and so a run with `tuxifier_reinstall=true`, works on 2.16 and newer, but 2.21 is the first version where both runs work.
 * The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage), from its `main` branch. It is a role and not a collection, so it is installed separately, see below.
 * The Python `dnf` module (`python3-dnf`) for `/usr/bin/python3` on the Ansible controller: `generate_minimal_install_info` is delegated to `localhost`, so the controller has to be an RPM based distribution.
 * The machine to install has to boot an initramfs built with [dracut-incubator](https://github.com/Geertsky/dracut-incubator).

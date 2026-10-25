@@ -1,2 +1,6 @@
 ---
-requires_ansible: '>=2.10'
+# 2.21: the role gathers the packages of the installed system with package_facts in a chroot.
+# Up to 2.20 the rpm backend of package_facts uses the python rpm bindings of the python-nest environment. These look for the
+# rpmdb in the python-nest prefix, and can not be given the _dbpath macro: "Failed to retrieve packages with rpm: rpmdb open failed".
+# 2.21 runs the rpm cli, of the installed system. Tested: 2.16 - 2.20 fail the second run.
+requires_ansible: '>=2.21.0'
