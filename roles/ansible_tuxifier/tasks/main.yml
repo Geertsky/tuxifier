@@ -87,7 +87,6 @@
   changed_when: false
 
 - name: Remove the python-nest bind mount and /local/conda from the chroot
-  when: python_interpreter == '/local/conda/envs/python-nest/bin/python3'
   vars:
     ansible_shell_executable: /tmp/namespaced-ansible-shell
   block:

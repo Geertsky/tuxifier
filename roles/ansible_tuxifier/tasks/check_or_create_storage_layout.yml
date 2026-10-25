@@ -104,11 +104,8 @@
       - _sysroot_volumes | map(attribute='src') | reject('match', '.+') | list | length == 0
     fail_msg: "The storage role did not return an fstab identifier for every volume that has to be mounted: {{ _sysroot_volumes }}"
 
-- name: Mount the filesystems parent first
-  ansible.builtin.include_tasks: mount_one.yml
-  loop: "{{ _sysroot_volumes | rejectattr('fstype', 'equalto', 'swap') | list }}"
-  loop_control:
-    loop_var: _mount
+- name: Mount /tuxifier-sysroot with all its filesystems
+  ansible.builtin.include_tasks: mount_tuxifier_sysroot.yml
   vars:
     ansible_shell_executable: /tmp/namespaced-ansible-shell
 

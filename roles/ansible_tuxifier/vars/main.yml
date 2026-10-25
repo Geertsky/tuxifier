@@ -1,5 +1,8 @@
 ansible_pipelining: true
 
+# The python-nest environment is bind mounted in the chroot, see mount_tuxifier_sysroot.yml.
+python_interpreter: /local/conda/envs/python-nest/bin/python3
+
 ansible_interpreter_python_fallback:
   - /local/conda/envs/python-nest/bin/python3
   - /local/conda/envs/python-nest/bin/python

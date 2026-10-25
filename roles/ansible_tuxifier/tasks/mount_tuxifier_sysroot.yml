@@ -1,0 +1,52 @@
+---
+
+# Mounts everything the chroot needs, parent first. Included with ansible_shell_executable: /tmp/namespaced-ansible-shell,
+# so that the mounts end up in the namespace of /tuxifier-sysroot.
+- name: Mount the filesystems parent first
+  ansible.builtin.include_tasks: mount_one.yml
+  loop: "{{ _sysroot_volumes | rejectattr('fstype', 'equalto', 'swap') | list }}"
+  loop_control:
+    loop_var: _mount
+
+- name: Stat /dev /sys and /proc
+  ansible.builtin.stat:
+    path: "/tuxifier-sysroot{{ item }}"
+  loop:
+    - "/dev"
+    - "/proc"
+    - "/sys"
+  register: _dev_proc_sys
+
+- name: Mkdirs /dev /sys and /proc
+  notify: Relabel sysroot
+  ansible.builtin.file:
+    path: "/tuxifier-sysroot{{ item }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ _dev_proc_sys.results | rejectattr('stat.exists') | map(attribute='item') | list }}"
+
+- name: Mount all virtual_filesystems
+  ansible.posix.mount:
+    path: "{{ '/tuxifier-sysroot' ~ item.path }}"
+    src: "{{ item.src }}"
+    fstype: "{{ item.src }}"
+    opts: "{{ item.opts }}"
+    state: ephemeral
+  loop: "{{ virtual_filesystems }}"
+  changed_when: false
+
+- name: Create the python-nest mountpoint in the chroot
+  ansible.builtin.file:
+    path: /tuxifier-sysroot/local/conda/envs/python-nest
+    state: directory
+    mode: '0755'
+  changed_when: false
+
+- name: Bind mount python-nest in the chroot
+  ansible.posix.mount:
+    path: /tuxifier-sysroot/local/conda/envs/python-nest
+    src: /local/conda/envs/python-nest
+    fstype: none
+    opts: bind,ro
+    state: ephemeral
+  changed_when: false
