@@ -89,5 +89,5 @@
       - "{{ distro_gpg_key }}"
     packages: "{{ generate_minimal_install.packages }}"
     installed_packages: "{{ _chroot_facts['packages'].keys() | list if _chroot_rpm.stat.exists else omit }}"
-    reimport_rpmdb: "{{ rpmdb_reimport | default(false) | bool }}"
+    reimport_rpmdb: true
   notify: Relabel sysroot

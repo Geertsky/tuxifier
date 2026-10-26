@@ -66,12 +66,6 @@ options:
           - Not used by this module; accepted so the complete distribution dict can be passed.
         required: false
         type: str
-      grub_cfg_full_on_esp:
-        description:
-          - Whether the grub.cfg on the ESP is the full configuration (true) or a stub that refers to O(distribution.grub_cfg) (false).
-          - Not used by this module; accepted so the complete distribution dict can be passed.
-        required: false
-        type: bool
       repo:
         description:
           - Repository definition.
@@ -358,10 +352,6 @@ def run_module():
                 },
                 "grub_cfg": {
                     "type": "str",
-                    "required": False,
-                },
-                "grub_cfg_full_on_esp": {
-                    "type": "bool",
                     "required": False,
                 },
                 "repo": {

@@ -1,5 +1,4 @@
 ---
-rpmdb_reimport: True
 distribution:
   name: 'rhel'
   arch: 'x86_64'
@@ -7,7 +6,6 @@ distribution:
   efi_vendor_dir: 'redhat'
   efi_loader: 'shimx64.efi'
   grub_cfg: '/boot/grub2/grub.cfg'
-  grub_cfg_full_on_esp: true
   repo: "{{ installdistribution.repo | default({'type': 'mirrorlist', 'url': 'https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-8'}) }}"
   minimalpackages:
     - '@Core'
