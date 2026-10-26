@@ -36,7 +36,7 @@ The role uses `generate_minimal_install_info` to find the packages to install, a
 
 ## Requirements
 
-* An ansible-core that satisfies `requires_ansible` in [meta/runtime.yml](meta/runtime.yml), and the collections `community.general` and `ansible.posix`. These are installed with this collection.
+* ansible-core 2.15 or newer (`requires_ansible` in [meta/runtime.yml](meta/runtime.yml)), and the collections `community.general` and `ansible.posix`. The collections are installed with this collection. A second run of the role (the one that reads the installed system) was tested with every ansible-core from 2.15 to 2.21, after a first install with 2.21.
 * The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage), from its `main` branch. It is a role and not a collection, so it is installed separately, see below.
 * The Python `dnf` module (`python3-dnf`) for `/usr/bin/python3` on the Ansible controller: `generate_minimal_install_info` is delegated to `localhost`, so the controller has to be an RPM based distribution.
 * The machine to install has to boot an initramfs built with [dracut-incubator](https://github.com/Geertsky/dracut-incubator).
@@ -101,6 +101,8 @@ The [tuxifier-playbook repository](https://github.com/Geertsky/tuxifier-playbook
 ## Supported distributions
 
 Rocky Linux, AlmaLinux, RHEL and Fedora, see [Supported distributions](roles/ansible_tuxifier/README.md#supported-distributions) in the role README for the versions and how far each of them is tested.
+
+Only version 9 and 10 are supported. Version 8 is not, because of its `platform-python` 3.6, its Berkeley DB rpm database and its EFI `grub.cfg`; see the [note in the role README](roles/ansible_tuxifier/README.md#supported-distributions). The `el8` branch supports version 8 only.
 
 ## Development
 

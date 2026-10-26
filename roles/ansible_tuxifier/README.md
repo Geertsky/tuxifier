@@ -4,6 +4,13 @@ Description: Partition and install a server from the initramfs built with dracut
 
 ## Dependencies
 
+### ansible-core
+ansible-core 2.15 or newer. A second run of the role without `tuxifier_reinstall` was tested with every ansible-core from 2.15 to 2.21, after a first install with 2.21.
+
+On a second run the role gathers the packages of the installed system with `package_facts` in the chroot. It runs the task with the `python3` of the
+installed system and with the `rpm` of the installed system first in the `PATH`, because the `rpm` of the python-nest environment looks for its database
+below the python-nest prefix and not in `/var/lib/rpm`. Up to ansible-core 2.20 `package_facts` uses the rpm python bindings of the interpreter, from 2.21 it runs `rpm`.
+
 ### Roles
 The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage) has to be installed as a role (not as the `fedora.linux_system_roles` collection),
 from the `main` branch. The `requirements.yml` in the root of this repository does that:
@@ -25,15 +32,21 @@ so it can not be listed in the `dependencies` of `galaxy.yml` (`ansible-galaxy c
 
 | distribution | versions | status |
 |--------------|----------|--------|
-| Rocky Linux  | 8, 9, 10 | installed in the BIOS and UEFI test VMs |
+| Rocky Linux  | 9, 10    | installed in the BIOS and UEFI test VMs |
 | AlmaLinux    | 9, 10    | installed in the BIOS and UEFI test VMs |
-| RHEL         | 8, 9, 10 | `vars/` files exist (`rhel8.yml`, `rhel9.yml`, `rhel10.yml`), not part of the regular test |
+| RHEL         | 9, 10    | installed in the BIOS and UEFI test VMs |
 | Fedora       | 38, 44   | `vars/` files exist (`fedora38.yml`, `fedora44.yml`), untested |
 
 The version of a distribution is the major version, given as a string (`installdistribution.version: "9"`).
 
-AlmaLinux 8 is not supported. Part of its packages (for example `setup`, `filesystem` and `crypto-policies`) are still signed with the older AlmaLinux key `51D6647EC21AD6EA`.
-The binding signatures of that key use SHA1, which the `rpm` in the initramfs (rpm-sequoia) rejects: `Policy rejects 488FCF7C3ABB34F8 ... SHA1 is not considered secure`. The install can only continue by weakening the signature policy, which is not done.
+>[!NOTE]
+>Only version 9 and 10 are supported. Version 8 of Rocky Linux and RHEL (AlmaLinux 8 is not supported at all) is not, because:
+>
+>* The Python of version 8, `platform-python` 3.6, is not a target that current ansible-core versions run modules on. The role therefore runs the modules of the chroot with the Python of the python-nest environment, and with it `package_facts` can only read the installed packages with ansible-core 2.21 or newer.
+>* The rpm database of version 8 is Berkeley DB, while the `rpm` of the initramfs writes sqlite. After installing, the database has to be reimported with the `rpmdb` of the installed system (`reimport_rpmdb` of the `rpm_install` module).
+>* On version 8 the `grub.cfg` on the EFI system partition is the full configuration, not a pointer to the one in `/boot`.
+>
+>The `el8` branch of the [tuxifier](https://github.com/Geertsky/tuxifier), [tuxifier-playbook](https://github.com/Geertsky/tuxifier-playbook) and [tuxifier_project](https://github.com/Geertsky/tuxifier_project) repositories supports version 8 only, and needs ansible-core 2.21 or newer. Version 8 and its workarounds are not tested with the `main` branch.
 
 ### Initramfs image generation
 For using `tuxifier`, the machine has to be booted using an initramfs image with the [dracut-incubator](https://github.com/geertsky/dracut-incubator) module included.
@@ -260,7 +273,6 @@ The distribution variable are set in a file named `{{distribution.name + distrib
 In such a distribution file the following variable are set:
 | Var                          | Type | Value                                                                                          |
 |------------------------------|------|------------------------------------------------------------------------------------------------|
-| rpmdb_reimport               | bool | `rpmdb_reimport` controls if the sqlite rpmdb, as written by the rpm of the initramfs, is exported and imported again with the rpm of the installed system. This gives distributions with another backend, such as bdb for version 8 of RHEL and its derivatives, an rpmdb in their own format.                       |
 | distribution                 | dict | The distribution dict describes the distribution to install.                                   |
 | distribution.name            | str  | The `name` of the distribution.                                                                |
 | distribution.version         | str  | The `version` of the distribution.                                                             |
@@ -268,7 +280,6 @@ In such a distribution file the following variable are set:
 | distribution.efi_vendor_dir  | str  | The directory below `EFI/` on the ESP with the boot loader of the distribution (e.g. `redhat`, `rocky`, `almalinux`, `fedora`). |
 | distribution.efi_loader      | str  | The file name of the shim EFI binary in `distribution.efi_vendor_dir` (e.g. `shimx64.efi`).     |
 | distribution.grub_cfg        | str  | The path of the grub configuration read at boot, relative to the root of the installed system.  |
-| distribution.grub_cfg_full_on_esp | bool | `true` when the grub.cfg on the ESP is the full configuration (RHEL 8 family); `false` when it is a stub referring to `distribution.grub_cfg`. |
 | distribution.repo            | dict | The `repo` dictionary is describes the repository where the packages can be retrieved.         |
 | distribution.repo.type       | str  | The `type` of URL used for this repository.                                                    |
 | distribution.repo.url        | str  | The `url` to the repository.                                                                   |

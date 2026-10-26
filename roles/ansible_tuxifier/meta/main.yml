@@ -12,12 +12,10 @@ galaxy_info:
         - 44
     - name: Rocky
       versions:
-        - 8
         - 9
         - 10
     - name: RedHat
       versions:
-        - 8
         - 9
         - 10
     - name: Almalinux
