@@ -52,17 +52,19 @@
     ansible_python_interpreter: "{{ python_interpreter }}"
   when: _chroot_rpm.stat.exists
 
+# The rpm of the installed system, not the one of python-nest. Up to ansible-core 2.20 package_facts uses the rpm python
+# bindings of the interpreter (python3 of the installed system), from 2.21 it runs the rpm of the PATH. Both read the
+# rpm database from where the installed system keeps it; the python-nest rpm looks below the python-nest prefix.
 - name: Gather the packages of the installed system
   ansible.builtin.package_facts:
     manager: rpm
   environment:
-    # The rpm of the installed system, not the one of python-nest that is first in the PATH of the shell.
     PATH: /usr/sbin:/usr/bin:/sbin:/bin
   delegate_to: "{{ inventory_hostname }}_chroot"
   delegate_facts: true
   vars:
     ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
-    ansible_python_interpreter: "{{ python_interpreter }}"
+    ansible_python_interpreter: /usr/bin/python3
   when: _chroot_rpm.stat.exists
 
 - name: Set_fact _chroot_facts

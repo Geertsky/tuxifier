@@ -1,2 +1,5 @@
 ---
-requires_ansible: '>=2.10'
+# Tested with the playbook on RHEL 9 and 10: a first install with 2.21 and a second run with every release from 2.15 to 2.21 (2.15 with community.general 10.7.9).
+# The role gathers the packages of the installed system with package_facts in a chroot, with the python3 of the installed
+# system and its rpm on the PATH, so it does not depend on how the rpm backend of package_facts reads the rpm database.
+requires_ansible: '>=2.15.0'
