@@ -27,11 +27,11 @@
   ansible.builtin.set_fact:
     installdisk_disks: >-
       {{ _partition_disks +
-         (installdisk | map(attribute='disks') | flatten | unique
-          | reject('match', '^(' ~ (_partition_disks | map('regex_escape') | join('|')) ~ ')(p?[0-9]+|-part[0-9]+)$')
-          | difference(_partition_disks) | list) }}
+         (installdisk | map(attribute='disks') | flatten
+          | reject('match', '(' ~ (_partition_disks | map('regex_escape') | join('|')) ~ ')(p?[0-9]+|-part[0-9]+)?$')
+          | unique | list) }}
   vars:
-    _partition_disks: "{{ installdisk | selectattr('type', 'equalto', 'partition') | map(attribute='disks') | flatten | unique | list }}"
+    _partition_disks: "{{ installdisk | selectattr('type', 'equalto', 'partition') | map(attribute='disks') | flatten | unique }}"
 
 - name: Clear install disk
   ansible.builtin.import_tasks: clear_disk.yml
