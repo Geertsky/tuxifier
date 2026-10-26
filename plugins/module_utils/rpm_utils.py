@@ -31,7 +31,6 @@ TAG_PUBLIC_KEY = 6
 C_LOCALE = dict(LANG="C", LC_ALL="C")
 
 # The rpm of the installed system lists an imported key as a package with this name.
-PUBKEY_PACKAGE = "gpg-pubkey"
 
 
 def parse_key_list(output):

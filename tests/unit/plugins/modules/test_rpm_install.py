@@ -72,6 +72,12 @@ def test_second_run_changes_nothing(run_module, key):
     assert [call[0] for call in calls] == ["rpmkeys", "rpm"]
 
 
+def make_root(tmp_path):
+    root = tmp_path / "sysroot"
+    (root / "var" / "lib" / "rpm").mkdir(parents=True)
+    return root
+
+
 def test_missing_key_and_packages_are_imported_and_installed_once(run_module, key, tmp_path):
     root = make_root(tmp_path)
     result, calls = run_module(
@@ -126,88 +132,3 @@ def test_invalid_key_fails_before_any_command(run_module):
     result, calls = run_module(dict(root="/sysroot", gpg_keys=["nonsense"]), {})
     assert result["failed"] is True
     assert calls == []
-
-
-def make_root(tmp_path):
-    root = tmp_path / "sysroot"
-    (root / "var" / "lib" / "rpm").mkdir(parents=True)
-    (root / "var" / "tmp").mkdir(parents=True)
-    (root / "var" / "lib" / "rpm" / "rpmdb.sqlite").write_text(u"old")
-    return root
-
-
-def reimport_outputs(backend="bdb\n", imported="bash\nglibc\ngpg-pubkey\n", importdb=(0, b"", b"")):
-    return {
-        "rpmkeys": [(0, "", "")],
-        "rpm": [(0, "", ""), (0, "", ""), (0, "bash\nglibc\n", "")],
-        "chroot-rpm": [(0, backend.encode(), b""), (0, imported.encode(), b"")],
-        "chroot-rpmdb": [(0, b"EXPORT", b""), importdb],
-    }
-
-
-def test_sqlite_database_is_reimported_when_the_installed_system_uses_bdb(run_module, tmp_path):
-    root = make_root(tmp_path)
-    result, calls = run_module(dict(root=str(root), packages=PACKAGES, reimport_rpmdb=True), reimport_outputs())
-    assert result["changed"] is True
-    assert result["rpmdb_reimported"] is True
-    assert calls[-2][1][:4] == ["/usr/bin/chroot", str(root), "rpmdb", "--importdb"]
-    assert calls[-2][2] == b"EXPORT"
-    assert not (root / "var" / "lib" / "rpm" / "rpmdb.sqlite").exists()
-    assert os.listdir(str(root / "var" / "tmp")) == []
-
-
-def test_no_reimport_when_the_installed_system_uses_sqlite(run_module, tmp_path):
-    root = make_root(tmp_path)
-    outputs = reimport_outputs(backend="sqlite\n")
-    outputs["chroot-rpmdb"] = []
-    outputs["chroot-rpm"] = outputs["chroot-rpm"][:1]
-    result, _calls = run_module(dict(root=str(root), packages=PACKAGES, reimport_rpmdb=True), outputs)
-    assert result["rpmdb_reimported"] is False
-    assert (root / "var" / "lib" / "rpm" / "rpmdb.sqlite").exists()
-
-
-def test_no_reimport_when_there_is_no_sqlite_database(run_module, tmp_path):
-    root = make_root(tmp_path)
-    (root / "var" / "lib" / "rpm" / "rpmdb.sqlite").unlink()
-    (root / "var" / "lib" / "rpm" / "Packages").write_text(u"bdb")
-    outputs = reimport_outputs()
-    outputs["chroot-rpm"] = []
-    outputs["chroot-rpmdb"] = []
-    result, _calls = run_module(dict(root=str(root), packages=PACKAGES, reimport_rpmdb=True), outputs)
-    assert result["rpmdb_reimported"] is False
-    assert result["changed"] is True
-
-
-def test_reimport_is_done_when_nothing_was_installed_but_the_database_is_still_sqlite(run_module, tmp_path):
-    root = make_root(tmp_path)
-    outputs = reimport_outputs()
-    outputs["rpm"] = [(0, "bash\nglibc\n", ""), (0, "bash\nglibc\n", "")]
-    result, _calls = run_module(dict(root=str(root), packages=PACKAGES, reimport_rpmdb=True), outputs)
-    assert result["rpmdb_reimported"] is True
-    assert result["packages_installed"] == []
-
-
-def test_failed_import_restores_the_old_database(run_module, tmp_path):
-    root = make_root(tmp_path)
-    outputs = reimport_outputs(importdb=(1, b"", b"bad"))
-    result, _calls = run_module(dict(root=str(root), packages=PACKAGES, reimport_rpmdb=True), outputs)
-    assert result["failed"] is True
-    assert (root / "var" / "lib" / "rpm" / "rpmdb.sqlite").read_text() == u"old"
-
-
-def test_a_reimported_database_with_other_packages_is_restored(run_module, tmp_path):
-    root = make_root(tmp_path)
-    outputs = reimport_outputs(imported="bash\n")
-    result, _calls = run_module(dict(root=str(root), packages=PACKAGES, reimport_rpmdb=True), outputs)
-    assert result["failed"] is True
-    assert (root / "var" / "lib" / "rpm" / "rpmdb.sqlite").read_text() == u"old"
-
-
-def test_check_mode_predicts_the_reimport_of_a_fresh_installation(run_module, tmp_path):
-    root = make_root(tmp_path)
-    result, calls = run_module(
-        dict(root=str(root), packages=PACKAGES, reimport_rpmdb=True, _ansible_check_mode=True),
-        {"rpmkeys": [(0, "", "")], "rpm": [(0, "", "")]})
-    assert result["rpmdb_reimported"] is True
-    assert (root / "var" / "lib" / "rpm" / "rpmdb.sqlite").exists()
-    assert [call[0] for call in calls] == ["rpmkeys", "rpm"]

@@ -19,8 +19,6 @@ description:
   - Installs RPM packages that are given as URLs or paths into a root such as C(/tuxifier-sysroot), without dnf.
   - Imports the GPG keys that verify the packages, but only the keys that are not yet in the keyring of the root.
   - Installs only the packages whose name is not installed yet, so a second run changes nothing.
-  - Can reimport the rpm database with the rpm of the installed system when the installer
-    wrote it in a format or place the installed system does not read.
 
 version_added: "1.0.0"
 
@@ -79,28 +77,8 @@ options:
     type: list
     elements: str
 
-  reimport_rpmdb:
-    description:
-      - Make the rpm database use the database backend of the rpm of the installed system.
-      - The rpm of the installer writes a sqlite database. When the rpm of the installed system uses another
-        backend, for example bdb on version 8 of RHEL and its derivatives, the database is exported with
-        C(rpmdb --exportdb) and imported with C(rpmdb --importdb) in a C(chroot) of O(root).
-      - The old database files are moved away for the import and removed after it, when the installed system lists
-        the same packages. Otherwise the old files are moved back and the module fails.
-      - Nothing is done when the database is not a sqlite database or when the installed system uses sqlite.
-    type: bool
-    default: false
-
-  dbpath:
-    description:
-      - Directory below O(root) with the database files that are replaced by O(reimport_rpmdb).
-      - Defaults to the value of the V(_dbpath) macro in O(macros), and to V(/var/lib/rpm) without it.
-      - Not the location that rpm is queried with, that is set with the V(_dbpath) macro.
-    type: path
-
 notes:
   - The fingerprints of the keys are computed by the module, C(gpg) is not required.
-  - O(reimport_rpmdb) needs C(chroot) and the C(rpm) and C(rpmdb) of the installed system inside O(root), which the installed packages provide.
 
 attributes:
   check_mode:
@@ -119,7 +97,6 @@ attributes:
 
 requirements:
   - C(rpm) and C(rpmkeys)
-  - C(chroot), only with O(reimport_rpmdb)
 """
 
 EXAMPLES = r"""
@@ -134,7 +111,6 @@ EXAMPLES = r"""
     gpg_keys:
       - "{{ lookup('ansible.builtin.file', gpg_key) }}"
     packages: "{{ generate_minimal_install.packages }}"
-    reimport_rpmdb: "{{ rpmdb_reimport }}"
   notify: Relabel sysroot
 
 - name: Only make sure a key is imported
@@ -169,126 +145,14 @@ packages_present:
   type: list
   elements: str
   sample: [glibc]
-
-rpmdb_reimported:
-  description:
-    - Whether the rpm database was reimported, or would be in check mode.
-  returned: always
-  type: bool
-  sample: false
 """
-
-import os
-import shutil
-import tempfile
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.geertsky.tuxifier.plugins.module_utils.rpm_utils import (
-    PUBKEY_PACKAGE,
     RpmRunner,
     key_fingerprints,
     missing_packages,
 )
-
-CHROOT_PATH = "/usr/sbin:/usr/bin:/sbin:/bin"
-SQLITE_DATABASE = "rpmdb.sqlite"
-
-
-class ChrootRunner(object):
-    """Run the commands of the installed system in a chroot of the root."""
-
-    def __init__(self, module, root):
-        self.module = module
-        self.chroot = [module.get_bin_path("chroot", required=True), root]
-
-    def run(self, *args, **kwargs):
-        """Return ``(command, rc, stdout, stderr)`` with stdin and stdout as bytes."""
-        command = self.chroot + list(args)
-        rc, stdout, stderr = self.module.run_command(
-            command,
-            data=kwargs.get("data"),
-            binary_data=True,
-            encoding=None,
-            environ_update=dict(PATH=CHROOT_PATH),
-        )
-        return command, rc, stdout, stderr
-
-    def installed_names(self):
-        """Return the names of the packages that the rpm of the installed system lists."""
-        command, rc, stdout, stderr = self.run("rpm", "-qa", "--queryformat", "%{NAME}\\n")
-        if rc != 0:
-            self.module.fail_json(msg="rpm -qa failed in the root", cmd=command, rc=rc, stderr=stderr)
-        return stdout.decode("utf-8").split()
-
-    def database_backend(self):
-        """Return the database backend that the rpm of the installed system uses."""
-        command, rc, stdout, stderr = self.run("rpm", "--eval", "%{_db_backend}")
-        if rc != 0:
-            self.module.fail_json(msg="rpm --eval failed in the root", cmd=command, rc=rc, stderr=stderr)
-        return stdout.decode("utf-8").strip()
-
-
-def database_files(directory):
-    """Return the rpmdb files in ``directory``."""
-    if not os.path.isdir(directory):
-        return []
-    return sorted(
-        os.path.join(directory, name)
-        for name in os.listdir(directory)
-        if name.startswith("rpmdb")
-    )
-
-
-def move_files(files, destination):
-    """Move ``files`` into ``destination`` and return their new paths."""
-    moved = []
-    for path in files:
-        target = os.path.join(destination, os.path.basename(path))
-        shutil.move(path, target)
-        moved.append(target)
-    return moved
-
-
-def reimport_needed(chroot_runner, directory):
-    """Return whether ``directory`` holds a sqlite database while the installed system uses another backend."""
-    if not os.path.exists(os.path.join(directory, SQLITE_DATABASE)):
-        return False
-    return chroot_runner.database_backend() != "sqlite"
-
-
-def reimport_database(module, runner, chroot_runner, directory):
-    """Export the database, move its files away and import it with the rpm of the installed system.
-
-    The old files are moved back when the import fails or when the installed system does not list
-    the same packages afterwards.
-    """
-    expected = sorted(set(runner.installed_names()) - set([PUBKEY_PACKAGE]))
-
-    command, rc, exported, stderr = chroot_runner.run("rpmdb", "--exportdb")
-    if rc != 0:
-        module.fail_json(msg="rpmdb --exportdb failed", cmd=command, rc=rc, stderr=stderr)
-
-    backup = tempfile.mkdtemp(prefix="rpmdb-reimport-", dir=os.path.join(runner.root, "var", "tmp"))
-    try:
-        moved = move_files(database_files(directory), backup)
-    except (IOError, OSError) as exc:
-        module.fail_json(msg="Unable to move the database files away: %s" % exc, dbpath=directory)
-
-    def restore(message, **details):
-        for path in database_files(directory):
-            os.remove(path)
-        move_files(moved, directory)
-        module.fail_json(msg=message, backup=backup, **details)
-
-    command, rc, _stdout, stderr = chroot_runner.run("rpmdb", "--importdb", data=exported)
-    if rc != 0:
-        restore("rpmdb --importdb failed, the old database was restored", cmd=command, rc=rc, stderr=stderr)
-
-    imported = sorted(set(chroot_runner.installed_names()) - set([PUBKEY_PACKAGE]))
-    if imported != expected:
-        restore("The reimported database does not list the installed packages, the old database was restored")
-    shutil.rmtree(backup)
-
 
 def main():
     module = AnsibleModule(
@@ -306,8 +170,6 @@ def main():
                 ),
             ),
             installed_packages=dict(type="list", elements="str"),
-            reimport_rpmdb=dict(type="bool", default=False),
-            dbpath=dict(type="path"),
         ),
         supports_check_mode=True,
     )
@@ -339,24 +201,11 @@ def main():
         if to_install:
             runner.run("rpm", "--install", *[package["url"] for package in to_install])
 
-    reimport = False
-    if params["reimport_rpmdb"]:
-        directory = os.path.join(
-            params["root"], (params["dbpath"] or params["macros"].get("_dbpath", "/var/lib/rpm")).lstrip(os.sep))
-        chroot_runner = ChrootRunner(module, params["root"])
-        if module.check_mode and to_install:
-            reimport = True
-        elif not module.check_mode or os.path.exists(os.path.join(params["root"], "usr", "bin", "rpm")):
-            reimport = reimport_needed(chroot_runner, directory)
-        if reimport and not module.check_mode:
-            reimport_database(module, runner, chroot_runner, directory)
-
     module.exit_json(
-        changed=bool(keys_imported or to_install or reimport),
+        changed=bool(keys_imported or to_install),
         keys_imported=keys_imported,
         packages_installed=names_to_install,
         packages_present=present,
-        rpmdb_reimported=reimport,
     )
 
 

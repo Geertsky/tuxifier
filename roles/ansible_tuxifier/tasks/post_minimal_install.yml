@@ -262,16 +262,7 @@
       vars:
         ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
         ansible_python_interpreter: "{{ python_interpreter }}"
-# On RHEL 8 the grub.cfg on the ESP is the full config; elsewhere it is a stub
-# that points to distribution.grub_cfg, which must be left untouched on the ESP.
-- name: Set_fact grub_cfg_path
-  ansible.builtin.set_fact:
-    grub_cfg_path: >-
-      {{ '/boot/efi/EFI/' ~ distribution.efi_vendor_dir ~ '/grub.cfg'
-         if (grub_target == 'x86_64-efi' and distribution.grub_cfg_full_on_esp | bool)
-         else distribution.grub_cfg }}
-  changed_when: false
-
+# The grub.cfg on the ESP is a stub that points to distribution.grub_cfg; it is left untouched.
 - name: Generate grub config in a temporary file
   ansible.builtin.command:
     cmd: "/usr/sbin/grub2-mkconfig -o /tmp/grub.cfg"
@@ -284,7 +275,7 @@
   notify: Relabel sysroot
   ansible.builtin.copy:
     src: /tuxifier-sysroot/tmp/grub.cfg
-    dest: "/tuxifier-sysroot{{ grub_cfg_path }}"
+    dest: "/tuxifier-sysroot{{ distribution.grub_cfg }}"
     remote_src: true
     owner: root
     group: root
