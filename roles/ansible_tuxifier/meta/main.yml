@@ -6,24 +6,12 @@ galaxy_info:
 
 
   platforms:
-    - name: Fedora
-      versions:
-        - 38
-        - 44
     - name: Rocky
       versions:
         - 8
-        - 9
-        - 10
     - name: RedHat
       versions:
         - 8
-        - 9
-        - 10
-    - name: Almalinux
-      versions:
-        - 9
-        - 10
 
   galaxy_tags:
     - minimal_install

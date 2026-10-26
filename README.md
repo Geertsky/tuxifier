@@ -54,12 +54,12 @@ The second command needs the `requirements.yml` of this repository, so run it fr
 
 ## Example
 
-The host_vars of a machine with one disk, installed with Rocky Linux 9 on a BIOS machine:
+The host_vars of a machine with one disk, installed with Rocky Linux 8 on a BIOS machine:
 
 ```
 installdistribution:
   name: rocky
-  version: "9"
+  version: "8"
 
 rootpw: rootpw        # keep this in an Ansible Vault
 strict_selinux: true  # relabel the installed system at its first boot
@@ -100,9 +100,19 @@ The `environment` puts the python-nest environment of the initramfs, with `wipef
 
 The [tuxifier-playbook repository](https://github.com/Geertsky/tuxifier-playbook) has the complete playbook, host_vars for every supported distribution, and the steps to build and boot the initramfs. For a quick-start please see its README.
 
+## Why this branch exists: the problems with version 8
+
+Version 8 of Rocky Linux and RHEL is supported in this branch only. The `main` branch supports version 9 and 10, and has none of the workarounds below. AlmaLinux 8 is not supported at all. Version 8 differs from version 9 and 10 in the following ways:
+
+* **`platform-python` 3.6.** The Python of version 8 is not a target that current ansible-core versions run modules on. The role therefore runs the modules of the chroot with the Python of the python-nest environment, which is bind mounted in the chroot (`python_interpreter`). Version 9 and 10 have a `python3` that works as the interpreter.
+* **`package_facts` needs ansible-core 2.21.** With the python-nest interpreter, `package_facts` up to ansible-core 2.20 uses the `rpm` Python bindings of python-nest. They look for the rpm database below `/local/conda/envs/python-nest` instead of `/var/lib/rpm`, which fails the second run (without `tuxifier_reinstall`) with `rpmdb open failed`. From 2.21 `package_facts` runs the `rpm` command, and the role puts the `rpm` of the installed system first in the `PATH`. This is why `requires_ansible` is `>=2.21.0` here, and `>=2.15.0` in `main`.
+* **Berkeley DB rpm database.** The rpm database of version 8 is Berkeley DB, while the `rpm` of the initramfs writes sqlite. After the installation `rpm_install` reimports the database with the `rpmdb` of the installed system (`reimport_rpmdb`), so that the installed system can read it.
+* **Full `grub.cfg` on the ESP.** On a UEFI machine the `grub.cfg` on the EFI system partition of version 8 is the full configuration, not a pointer to the one in `/boot`. The role writes it to `/boot/efi/EFI/<vendor>/grub.cfg`.
+* **Old glibc and kernel.** Version 8 has glibc 2.28 and a 4.18 kernel, so the python-nest environment has to be built against that glibc and can not use libraries that need a newer kernel. See the Build constraints in the python-nest README.
+
 ## Supported distributions
 
-Rocky Linux, AlmaLinux, RHEL and Fedora, see [Supported distributions](roles/ansible_tuxifier/README.md#supported-distributions) in the role README for the versions and how far each of them is tested.
+Rocky Linux and RHEL 8 (this branch, `el8`; version 9 and 10 are in the `main` branch), see [Supported distributions](roles/ansible_tuxifier/README.md#supported-distributions) in the role README for the versions and how far each of them is tested.
 
 ## Development
 

@@ -33,12 +33,11 @@ so it can not be listed in the `dependencies` of `galaxy.yml` (`ansible-galaxy c
 
 | distribution | versions | status |
 |--------------|----------|--------|
-| Rocky Linux  | 8, 9, 10 | installed in the BIOS and UEFI test VMs |
-| AlmaLinux    | 9, 10    | installed in the BIOS and UEFI test VMs |
-| RHEL         | 8, 9, 10 | `vars/` files exist (`rhel8.yml`, `rhel9.yml`, `rhel10.yml`), not part of the regular test |
-| Fedora       | 38, 44   | `vars/` files exist (`fedora38.yml`, `fedora44.yml`), untested |
+| Rocky Linux  | 8        | installed in the BIOS and UEFI test VMs |
+| RHEL         | 8        | installed in the BIOS and UEFI test VMs |
 
-The version of a distribution is the major version, given as a string (`installdistribution.version: "9"`).
+This branch (`el8`) supports version 8 only. Version 9 and 10 (Rocky Linux, AlmaLinux, RHEL and Fedora) are supported in the `main` branch.
+The version of a distribution is the major version, given as a string (`installdistribution.version: "8"`).
 
 AlmaLinux 8 is not supported. Part of its packages (for example `setup`, `filesystem` and `crypto-policies`) are still signed with the older AlmaLinux key `51D6647EC21AD6EA`.
 The binding signatures of that key use SHA1, which the `rpm` in the initramfs (rpm-sequoia) rejects: `Policy rejects 488FCF7C3ABB34F8 ... SHA1 is not considered secure`. The install can only continue by weakening the signature policy, which is not done.
@@ -128,7 +127,7 @@ installdisk:
         mount_point: /secure
         mount_options: defaults,nofail
 ```
-Working examples are in the `tuxifier-playbook` host_vars `rocky9-uefi-raid1.yml`, `rocky9-uefi-luks.yml` and `rocky9-uefi-raid1-luks.yml`.
+Working examples are in the `tuxifier-playbook` host_vars `rocky8-uefi-raid1.yml`, `rocky8-uefi-luks.yml` and `rocky8-uefi-raid1-luks.yml`.
 
 #### Example installdisk:
 ```
@@ -183,10 +182,10 @@ installdisk:
 ```
 installdistribution:
   name: rocky
-  version: "9"
+  version: "8"
   repo:
     type: mirrorlist
-    url: https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-9&country=ch
+    url: https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-8&country=ch
 ```
 _`repo` is optional but defaults to the general mirrorlist of the distribution. An added `country=` can improve download speed and reliability._
 
@@ -264,11 +263,10 @@ In the role a number of variables are defined in different var files.
 
 ### {{ distribution.name + distribution.version }}.yml Distribution vars
 
-The distribution variable are set in a file named `{{distribution.name + distribution.version }}.yml` so for rocky 9 it would be `rocky9.yml`.
+The distribution variable are set in a file named `{{distribution.name + distribution.version }}.yml` so for rocky 8 it would be `rocky8.yml`.
 In such a distribution file the following variable are set:
 | Var                          | Type | Value                                                                                          |
 |------------------------------|------|------------------------------------------------------------------------------------------------|
-| rpmdb_reimport               | bool | `rpmdb_reimport` controls if the sqlite rpmdb, as written by the rpm of the initramfs, is exported and imported again with the rpm of the installed system. This gives distributions with another backend, such as bdb for version 8 of RHEL and its derivatives, an rpmdb in their own format.                       |
 | distribution                 | dict | The distribution dict describes the distribution to install.                                   |
 | distribution.name            | str  | The `name` of the distribution.                                                                |
 | distribution.version         | str  | The `version` of the distribution.                                                             |
@@ -276,7 +274,6 @@ In such a distribution file the following variable are set:
 | distribution.efi_vendor_dir  | str  | The directory below `EFI/` on the ESP with the boot loader of the distribution (e.g. `redhat`, `rocky`, `almalinux`, `fedora`). |
 | distribution.efi_loader      | str  | The file name of the shim EFI binary in `distribution.efi_vendor_dir` (e.g. `shimx64.efi`).     |
 | distribution.grub_cfg        | str  | The path of the grub configuration read at boot, relative to the root of the installed system.  |
-| distribution.grub_cfg_full_on_esp | bool | `true` when the grub.cfg on the ESP is the full configuration (RHEL 8 family); `false` when it is a stub referring to `distribution.grub_cfg`. |
 | distribution.repo            | dict | The `repo` dictionary is describes the repository where the packages can be retrieved.         |
 | distribution.repo.type       | str  | The `type` of URL used for this repository.                                                    |
 | distribution.repo.url        | str  | The `url` to the repository.                                                                   |
@@ -289,7 +286,7 @@ In such a distribution file the following variable are set:
 ```
 installdistribution:
   name: rocky
-  version: "9"
+  version: "8"
 
 root_authorized_keys:
   - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOm4c78woS/1JU/A+jeAuKjuThZSH7qUbzuS+ldogq2v geert@clt-mgt05'
