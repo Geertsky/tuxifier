@@ -94,11 +94,13 @@
       ansible.posix.mount:
         path: /tuxifier-sysroot/local/conda/envs/python-nest
         state: unmounted
+      changed_when: false
 
     - name: Remove /local/conda from the chroot
       ansible.builtin.file:
         path: /tuxifier-sysroot/local/conda
         state: absent
+      changed_when: false
 
 - name: Umount /tuxifier-sysroot
   ansible.builtin.command:
