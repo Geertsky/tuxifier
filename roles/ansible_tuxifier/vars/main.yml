@@ -15,13 +15,17 @@ ansible_interpreter_python_fallback:
   - /usr/bin/python3
   - python3
 
-  # Macros named _ followed by letters, with an absolute path as value, are directories that must exist in /tuxifier-sysroot
-rpm_macros:
+# The directories of the rpm macros must exist in /tuxifier-sysroot.
+rpm_directory_macros:
   _dbpath: /var/lib/rpm
   _var: /var
   _tmppath: /var/tmp
+
+rpm_other_macros:
   __urlhelpercmd: /local/conda/envs/python-nest/bin/curl
   __urlhelper_localopts: --retry=10 --retry-all-errors --cacert=/local/conda/envs/python-nest/ssl/cacert.pem
+
+rpm_macros: "{{ rpm_directory_macros | combine(rpm_other_macros) }}"
 
 efi_virtual_filesystem:
   - { path: /sys/firmware/efi/efivars, src: efivarfs, opts: "rw,nosuid,nodev,noexec,relatime" }
@@ -39,6 +43,9 @@ generic_virtual_filesystems:
   - { path: /dev/pts, src: devpts, opts: "rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000" }
 
 virtual_filesystems: "{{ generic_virtual_filesystems + (efi_virtual_filesystem if efi_booted else []) }}"
+
+# The inventory host of the chroot, see minimal_install.yml.
+_chroot_host: "{{ inventory_hostname }}_chroot"
 
 # The continue_install extra var can be the string 'false', so it is normalised once.
 _continue_install: "{{ continue_install | bool }}"

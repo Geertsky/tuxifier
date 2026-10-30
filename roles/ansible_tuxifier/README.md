@@ -264,7 +264,9 @@ In the role a number of variables are defined in different var files.
 | Variable                                       | Type | Description                                                                                                                                                                      |
 |------------------------------------------------|------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | ansible_interpreter_python_fallback | list | The `ansible_interpreter_python_fallback` var is extended with the python interpreter of the python-nest environment available in the initramfs                                         |
-| rpm_macros | dict | The rpm macros defined for the rpm commands executed by `tuxifier`, as macro name and macro value, for example `_dbpath: /var/lib/rpm`. Macros named `_` followed by letters with an absolute path as value are created as directories in `/tuxifier-sysroot`                                                                                                                                                          |
+| rpm_directory_macros | dict | The rpm macros whose value is a directory, as macro name and path, for example `_dbpath: /var/lib/rpm`. These directories are created in `/tuxifier-sysroot`. |
+| rpm_other_macros | dict | The other rpm macros, for example the `curl` that rpm uses to download packages. |
+| rpm_macros | dict | The rpm macros defined for the rpm commands executed by `tuxifier`: `rpm_directory_macros` and `rpm_other_macros` together. |
 | virtual_filesystems | list | The list of virtual filesystems mounted in the `/tuxifier-sysroot` for the installation.                                                                                                                    |
 
 ### {{ distribution.name + distribution.version }}.yml Distribution vars
