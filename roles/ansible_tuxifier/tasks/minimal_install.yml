@@ -16,7 +16,9 @@
 
 - name: Resolve install packages
   geertsky.tuxifier.generate_minimal_install_info:
-    distribution: "{{ distribution }}"
+    distribution: >-
+      {{ distribution | combine({'repo': installdistribution.repo | default(distribution.repo),
+                                 'minimalpackages': minimal_packages}) }}
   register: generate_minimal_install
   delegate_to: localhost
   vars:

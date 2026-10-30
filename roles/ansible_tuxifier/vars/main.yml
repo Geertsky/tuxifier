@@ -39,3 +39,28 @@ generic_virtual_filesystems:
   - { path: /dev/pts, src: devpts, opts: "rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000" }
 
 virtual_filesystems: "{{ generic_virtual_filesystems + (efi_virtual_filesystem if (_efi.stat.exists | default(false)) else []) }}"
+
+# The continue_install extra var can be the string 'false', so it is normalised once.
+_continue_install: "{{ continue_install | bool }}"
+
+# The packages of distribution.minimalpackages, see minimal_install.yml. The kernel of the installer is
+# installed when continuing, so the installed system boots the same version.
+minimal_packages_common:
+  - '@Core'
+  - util-linux
+  - lvm2
+  - cryptsetup
+  - mdadm
+  - python3
+  - selinux-policy-targeted
+minimal_packages_efi:
+  - grub2-efi-x64
+  - grub2-tools-efi
+  - efibootmgr
+  - shim-x64
+minimal_packages_bios:
+  - grub2-pc
+minimal_packages: >-
+  {{ [('kernel-' ~ ansible_facts['kernel']) if _continue_install else 'kernel']
+     + minimal_packages_common
+     + (minimal_packages_efi if efi_booted else minimal_packages_bios) }}

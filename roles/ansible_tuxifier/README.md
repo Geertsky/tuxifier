@@ -283,7 +283,6 @@ In such a distribution file the following variable are set:
 | distribution.repo            | dict | The `repo` dictionary is describes the repository where the packages can be retrieved.         |
 | distribution.repo.type       | str  | The `type` of URL used for this repository.                                                    |
 | distribution.repo.url        | str  | The `url` to the repository.                                                                   |
-| distribution.minimalpackages | list | The `minimalpackages` list of packages to install for a minimal install.                       |
 | gpg_key                      | str  | The path to the GPG key relative to the `files/` directory to verify the validity of the rpms. |
 
 
