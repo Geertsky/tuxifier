@@ -23,16 +23,6 @@
 - name: Set the install distribution vars
   ansible.builtin.include_vars: "{{ installdistribution['name'] ~ installdistribution['version'] }}.yml"
 
-- name: Set the install disks
-  ansible.builtin.set_fact:
-    installdisk_disks: >-
-      {{ _partition_disks +
-         (installdisk | map(attribute='disks') | flatten
-          | reject('match', '(' ~ (_partition_disks | map('regex_escape') | join('|')) ~ ')(p?[0-9]+|-part[0-9]+)?$')
-          | unique | list) }}
-  vars:
-    _partition_disks: "{{ installdisk | selectattr('type', 'equalto', 'partition') | map(attribute='disks') | flatten | unique }}"
-
 - name: Clear install disk
   ansible.builtin.import_tasks: clear_disk.yml
   when: tuxifier_reinstall | bool
