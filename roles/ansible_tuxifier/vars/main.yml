@@ -39,3 +39,8 @@ generic_virtual_filesystems:
   - { path: /dev/pts, src: devpts, opts: "rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000" }
 
 virtual_filesystems: "{{ generic_virtual_filesystems + (efi_virtual_filesystem if efi_booted else []) }}"
+
+# The continue_install extra var can be the string 'false', so it is normalised once.
+_continue_install: "{{ continue_install | bool }}"
+# Whether the initramfs continues into the installed system, or powers off.
+_boot_installed_system: "{{ _continue_install and current_version_installed }}"
