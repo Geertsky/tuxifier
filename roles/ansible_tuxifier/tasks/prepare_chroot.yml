@@ -7,14 +7,8 @@
     mode: '0644'
   changed_when: false
 
-- name: Stat /etc
-  ansible.builtin.stat:
-    path: /tuxifier-sysroot/etc
-  register: _stat_etc
-
 - name: Create /etc
   notify: Relabel sysroot
-  when: not _stat_etc.stat.exists
   ansible.builtin.file:
     path: /tuxifier-sysroot/etc
     state: directory
