@@ -6,12 +6,10 @@
       ansible.builtin.stat:
         path: "{{ '/tuxifier-sysroot/boot/vmlinuz-' ~ ansible_facts['kernel'] }}"
       register: _vmlinuz
-      changed_when: false
 
     - name: Set_fact current_version_installed
       ansible.builtin.set_fact:
         current_version_installed: "{{ _vmlinuz.stat.exists }}"
-      changed_when: false
 
 - name: Set root password
   block:
