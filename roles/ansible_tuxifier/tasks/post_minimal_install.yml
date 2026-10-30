@@ -44,10 +44,6 @@
     src: /root/.ssh/authorized_keys
   register: _authorized_keys
 
-- name: Set_fact authorized_keys
-  ansible.builtin.set_fact:
-    authorized_keys: "{{ _authorized_keys['content'] | b64decode | split('\n') | reject('equalto', '') }}"
-
 - name: Add root authorized_keys to chroot
   block:
     - name: Create .ssh dir
@@ -65,7 +61,7 @@
         create: true
         mode: "0600"
         owner: root
-      loop: "{{ (authorized_keys + root_authorized_keys) | unique | reject('equalto', '') }}"
+      loop: "{{ ((_authorized_keys['content'] | b64decode).splitlines() + root_authorized_keys) | select | unique }}"
   vars:
     ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
     ansible_python_interpreter: "{{ python_interpreter }}"
@@ -262,14 +258,10 @@
 - name: Discover host keys from initrd
   ansible.builtin.find:
     path: "/etc/ssh/"
+    patterns:
+      - 'ssh_host_*_key'
+      - 'ssh_host_*_key.pub'
   register: etc_ssh
-  changed_when: false
-
-- name: Set_fact ssh_keys and ssh_pubs
-  ansible.builtin.set_fact:
-    ssh_keys: "{{ etc_ssh.files | map(attribute='path') | select('match', '.*key$') }}"
-    ssh_pubs: "{{ etc_ssh.files | map(attribute='path') | select('match', '.*pub$') }}"
-  changed_when: false
 
 - name: Install ssh host keys
   notify: Relabel sysroot
@@ -277,17 +269,8 @@
     src: "{{ item }}"
     dest: /tuxifier-sysroot/etc/ssh/
     remote_src: true
-    mode: '0600'
-  loop: "{{ ssh_keys }}"
-
-- name: Install ssh host pub keys
-  notify: Relabel sysroot
-  ansible.builtin.copy:
-    src: "{{ item }}"
-    dest: /tuxifier-sysroot/etc/ssh/
-    remote_src: true
-    mode: '0644'
-  loop: "{{ ssh_pubs }}"
+    mode: "{{ '0644' if item.endswith('.pub') else '0600' }}"
+  loop: "{{ etc_ssh.files | map(attribute='path') | list }}"
 
 - name: Relabel /tuxifier-sysroot when something changed
   ansible.builtin.meta: flush_handlers
