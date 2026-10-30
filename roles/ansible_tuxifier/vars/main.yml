@@ -42,6 +42,8 @@ virtual_filesystems: "{{ generic_virtual_filesystems + (efi_virtual_filesystem i
 
 # The continue_install extra var can be the string 'false', so it is normalised once.
 _continue_install: "{{ continue_install | bool }}"
+# Whether the initramfs continues into the installed system, or powers off.
+_boot_installed_system: "{{ _continue_install and current_version_installed }}"
 
 # The packages of distribution.minimalpackages, see minimal_install.yml. The kernel of the installer is
 # installed when continuing, so the installed system boots the same version.
