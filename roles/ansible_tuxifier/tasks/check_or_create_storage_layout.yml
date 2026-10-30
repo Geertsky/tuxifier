@@ -19,6 +19,32 @@
     mode: "0755"
   changed_when: false
 
+# The initramfs does not assemble md RAID arrays. Without them the storage role does not see the volume groups on
+# them and creates the arrays again, which destroys their data. Only the member disks of the install layout are
+# assembled; a disk that is no member, or an array that is running already, is not an error.
+- name: Assemble the existing md RAID arrays of the install layout
+  ansible.builtin.command:
+    argv:
+      - mdadm
+      - --incremental
+      - "{{ item }}"
+  loop: "{{ installdisk | selectattr('raid_level', 'defined') | map(attribute='disks') | flatten | unique | list }}"
+  when: not (tuxifier_reinstall | bool)
+  register: _mdadm_incremental
+  changed_when: false
+  failed_when:
+    - _mdadm_incremental.rc != 0
+    - "'no recognisable superblock' not in _mdadm_incremental.stderr"
+    - "'Device or resource busy' not in _mdadm_incremental.stderr"
+
+# The arrays and their volume groups exist now, and the swap usage has to be known to switch it off below.
+- name: Refresh the device and swap facts
+  ansible.builtin.setup:
+    gather_subset:
+      - '!all'
+      - '!min'
+      - hardware
+
 - name: Activate the existing volume groups of the install layout
   community.general.lvg:
     vg: "{{ item }}"
@@ -43,13 +69,6 @@
         {%- set ns.disks = ns.disks + [disk | combine({'volumes': vols.items})] -%}
       {%- endfor -%}
       {{ ns.disks | to_json | from_json }}
-
-- name: Rerfesh swap usage
-  ansible.builtin.setup:
-    gather_subset:
-      - '!all'
-      - '!min'
-      - hardware
 
 - name: Make certain swap is not active
   when: ansible_facts['swaptotal_mb'] > 0
