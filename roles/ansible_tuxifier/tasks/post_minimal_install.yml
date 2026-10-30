@@ -70,22 +70,10 @@
     ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
     ansible_python_interpreter: "{{ python_interpreter }}"
 
-- name: Detect EFI
-  block:
-    - name: Stat /sys/firmware/efi
-      ansible.builtin.stat:
-        path: "/sys/firmware/efi"
-      register: _efi
-      changed_when: false
-
-    - name: Set_fact grub_target
-      ansible.builtin.set_fact:
-        grub_target: "{% if _efi.stat.exists %}x86_64-efi{% else %}i386-pc{% endif %}"
-      changed_when: false
-
-- name: Set_fact _boot_disk_candidates
+# The first partition pool with a volume at /boot, or else at /boot/efi.
+- name: Set_fact boot_disk
   ansible.builtin.set_fact:
-    _boot_disk_candidates: >-
+    boot_disk: >-
       {%- set ns = namespace(disks=[]) -%}
       {%- for mountpoint in ['/boot', '/boot/efi'] -%}
       {%- for pool in installdisk if pool.type == 'partition' -%}
@@ -94,24 +82,18 @@
       {%- endfor -%}
       {%- endfor -%}
       {%- endfor -%}
-      {{ ns.disks }}
-  changed_when: false
-
-- name: Set_fact boot_disk
-  ansible.builtin.set_fact:
-    boot_disk: "{{ installdisk_boot_disk | default(_boot_disk_candidates | first | default('')) }}"
-  changed_when: false
+      {{ installdisk_boot_disk | default(ns.disks | first | default('')) }}
 
 - name: Validate boot_disk
   ansible.builtin.assert:
     that:
-      - boot_disk | default('', true) | string | trim != ''
+      - boot_disk | length > 0
     fail_msg: >-
       boot_disk is not defined. The boot loader needs a partition pool with a volume mounted at /boot
       (or, if there is none, at /boot/efi). Alternatively set installdisk_boot_disk.
 
 - name: Install grub2 to boot_disk for BIOS
-  when: grub_target == "i386-pc"
+  when: not efi_booted
   block:
     - name: Set_fact _biosboot_device
       ansible.builtin.set_fact:
@@ -119,7 +101,6 @@
           {%- set partitions = installdisk | selectattr('name', 'equalto', boot_disk) | map(attribute='volumes') | flatten
               | selectattr('fs_type', 'defined') | selectattr('fs_type', 'equalto', 'biosboot') | map(attribute='name') | list -%}
           {{ (boot_disk ~ ('p' if boot_disk[-1] is match('[0-9]') else '') ~ partitions[0]) if partitions | length > 0 else '' }}
-      changed_when: false
 
     # The disk is read from the initramfs itself: entering the mount namespace of the sysroot is not needed
     # for that, and the nsenter of the namespaced shell fails here with rc 1, which is also the rc of "not found".
@@ -127,7 +108,7 @@
     - name: Check if grub2 is installed to boot_disk for BIOS
       ansible.builtin.shell: |
         if dd if={{ boot_disk }} bs=440 count=1 2>/dev/null | grep -aq 'GRUB ' &&
-           dd if={{ _biosboot_device if _biosboot_device else boot_disk }} bs=512 count=1 {{ '' if _biosboot_device else 'skip=1' }} 2>/dev/null | grep -aq 'loading'
+           dd if={{ _biosboot_device or boot_disk }} bs=512 count=1 {{ 'skip=1' if not _biosboot_device else '' }} 2>/dev/null | grep -aq 'loading'
         then exit 0; else exit 3; fi
       register: _grub_bios_installed
       changed_when: false
@@ -150,61 +131,36 @@
         ansible_python_interpreter: "{{ python_interpreter }}"
 
 - name: Install grub2 at efi
-  when: grub_target == "x86_64-efi"
+  when: efi_booted
   block:
-    - name: Set_fact efi partitionnr
+    - name: Set_fact _esp_volume
       ansible.builtin.set_fact:
-        efi_partitionnr: >-
-          {{
-          installdisk
-          | selectattr('name', 'equalto', boot_disk)
-          | map(attribute='volumes')
-          | flatten
-          | selectattr('fs_type', 'equalto', 'efi')
-          | map(attribute='name')
-          | first
-          }}
-      changed_when: false
+        _esp_volume: >-
+          {{ installdisk | selectattr('name', 'equalto', boot_disk) | map(attribute='volumes') | flatten
+             | selectattr('fs_type', 'defined') | selectattr('fs_type', 'equalto', 'efi') | first }}
 
-    - name: Set_fact efi_mountpoint
-      ansible.builtin.set_fact:
-        efi_mountpoint: >-
-          {{ installdisk | map(attribute='volumes') | flatten
-             | selectattr('fs_type', 'defined')
-             | selectattr('fs_type', 'equalto', 'efi')
-             | map(attribute='mount_point') | first }}
-      changed_when: false
-
-    # The ESP is mounted at this point: take its device from the mounts of the namespace
-    - name: Read the mounts of the namespace
-      ansible.builtin.slurp:
-        src: /proc/self/mountinfo
-      register: _mountinfo
-
-    # mountinfo: <id> <parent> <major:minor> <root> <mountpoint> <opts> [optional...] - <fstype> <source> <superopts>
-    - name: Set_fact _esp_device
-      ansible.builtin.set_fact:
-        _esp_device: >-
-          {{ (_mountinfo.content | b64decode).splitlines()
-             | map('regex_search', '^\S+ \S+ \S+ \S+ ' ~ (('/tuxifier-sysroot' ~ efi_mountpoint) | regex_escape) ~ ' .* - \S+ (\S+) ', '\1')
-             | select | map('first') | list | last | default('') }}
+    # The ESP is mounted at this point: ask the mounts of the namespace for its PARTUUID
+    - name: Read the PARTUUID of the ESP
+      ansible.builtin.command:
+        argv:
+          - findmnt
+          - --noheadings
+          - --first-only
+          - --output
+          - PARTUUID
+          - --mountpoint
+          - "/tuxifier-sysroot{{ _esp_volume.mount_point }}"
+      register: _esp_findmnt
       changed_when: false
 
     - name: Assert the ESP is mounted
       ansible.builtin.assert:
-        that: _esp_device is match('^/dev/')
-        fail_msg: "No device found mounted at /tuxifier-sysroot{{ efi_mountpoint }}"
-
-    - name: Read PARTUUID of the ESP
-      ansible.builtin.command:
-        cmd: "blkid -p -s PART_ENTRY_UUID -o value {{ _esp_device }}"
-      register: _esp_blkid
-      changed_when: false
+        that: _esp_findmnt.stdout | trim != ''
+        fail_msg: "No device found mounted at /tuxifier-sysroot{{ _esp_volume.mount_point }}"
 
     - name: Set_fact _esp_partuuid
       ansible.builtin.set_fact:
-        _esp_partuuid: "{{ _esp_blkid.stdout | trim | lower }}"
-      changed_when: false
+        _esp_partuuid: "{{ _esp_findmnt.stdout | trim | lower }}"
 
     - name: Read existing EFI boot entries
       ansible.builtin.command:
@@ -217,27 +173,28 @@
         ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
         ansible_python_interpreter: "{{ python_interpreter }}"
 
-    - name: Set_fact entries and bootorder
+    - name: Set_fact _efi_entries, _efi_bootorder and _efi_label
       ansible.builtin.set_fact:
-        entries: "{{ efibootmgr_entries.stdout_lines | select('search', _esp_partuuid) | list }}"
-        bootorder: >-
+        _efi_entries: "{{ efibootmgr_entries.stdout_lines | select('search', _esp_partuuid) | list }}"
+        _efi_bootorder: >-
           {{ efibootmgr_entries.stdout_lines | select('match', '^BootOrder:') | first | default('')
              | regex_replace('^BootOrder:\s*', '') | split(',') }}
-      changed_when: false
+        _efi_label: "{{ distribution.name | capitalize }}"
 
-    - name: Set_fact bootnr efiloader
+    - name: Set_fact _efi_bootnr and _efi_loader
       ansible.builtin.set_fact:
-        bootnr: "{{ (entries | first | default('')) | regex_replace('^Boot([0-9A-Fa-f]{4}).*', '\\1') }}"
-        efiloader: "{{ (entries | first | default('')) | regex_replace('.*File\\((.*)\\).*', '\\1') | regex_replace('\\\\', '/') if entries | length > 0 else '' }}"
-      changed_when: false
+        _efi_bootnr: "{{ _efi_entry | regex_replace('^Boot([0-9A-Fa-f]{4}).*', '\\1') }}"
+        _efi_loader: "{{ (_efi_entry | regex_search(distribution.efi_entry_regex, '\\1') | default([''], true) | first) | regex_replace('\\\\', '/') }}"
+      vars:
+        _efi_entry: "{{ _efi_entries | first | default('') }}"
 
     - name: Stat efiloader
       ansible.builtin.stat:
-        path: "{{ '/tuxifier-sysroot' ~ efi_mountpoint ~ efiloader }}"
+        path: "{{ '/tuxifier-sysroot' ~ _esp_volume.mount_point ~ _efi_loader }}"
       register: _stat_efiloader
 
     - name: Remove and install efi entries
-      when: (entries | length != 1) or (not _stat_efiloader.stat.exists) or (bootnr not in bootorder)
+      when: (_efi_entries | length != 1) or (not _stat_efiloader.stat.exists) or (_efi_bootnr not in _efi_bootorder)
       block:
         - name: Remove existing efi entries
           ansible.builtin.command:
@@ -248,7 +205,7 @@
               - "{{ item }}"
           loop: >-
             {{ efibootmgr_entries.stdout_lines
-               | select('match', '^Boot[0-9A-Fa-f]{4}\*? +' ~ (installdistribution.name | capitalize) ~ '\s')
+               | select('match', '^Boot[0-9A-Fa-f]{4}\*? +' ~ _efi_label ~ '\s')
                | map('regex_replace', '^Boot([0-9A-Fa-f]{4}).*', '\1') | list }}
 
         - name: Install grub2 at efi
@@ -260,9 +217,9 @@
               - --disk
               - "{{ boot_disk }}"
               - --part
-              - "{{ efi_partitionnr }}"
+              - "{{ _esp_volume.name }}"
               - --label
-              - "{{ installdistribution.name | capitalize }}"
+              - "{{ _efi_label }}"
               - --loader
               - '\EFI\{{ distribution.efi_vendor_dir }}\{{ distribution.efi_loader }}'
       vars:
@@ -274,7 +231,7 @@
   ansible.builtin.set_fact:
     grub_cfg_path: >-
       {{ '/boot/efi/EFI/' ~ distribution.efi_vendor_dir ~ '/grub.cfg'
-         if (grub_target == 'x86_64-efi' and distribution.grub_cfg_full_on_esp | bool)
+         if (efi_booted and distribution.grub_cfg_full_on_esp | bool)
          else distribution.grub_cfg }}
   changed_when: false
 
