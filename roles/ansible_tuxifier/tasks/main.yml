@@ -7,7 +7,6 @@
   ansible.builtin.stat:
     path: /sys/firmware/efi
   register: _efi
-  changed_when: false
 
 - name: Set_fact efi_booted
   ansible.builtin.set_fact:
