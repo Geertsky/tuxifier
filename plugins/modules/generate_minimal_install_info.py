@@ -60,6 +60,12 @@ options:
           - Not used by this module; accepted so the complete distribution dict can be passed.
         required: false
         type: str
+      efi_entry_regex:
+        description:
+          - Regular expression that captures the path of the boot loader in a line of C(efibootmgr -v).
+          - Not used by this module; accepted so the complete distribution dict can be passed.
+        required: false
+        type: str
       grub_cfg:
         description:
           - Path of the grub configuration file that is read at boot.
@@ -353,6 +359,10 @@ def run_module():
                     "required": False,
                 },
                 "efi_loader": {
+                    "type": "str",
+                    "required": False,
+                },
+                "efi_entry_regex": {
                     "type": "str",
                     "required": False,
                 },
