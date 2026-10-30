@@ -5,6 +5,8 @@ distribution:
   version: '44'
   efi_vendor_dir: 'fedora'
   efi_loader: 'shimx64.efi'
+  # Matches the path of the loader in a line of efibootmgr -v; the format depends on the efibootmgr version.
+  efi_entry_regex: 'HD\([^)]*\)/(.*)$'
   grub_cfg: '/boot/grub2/grub.cfg'
   repo:
     type: 'metalink'

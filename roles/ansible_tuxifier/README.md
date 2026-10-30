@@ -279,6 +279,7 @@ In such a distribution file the following variable are set:
 | distribution.arch            | str  | The `architecture` to install.                                                                 |
 | distribution.efi_vendor_dir  | str  | The directory below `EFI/` on the ESP with the boot loader of the distribution (e.g. `redhat`, `rocky`, `almalinux`, `fedora`). |
 | distribution.efi_loader      | str  | The file name of the shim EFI binary in `distribution.efi_vendor_dir` (e.g. `shimx64.efi`).     |
+| distribution.efi_entry_regex | str  | A regular expression with one group that captures the path of the loader in a line of `efibootmgr -v`; the output format depends on the `efibootmgr` version of the distribution. |
 | distribution.grub_cfg        | str  | The path of the grub configuration read at boot, relative to the root of the installed system.  |
 | distribution.repo            | dict | The `repo` dictionary is describes the repository where the packages can be retrieved.         |
 | distribution.repo.type       | str  | The `type` of URL used for this repository.                                                    |

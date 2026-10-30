@@ -5,6 +5,8 @@ distribution:
   version: '9'
   efi_vendor_dir: 'redhat'
   efi_loader: 'shimx64.efi'
+  # Matches the path of the loader in a line of efibootmgr -v; the format depends on the efibootmgr version.
+  efi_entry_regex: 'HD\([^)]*\)/File\((.*)\)'
   grub_cfg: '/boot/grub2/grub.cfg'
   repo:
     type: 'mirrorlist'
