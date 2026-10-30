@@ -42,44 +42,37 @@
 - name: Check/create storage layout
   ansible.builtin.import_tasks: check_or_create_storage_layout.yml
 
-- name: Prepare chroot
-  ansible.builtin.import_tasks: prepare_chroot.yml
-  vars:
-    ansible_shell_executable: /tmp/namespaced-ansible-shell
-
-- name: Prepare the storage configuration of the installed system
-  ansible.builtin.import_tasks: prepare_storage_config.yml
-  vars:
-    ansible_shell_executable: /tmp/namespaced-ansible-shell
-
-- name: Update message
-  ansible.builtin.copy:
-    dest: /tmp/message
-    content: Installing...
-    mode: "0644"
-  changed_when: false
-
-- name: Minimal Install
-  ansible.builtin.import_tasks: minimal_install.yml
-  vars:
-    ansible_shell_executable: /tmp/namespaced-ansible-shell
-
-- name: Post Minimal Install
-  ansible.builtin.import_tasks: post_minimal_install.yml
-  vars:
-    ansible_shell_executable: /tmp/namespaced-ansible-shell
-
-- name: Update message
-  ansible.builtin.copy:
-    dest: /tmp/message
-    content: Installation finished
-    mode: "0644"
-  changed_when: false
-
-- name: Remove the python-nest bind mount and /local/conda from the chroot
+# Everything in the namespace of /tuxifier-sysroot.
+- name: Install into /tuxifier-sysroot
   vars:
     ansible_shell_executable: /tmp/namespaced-ansible-shell
   block:
+    - name: Prepare chroot
+      ansible.builtin.import_tasks: prepare_chroot.yml
+
+    - name: Prepare the storage configuration of the installed system
+      ansible.builtin.import_tasks: prepare_storage_config.yml
+
+    - name: Update message
+      ansible.builtin.copy:
+        dest: /tmp/message
+        content: Installing...
+        mode: "0644"
+      changed_when: false
+
+    - name: Minimal Install
+      ansible.builtin.import_tasks: minimal_install.yml
+
+    - name: Post Minimal Install
+      ansible.builtin.import_tasks: post_minimal_install.yml
+
+    - name: Update message
+      ansible.builtin.copy:
+        dest: /tmp/message
+        content: Installation finished
+        mode: "0644"
+      changed_when: false
+
     - name: Unmount python-nest from the chroot
       ansible.posix.mount:
         path: /tuxifier-sysroot/local/conda/envs/python-nest
@@ -92,21 +85,25 @@
         state: absent
       changed_when: false
 
-- name: Umount /tuxifier-sysroot
-  ansible.builtin.command:
-    cmd: umount -R -A /tuxifier-sysroot
-  vars:
-    ansible_shell_executable: /tmp/namespaced-ansible-shell
+    - name: Umount /tuxifier-sysroot
+      ansible.builtin.command:
+        argv:
+          - umount
+          - -R
+          - -A
+          - /tuxifier-sysroot
+      changed_when: false
+
+- name: Umount /root/namespacesi/tuxifier-sysroot
+  ansible.posix.mount:
+    path: /root/namespaces/tuxifier-sysroot
+    state: unmounted
   changed_when: false
 
 - name: Umount /root/namespaces
-  ansible.builtin.shell: |
-    while mountpoint -q /root/namespaces/tuxifier-sysroot; do
-      umount /root/namespaces/tuxifier-sysroot || exit 1
-    done
-    while mountpoint -q /root/namespaces; do
-      umount /root/namespaces || exit 1
-    done
+  ansible.posix.mount:
+    path: /root/namespaces
+    state: unmounted
   changed_when: false
 
 - name: Continue install
