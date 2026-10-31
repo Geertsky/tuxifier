@@ -1,0 +1,29 @@
+---
+distribution:
+  name: 'rocky'
+  arch: 'x86_64'
+  version: '8'
+  efi_vendor_dir: 'rocky'
+  efi_loader: 'shimx64.efi'
+  # Matches the path of the loader in a line of efibootmgr -v; the format depends on the efibootmgr version.
+  efi_entry_regex: 'HD\([^)]*\)/File\((.*)\)'
+  grub_cfg: '/boot/grub2/grub.cfg'
+  grub_cfg_full_on_esp: true
+  repo: "{{ installdistribution.repo | default({'type': 'mirrorlist', 'url': 'https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-8'}) }}"
+  minimalpackages:
+    - '@Core'
+    - 'util-linux'
+    - 'coreutils'
+    - "{{ 'kernel-' ~ ansible_facts['kernel'] if (continue_install | default(false) | bool) else 'kernel' }}"
+    - "{{ 'grub2-efi-x64' if efi_booted else 'grub2-pc' }}"
+    - "{{ 'grub2-tools-efi' if efi_booted else '' }}"
+    - "{{ 'shim-x64' if efi_booted else '' }}"
+    - 'lvm2'
+    - 'cryptsetup'
+    - 'mdadm'
+    - "{{ 'efibootmgr' if efi_booted else '' }}"
+    - 'sqlite'
+    # Queues the python3.12 install of the first boot, see post_minimal_install.yml.
+    - 'at'
+
+gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-Rocky-8

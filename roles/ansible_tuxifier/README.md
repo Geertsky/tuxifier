@@ -5,11 +5,11 @@ Description: Partition and install a server from the initramfs built with dracut
 ## Dependencies
 
 ### ansible-core
-ansible-core 2.15 or newer. A second run of the role without `tuxifier_reinstall` was tested with every ansible-core from 2.15 to 2.21, after a first install with 2.21.
-
-On a second run the role gathers the packages of the installed system with `package_facts` in the chroot. It runs the task with the `python3` of the
-installed system and with the `rpm` of the installed system first in the `PATH`, because the `rpm` of the python-nest environment looks for its database
-below the python-nest prefix and not in `/var/lib/rpm`. Up to ansible-core 2.20 `package_facts` uses the rpm python bindings of the interpreter, from 2.21 it runs `rpm`.
+ansible-core 2.21 or newer. The role gathers the packages of an already installed system with `package_facts` in the chroot.
+From 2.21 the rpm backend of that module runs the `rpm` command (`rpm -qa`) from the `PATH`, and in the chroot that is the `rpm` of the
+python-nest environment. It looks for its database in the python-nest prefix by default (`_dbpath` is `/local/conda/envs/python-nest/var/lib/rpm`),
+not in `/var/lib/rpm` of the installed system. The role therefore writes `/root/.rpmmacros` in the chroot from `rpm_macros` while it installs, and
+removes it afterwards. Without it `package_facts` finds no database and a second run of the role without `tuxifier_reinstall` fails with `package ... is already installed`.
 
 ### Roles
 The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage) has to be installed as a role (not as the `fedora.linux_system_roles` collection),
@@ -33,21 +33,21 @@ so it can not be listed in the `dependencies` of `galaxy.yml` (`ansible-galaxy c
 
 | distribution | versions | status |
 |--------------|----------|--------|
-| Rocky Linux  | 9, 10    | installed in the BIOS and UEFI test VMs |
+| Rocky Linux  | 8, 9, 10 | installed in the BIOS and UEFI test VMs |
 | AlmaLinux    | 9, 10    | installed in the BIOS and UEFI test VMs |
-| RHEL         | 9, 10    | installed in the BIOS and UEFI test VMs |
+| RHEL         | 8 (`vars/rhel8.yml` exists, untested), 9, 10 | 9 and 10 installed in the BIOS and UEFI test VMs |
 | Fedora       | 38, 44   | `vars/` files exist (`fedora38.yml`, `fedora44.yml`), untested |
 
 The version of a distribution is the major version, given as a string (`installdistribution.version: "9"`).
 
 >[!NOTE]
->Only version 9 and 10 are supported. Version 8 of Rocky Linux and RHEL (AlmaLinux 8 is not supported at all) is not, because:
+>Version 8 (Rocky Linux, RHEL; AlmaLinux 8 is not supported) differs from 9 and 10 in three ways, which the role handles:
 >
->* The Python of version 8, `platform-python` 3.6, is not a target that current ansible-core versions run modules on. The role therefore runs the modules of the chroot with the Python of the python-nest environment, and with it `package_facts` can only read the installed packages with ansible-core 2.21 or newer.
->* The rpm database of version 8 is Berkeley DB, while the `rpm` of the initramfs writes sqlite. After installing, the database has to be reimported with the `rpmdb` of the installed system (`reimport_rpmdb` of the `rpm_install` module).
->* On version 8 the `grub.cfg` on the EFI system partition is the full configuration, not a pointer to the one in `/boot`.
+>* The Python of version 8, `platform-python` 3.6, is not a target that current ansible-core versions run modules on. The role runs the modules of the chroot with the Python of the python-nest environment. With `continue_install` the installed system gets `python3.12` from a job of `at` on its first boot (`post_minimal_install.yml`), because the playbook needs a Python on the target to continue. Its `python3-firewall` can only be imported by `platform-python`, so `continue_install.yml` of the playbook opens the firewall with `firewall-offline-cmd`.
+>* The rpm database of version 8 is Berkeley DB, while the `rpm` of the initramfs writes sqlite. The database is converted when the install is done, see below.
+>* On version 8 the `grub.cfg` on the EFI system partition is the full configuration, not a pointer to the one in `/boot` (`grub_cfg_full_on_esp` in `vars/rocky8.yml`).
 >
->The `el8` branch of the [tuxifier](https://github.com/Geertsky/tuxifier), [tuxifier-playbook](https://github.com/Geertsky/tuxifier-playbook) and [tuxifier_project](https://github.com/Geertsky/tuxifier_project) repositories supports version 8 only, and needs ansible-core 2.21 or newer. Version 8 and its workarounds are not tested with the `main` branch.
+>Version 8 has its own `minimalpackages` in its vars file, which replaces the common list of `vars/main.yml`.
 
 ### Initramfs image generation
 For using `tuxifier`, the machine has to be booted using an initramfs image with the [dracut-incubator](https://github.com/geertsky/dracut-incubator) module included.
@@ -259,6 +259,36 @@ Tuxifier checks that `/boot/vmlinuz-<running kernel>` exists in the installed sy
 This can cause the `geertsky.tuxifier.generate_minimal_install_info` module to fail in resolving the URLs to the `minimalpackages` when the major version of the distribution used to generate the initramfs is not the same as the major version of the distribution that is being installed.
 Additionally, it can be that the kernel version used to generate the initramfs is not the latest available for this distribution. When that happens it means that the installation performed is not the latest available.
 
+## Install of the packages
+The packages of `distribution.minimalpackages` are installed in two stages, because the python, `rpm` and `curl` of python-nest are bind mounted in the
+chroot but link to the glibc of the distribution and need a shell there:
+
+1. The glibc packages of the distribution and what they need (a shell among them) are installed from the namespace with the `rpm` of python-nest and `--root`.
+2. In the chroot, `package_facts` with the python of python-nest tells which packages are missing, and they are installed from inside the chroot.
+
+`/proc`, `/sys` and `/dev` have to be mounted in the chroot before python-nest runs there, the role does that when it mounts `/tuxifier-sysroot`.
+
+A run starts from what a previous run left, which `tasks/classify_sysroot.yml` finds out from the existence of `/bin/sh` (first stage done), `/usr/bin/rpm` (second stage
+reached the `rpm` package) and the rpm database files, together with the major version of the distribution:
+
+| /bin/sh | /usr/bin/rpm | `Packages` (bdb) | `rpmdb.sqlite` | Version 8 | Version 9 and 10 |
+|---|---|---|---|---|---|
+| no  | no  | no  | no  | empty, first stage | empty, first stage |
+| no  | no  | no  | yes | first stage was interrupted, again | first stage was interrupted, again |
+| yes | no  | no  | yes | first stage done | first stage done |
+| yes | yes | no  | yes | second stage done, convert the database | complete |
+| yes | yes | yes | no  | complete | inconsistent |
+| yes | yes | yes | yes | inconsistent | inconsistent |
+
+Every other combination is inconsistent and stops the run, use `tuxifier_reinstall`. The files tell how far the install is, not if it is complete: the packages that are missing are
+always installed from the result of `package_facts`.
+
+The `rpm` of python-nest writes a sqlite database. The `rpm` of version 8 uses bdb, reads a sqlite database but does not write one, and uses it as long as one exists.
+It is written by the `rpm` that can: python-nest for sqlite, the `rpm` of the distribution once the database is bdb. On version 8 the sqlite database is therefore converted when
+the second stage is done: the `rpm` of the distribution exports it, the sqlite database is moved to `/var/lib/rpm-sqlite`, and the `rpm` of the distribution imports the export into a
+new `/var/lib/rpm`. The old database can not stay in `/var/lib/rpm` for that. When the new database lists the same packages, removing `/var/lib/rpm-sqlite/rpmdb.sqlite` finishes the conversion; when
+anything fails before that the old database is put back. A run that finds a conversion that was interrupted puts the old database back and starts again, or removes what is left of the old directory.
+
 ## role vars
 In the role a number of variables are defined in different var files.
 ### main.yml
@@ -268,7 +298,7 @@ In the role a number of variables are defined in different var files.
 | ansible_interpreter_python_fallback | list | The `ansible_interpreter_python_fallback` var is extended with the python interpreter of the python-nest environment available in the initramfs                                         |
 | rpm_directory_macros | dict | The rpm macros whose value is a directory, as macro name and path, for example `_dbpath: /var/lib/rpm`. These directories are created in `/tuxifier-sysroot`. |
 | rpm_other_macros | dict | The other rpm macros, for example the `curl` that rpm uses to download packages. |
-| rpm_macros | dict | The rpm macros defined for the rpm commands executed by `tuxifier`: `rpm_directory_macros` and `rpm_other_macros` together. |
+| rpm_macros | dict | The rpm macros defined for the rpm commands executed by `tuxifier`: `rpm_directory_macros` and `rpm_other_macros` together. They are also written to `/root/.rpmmacros` in the chroot while the packages are installed. |
 | virtual_filesystems | list | The list of virtual filesystems mounted in the `/tuxifier-sysroot` for the installation.                                                                                                                    |
 
 ### {{ distribution.name + distribution.version }}.yml Distribution vars

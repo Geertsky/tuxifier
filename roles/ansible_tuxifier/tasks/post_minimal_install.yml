@@ -64,6 +64,41 @@
     ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
     ansible_python_interpreter: "{{ python_interpreter }}"
 
+# Version 8 has no python3.12 (its python3 is 3.6, too old for the ansible modules), which the playbook needs to continue on the installed system. The first boot
+# installs it: atd runs a job that is already due when it starts.
+- name: Install python3.12 on the first boot of the installed system
+  when: distribution.version == '8' and _continue_install
+  block:
+    - name: Stat python3.12
+      ansible.builtin.stat:
+        path: /usr/bin/python3.12
+      register: _python3
+
+    - name: Enable atd
+      ansible.builtin.command:
+        cmd: systemctl enable atd
+        creates: /etc/systemd/system/multi-user.target.wants/atd.service
+      notify: Relabel sysroot
+
+    - name: List the queued at jobs
+      ansible.builtin.command:
+        argv:
+          - atq
+      register: _atq
+      changed_when: false
+
+    - name: Queue the python3.12 install
+      when: not _python3.stat.exists and _atq.stdout | trim == ''
+      ansible.builtin.command:
+        argv:
+          - at
+          - now
+        stdin: "until dnf install -y python3.12; do sleep 10; done"
+      notify: Relabel sysroot
+  vars:
+    ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
+    ansible_python_interpreter: "{{ python_interpreter }}"
+
 # The first partition pool with a volume at /boot, or else at /boot/efi.
 - name: Set_fact boot_disk
   ansible.builtin.set_fact:
@@ -219,7 +254,16 @@
       vars:
         ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
         ansible_python_interpreter: "{{ python_interpreter }}"
-# The grub.cfg on the ESP is a stub that points to distribution.grub_cfg; it is left untouched.
+# On RHEL 8 the grub.cfg on the ESP is the full config; elsewhere it is a stub
+# that points to distribution.grub_cfg, which must be left untouched on the ESP.
+- name: Set_fact grub_cfg_path
+  ansible.builtin.set_fact:
+    grub_cfg_path: >-
+      {{ '/boot/efi/EFI/' ~ distribution.efi_vendor_dir ~ '/grub.cfg'
+         if (efi_booted and distribution.grub_cfg_full_on_esp | default(false) | bool)
+         else distribution.grub_cfg }}
+  changed_when: false
+
 - name: Generate grub config in a temporary file
   ansible.builtin.command:
     cmd: "/usr/sbin/grub2-mkconfig -o /tmp/grub.cfg"
@@ -232,7 +276,7 @@
   notify: Relabel sysroot
   ansible.builtin.copy:
     src: /tuxifier-sysroot/tmp/grub.cfg
-    dest: "/tuxifier-sysroot{{ distribution.grub_cfg }}"
+    dest: "/tuxifier-sysroot{{ grub_cfg_path }}"
     remote_src: true
     owner: root
     group: root

@@ -30,13 +30,14 @@ The variables, the supported distributions and the behaviour of each option are 
 | Module | Description |
 |--------|-------------|
 | `geertsky.tuxifier.generate_minimal_install_info` | Resolves the packages and package groups of the `minimalpackages` of a distribution, with their dependencies, against its repository. Returns `packages`, a list of dicts with the `name` and the `url` of every package, `rpm_urls` with the same URLs as one string, and `package_count`. |
-| `geertsky.tuxifier.rpm_install` | Imports the GPG keys that are missing in the rpm keyring of a root and installs the packages that are not installed in that root, with `rpm`. Can reimport the rpm database with the `rpmdb` of the installed system. Running it again changes nothing. |
 
-The role uses `generate_minimal_install_info` to find the packages to install, and `rpm_install` to install them. See `ansible-doc geertsky.tuxifier.generate_minimal_install_info` and `ansible-doc geertsky.tuxifier.rpm_install` for the parameters and return values.
+The role uses `generate_minimal_install_info` to find the packages to install, and installs them with the `rpm` of the python-nest environment, see the README of the role. See `ansible-doc geertsky.tuxifier.generate_minimal_install_info` for the parameters and return values.
 
 ## Requirements
 
-* ansible-core 2.15 or newer (`requires_ansible` in [meta/runtime.yml](meta/runtime.yml)), and the collections `community.general` and `ansible.posix`. The collections are installed with this collection. A second run of the role (the one that reads the installed system) was tested with every ansible-core from 2.15 to 2.21, after a first install with 2.21.
+* ansible-core 2.21 or newer (`requires_ansible` in [meta/runtime.yml](meta/runtime.yml)), and the collections `community.general` and `ansible.posix`. The collections are installed with this collection.
+
+  Why 2.21: when the installed system already exists (a second run without `tuxifier_reinstall`), the role reads its packages with `package_facts` inside the chroot. Up to ansible-core 2.20 the rpm backend of that module uses the Python `rpm` bindings, and it can not be given rpm macros. The `rpm` of the python-nest environment looks for its database in the python-nest prefix by default (`_dbpath` is `/local/conda/envs/python-nest/var/lib/rpm`), not in `/var/lib/rpm` of the installed system. That is why the role passes `--define _var /var --define _dbpath /var/lib/rpm` on every `rpm` command line. The module then fails with `Failed to retrieve packages with rpm: rpmdb open failed`, so the role installs every package again and fails with `package ... is already installed`. From 2.21 the module runs the `rpm` command, and the role puts the `rpm` of the installed system first in the `PATH` for it, which finds its own database. A first install, and so a run with `tuxifier_reinstall=true`, works on 2.16 and newer, but 2.21 is the first version where both runs work.
 * The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage), from its `main` branch. It is a role and not a collection, so it is installed separately, see below.
 * The Python `dnf` module (`python3-dnf`) for `/usr/bin/python3` on the Ansible controller: `generate_minimal_install_info` is delegated to `localhost`, so the controller has to be an RPM based distribution.
 * The machine to install has to boot an initramfs built with [dracut-incubator](https://github.com/Geertsky/dracut-incubator).
@@ -102,7 +103,7 @@ The [tuxifier-playbook repository](https://github.com/Geertsky/tuxifier-playbook
 
 Rocky Linux, AlmaLinux, RHEL and Fedora, see [Supported distributions](roles/ansible_tuxifier/README.md#supported-distributions) in the role README for the versions and how far each of them is tested.
 
-Only version 9 and 10 are supported. Version 8 is not, because of its `platform-python` 3.6, its Berkeley DB rpm database and its EFI `grub.cfg`; see the [note in the role README](roles/ansible_tuxifier/README.md#supported-distributions). The `el8` branch supports version 8 only.
+Version 9 and 10 are installed in the BIOS and UEFI test VMs, Rocky Linux 8 too. Version 8 differs in its `platform-python` 3.6, its Berkeley DB rpm database and its EFI `grub.cfg`; see the [note in the role README](roles/ansible_tuxifier/README.md#supported-distributions).
 
 ## Development
 
