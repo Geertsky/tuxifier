@@ -23,5 +23,7 @@ distribution:
     - 'mdadm'
     - "{{ 'efibootmgr' if efi_booted else '' }}"
     - 'sqlite'
+    # Queues the python3.12 install of the first boot, see post_minimal_install.yml.
+    - 'at'
 
 gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
