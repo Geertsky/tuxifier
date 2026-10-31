@@ -20,18 +20,19 @@
     state: directory
     mode: '0755'
 
-- name: Write the fstab entries of the block device filesystems
+# The storage role has written the filesystems to the /etc/fstab of the initramfs, with the mount points below
+# /tuxifier-sysroot (swap has none). The installed system gets that file without the prefix.
+- name: Read the fstab written by the storage role
+  ansible.builtin.slurp:
+    src: /etc/fstab
+  register: _fstab
+
+- name: Write the fstab of the installed system
   notify: Relabel sysroot
-  ansible.posix.mount:
-    path: "{{ item.path }}"
-    src: "{{ item.src }}"
-    fstype: "{{ item.fstype }}"
-    opts: "{{ item.opts }}"
-    dump: "{{ item.dump }}"
-    passno: "{{ item.passno }}"
-    fstab: /tuxifier-sysroot/etc/fstab
-    state: present
-  loop: "{{ _sysroot_volumes }}"
+  ansible.builtin.copy:
+    dest: /tuxifier-sysroot/etc/fstab
+    content: "{{ _fstab.content | b64decode | regex_replace('(?m)^(\\S+\\s+)/tuxifier-sysroot/?(\\S*)', '\\1/\\2') }}"
+    mode: '0644'
 
 - name: Stat resolv.conf
   ansible.builtin.stat:
