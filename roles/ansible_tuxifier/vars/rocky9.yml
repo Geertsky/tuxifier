@@ -1,5 +1,4 @@
 ---
-rpmdb_reimport: False
 distribution:
   name: 'rocky'
   arch: 'x86_64'

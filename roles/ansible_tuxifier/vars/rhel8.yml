@@ -1,5 +1,4 @@
 ---
-rpmdb_reimport: True
 distribution:
   name: 'rhel'
   arch: 'x86_64'

@@ -1,0 +1,58 @@
+---
+
+# Tells how far the install of /tuxifier-sysroot is, from what exists in it and the major version of the distribution.
+# The stages of the install are in minimal_install.yml. Expects the vars sysroot and version.
+#
+# The key is <sh><rpm><bdb><sqlite>+<old><oldsqlite>, each 0 or 1:
+#   sh      /bin/sh          bash of the glibc packages, the marker of the first stage
+#   rpm     /usr/bin/rpm     the rpm of the distribution, installed in the second stage
+#   bdb     /var/lib/rpm/Packages       database of the rpm of version 8
+#   sqlite  /var/lib/rpm/rpmdb.sqlite   database as written by the rpm of python-nest, native on version 9 and 10
+#   old       /var/lib/rpm-sqlite              the sqlite database while it is converted on version 8: it is moved here before the bdb
+#                                              database is made in /var/lib/rpm, and removed when that lists the same packages
+#   oldsqlite /var/lib/rpm-sqlite/rpmdb.sqlite the old database itself. Removing this file is what finishes the conversion
+#
+# The rpm of python-nest only writes sqlite, and only the rpm of version 8 writes bdb. The rpm of version 8 reads sqlite, but does
+# not write it, and uses a sqlite database as long as one exists, so it can not be converted in place.
+- name: Stat the markers of the install state
+  ansible.builtin.stat:
+    path: "{{ sysroot }}{{ item }}"
+    follow: true
+  loop: [/bin/sh, /usr/bin/rpm, /var/lib/rpm/Packages, /var/lib/rpm/rpmdb.sqlite, /var/lib/rpm-sqlite, /var/lib/rpm-sqlite/rpmdb.sqlite]
+  register: _marks
+
+- name: Set_fact the state of the sysroot
+  ansible.builtin.set_fact:
+    _state_key: "{{ _bits[:4] | join('') }}+{{ _bits[4:] | join('') }}"
+    _sysroot_state: "{{ _swap_state if _swap_state is mapping else (_state_table[_class][_bits[:4] | join('')] | default(_unknown)) }}"
+    _sysroot_bdb: "{{ _bits[2] == 1 }}"
+  vars:
+    _bits: "{{ _marks.results | map(attribute='stat.exists') | map('int') | list }}"
+    _class: "{{ 'native_bdb' if (version | string) == '8' else 'native_sqlite' }}"
+    _unknown: {state: INCONSISTENT}
+    # only version 8 has a conversion, so only there the old database can exist. The live database in /var/lib/rpm is B (bdb only),
+    # S (sqlite, with or without bdb) or N (none).
+    _live: "{{ 'S' if _bits[3] else ('B' if _bits[2] else 'N') }}"
+    _swap_state: "{{ _swap[(_bits[4:] | join('')) ~ _live] | default('') if _class == 'native_bdb' else '' }}"
+    # While the old database has its file the conversion is not finished, whatever the new database in /var/lib/rpm looks like: the old
+    # one is put back and the conversion starts again. Without its file the new database was complete and the old directory is left over.
+    _swap:
+      '11N': {state: CONVERSION_RESTORE, stage1: false}
+      '11B': {state: CONVERSION_RESTORE, stage1: false}
+      '10B': {state: CONVERSION_CLEANUP, stage1: false}
+      '11S': {state: INCONSISTENT}
+      '10N': {state: INCONSISTENT}
+      '10S': {state: INCONSISTENT}
+    _state_table:
+      native_bdb:
+        '0000': {state: EMPTY, stage1: true}
+        '0001': {state: STAGE1_PARTIAL, stage1: true}
+        '1001': {state: STAGE1_DONE, stage1: false}
+        '1101': {state: STAGE2_ON_SQLITE, stage1: false}
+        '1110': {state: COMPLETE, stage1: false}
+        '1111': {state: BOTH_DATABASES}
+      native_sqlite:
+        '0000': {state: EMPTY, stage1: true}
+        '0001': {state: STAGE1_PARTIAL, stage1: true}
+        '1001': {state: STAGE1_DONE, stage1: false}
+        '1101': {state: COMPLETE, stage1: false}

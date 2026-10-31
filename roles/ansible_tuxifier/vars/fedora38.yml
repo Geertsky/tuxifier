@@ -1,6 +1,5 @@
 ---
 
-rpmdb_reimport: false
 distribution:
   name: 'fedora'
   arch: 'x86_64'
