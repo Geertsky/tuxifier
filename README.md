@@ -30,9 +30,8 @@ The variables, the supported distributions and the behaviour of each option are 
 | Module | Description |
 |--------|-------------|
 | `geertsky.tuxifier.generate_minimal_install_info` | Resolves the packages and package groups of the `minimalpackages` of a distribution, with their dependencies, against its repository. Returns `packages`, a list of dicts with the `name` and the `url` of every package, `rpm_urls` with the same URLs as one string, and `package_count`. |
-| `geertsky.tuxifier.rpm_install` | Imports the GPG keys that are missing in the rpm keyring of a root and installs the packages that are not installed in that root, with `rpm`. Can reimport the rpm database with the `rpmdb` of the installed system. Running it again changes nothing. |
 
-The role uses `generate_minimal_install_info` to find the packages to install, and `rpm_install` to install them. See `ansible-doc geertsky.tuxifier.generate_minimal_install_info` and `ansible-doc geertsky.tuxifier.rpm_install` for the parameters and return values.
+The role uses `generate_minimal_install_info` to find the packages to install, and installs them with the `rpm` of the python-nest environment, see the README of the role. See `ansible-doc geertsky.tuxifier.generate_minimal_install_info` for the parameters and return values.
 
 ## Requirements
 

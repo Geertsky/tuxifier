@@ -6,11 +6,10 @@ Description: Partition and install a server from the initramfs built with dracut
 
 ### ansible-core
 ansible-core 2.21 or newer. The role gathers the packages of an already installed system with `package_facts` in the chroot.
-Up to ansible-core 2.20 the rpm backend of that module uses the Python `rpm` bindings, and it can not be given rpm macros. The `rpm` of the
-python-nest environment looks for its database in the python-nest prefix by default (`_dbpath` is `/local/conda/envs/python-nest/var/lib/rpm`),
-not in `/var/lib/rpm` of the installed system, which is why `rpm_macros` sets `_var` and `_dbpath`. The module fails with
-`Failed to retrieve packages with rpm: rpmdb open failed`, and a second run of the role without `tuxifier_reinstall` then fails with `package ... is already installed`.
-From 2.21 the module runs the `rpm` command, and the role puts the `rpm` of the installed system first in the `PATH` for it.
+From 2.21 the rpm backend of that module runs the `rpm` command (`rpm -qa`) from the `PATH`, and in the chroot that is the `rpm` of the
+python-nest environment. It looks for its database in the python-nest prefix by default (`_dbpath` is `/local/conda/envs/python-nest/var/lib/rpm`),
+not in `/var/lib/rpm` of the installed system. The role therefore writes `/root/.rpmmacros` in the chroot from `rpm_macros` while it installs, and
+removes it afterwards. Without it `package_facts` finds no database and a second run of the role without `tuxifier_reinstall` fails with `package ... is already installed`.
 
 ### Roles
 The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage) has to be installed as a role (not as the `fedora.linux_system_roles` collection),
@@ -252,6 +251,36 @@ Tuxifier checks that `/boot/vmlinuz-<running kernel>` exists in the installed sy
 This can cause the `geertsky.tuxifier.generate_minimal_install_info` module to fail in resolving the URLs to the `minimalpackages` when the major version of the distribution used to generate the initramfs is not the same as the major version of the distribution that is being installed.
 Additionally, it can be that the kernel version used to generate the initramfs is not the latest available for this distribution. When that happens it means that the installation performed is not the latest available.
 
+## Install of the packages
+The packages of `distribution.minimalpackages` are installed in two stages, because the python, `rpm` and `curl` of python-nest are bind mounted in the
+chroot but link to the glibc of the distribution and need a shell there:
+
+1. The glibc packages of the distribution and what they need (a shell among them) are installed from the namespace with the `rpm` of python-nest and `--root`.
+2. In the chroot, `package_facts` with the python of python-nest tells which packages are missing, and they are installed from inside the chroot.
+
+`/proc`, `/sys` and `/dev` have to be mounted in the chroot before python-nest runs there, the role does that when it mounts `/tuxifier-sysroot`.
+
+A run starts from what a previous run left, which `tasks/classify_sysroot.yml` finds out from the existence of `/bin/sh` (first stage done), `/usr/bin/rpm` (second stage
+reached the `rpm` package) and the rpm database files, together with the major version of the distribution:
+
+| /bin/sh | /usr/bin/rpm | `Packages` (bdb) | `rpmdb.sqlite` | Version 8 | Version 9 and 10 |
+|---|---|---|---|---|---|
+| no  | no  | no  | no  | empty, first stage | empty, first stage |
+| no  | no  | no  | yes | first stage was interrupted, again | first stage was interrupted, again |
+| yes | no  | no  | yes | first stage done | first stage done |
+| yes | yes | no  | yes | second stage done, convert the database | complete |
+| yes | yes | yes | no  | complete | inconsistent |
+| yes | yes | yes | yes | inconsistent | inconsistent |
+
+Every other combination is inconsistent and stops the run, use `tuxifier_reinstall`. The files tell how far the install is, not if it is complete: the packages that are missing are
+always installed from the result of `package_facts`.
+
+The `rpm` of python-nest writes a sqlite database. The `rpm` of version 8 uses bdb, reads a sqlite database but does not write one, and uses it as long as one exists.
+It is written by the `rpm` that can: python-nest for sqlite, the `rpm` of the distribution once the database is bdb. On version 8 the sqlite database is therefore converted when
+the second stage is done: the `rpm` of the distribution exports it, the sqlite database is moved to `/var/lib/rpm-sqlite`, and the `rpm` of the distribution imports the export into a
+new `/var/lib/rpm`. The old database can not stay in `/var/lib/rpm` for that. When the new database lists the same packages, removing `/var/lib/rpm-sqlite/rpmdb.sqlite` finishes the conversion; when
+anything fails before that the old database is put back. A run that finds a conversion that was interrupted puts the old database back and starts again, or removes what is left of the old directory.
+
 ## role vars
 In the role a number of variables are defined in different var files.
 ### main.yml
@@ -259,7 +288,7 @@ In the role a number of variables are defined in different var files.
 | Variable                                       | Type | Description                                                                                                                                                                      |
 |------------------------------------------------|------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | ansible_interpreter_python_fallback | list | The `ansible_interpreter_python_fallback` var is extended with the python interpreter of the python-nest environment available in the initramfs                                         |
-| rpm_macros | dict | The rpm macros defined for the rpm commands executed by `tuxifier`, as macro name and macro value, for example `_dbpath: /var/lib/rpm`. Macros named `_` followed by letters with an absolute path as value are created as directories in `/tuxifier-sysroot`                                                                                                                                                          |
+| rpm_macros | dict | The rpm macros defined for the rpm commands executed by `tuxifier`, as macro name and macro value, for example `_dbpath: /var/lib/rpm`. Macros named `_` followed by letters with an absolute path as value are created as directories in `/tuxifier-sysroot`. They are also written to `/root/.rpmmacros` in the chroot while the packages are installed. |
 | virtual_filesystems | list | The list of virtual filesystems mounted in the `/tuxifier-sysroot` for the installation.                                                                                                                    |
 
 ### {{ distribution.name + distribution.version }}.yml Distribution vars
@@ -268,7 +297,6 @@ The distribution variable are set in a file named `{{distribution.name + distrib
 In such a distribution file the following variable are set:
 | Var                          | Type | Value                                                                                          |
 |------------------------------|------|------------------------------------------------------------------------------------------------|
-| rpmdb_reimport               | bool | `rpmdb_reimport` controls if the sqlite rpmdb, as written by the rpm of the initramfs, is exported and imported again with the rpm of the installed system. This gives distributions with another backend, such as bdb for version 8 of RHEL and its derivatives, an rpmdb in their own format.                       |
 | distribution                 | dict | The distribution dict describes the distribution to install.                                   |
 | distribution.name            | str  | The `name` of the distribution.                                                                |
 | distribution.version         | str  | The `version` of the distribution.                                                             |
