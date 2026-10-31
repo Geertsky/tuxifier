@@ -22,6 +22,15 @@ rpm_macros:
   _tmppath: /var/tmp
   __urlhelpercmd: /local/conda/envs/python-nest/bin/curl
   __urlhelper_localopts: --retry=10 --retry-all-errors --cacert=/local/conda/envs/python-nest/ssl/cacert.pem
+  # The unshare plugin of the rpm of python-nest changes the mount propagation of /, which fails in a chroot: the scriptlets exit 126.
+  __transaction_unshare: '%{nil}'
+
+# The rpm of python-nest by path, it is first in the PATH of the shells, but the installed system gets its own rpm.
+rpm_bin: /local/conda/envs/python-nest/bin/rpm
+rpmkeys_bin: /local/conda/envs/python-nest/bin/rpmkeys
+
+# rpm_macros as arguments of an rpm command: --define "name value"
+rpm_define_args: "{{ rpm_macros.items() | map('join', ' ') | map('regex_replace', '^', '--define=') | list }}"
 
 efi_virtual_filesystem:
   - { path: /sys/firmware/efi/efivars, src: efivarfs, opts: "rw,nosuid,nodev,noexec,relatime" }
