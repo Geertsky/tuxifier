@@ -79,7 +79,9 @@
       {%- for disk in installdisk -%}
         {%- set vols = namespace(items=[]) -%}
         {%- for vol in disk.volumes | default([]) -%}
-          {%- if vol.mount_point | default('') -%}
+          {%- if vol.fs_type | default('') == 'efi' -%}
+            {%- set vols.items = vols.items + [vol | dict2items | rejectattr('key', 'equalto', 'mount_point') | items2dict] -%}
+          {%- elif vol.mount_point | default('') -%}
             {%- set vols.items = vols.items + [vol | combine({'mount_point': '/tuxifier-sysroot' ~ ('' if vol.mount_point == '/' else vol.mount_point)})] -%}
           {%- else -%}
             {%- set vols.items = vols.items + [vol] -%}
@@ -90,6 +92,22 @@
       {{ ns.disks }}
     storage_volumes: []
     ansible_shell_executable: /tmp/namespaced-ansible-shell
+
+# TEMPORARY, until linux-system-roles.storage mounts an efi volume as vfat (branch fix-efi-mount-type, commit 1d7dd78):
+# the storage role has created the ESP but does not mount it, so it is mounted here and gets its fstab entry in
+# prepare_chroot.yml. Revert the commit that adds this when the fix is merged and requirements.yml points to it.
+- name: Set_fact _efi_mounts
+  ansible.builtin.set_fact:
+    _efi_mounts: >-
+      {%- set ns = namespace(items=[]) -%}
+      {%- for pool in installdisk -%}
+      {%- set bpool = _storage_pools_list | selectattr('name', 'equalto', pool.name) | first -%}
+      {%- for vol in pool.volumes | default([]) if (vol.fs_type | default('')) == 'efi' and (vol.mount_point | default('')) -%}
+      {%- set bvol = bpool.volumes | selectattr('name', 'equalto', vol.name) | first -%}
+      {%- set ns.items = ns.items + [{'path': vol.mount_point, 'src': bvol._mount_id}] -%}
+      {%- endfor -%}
+      {%- endfor -%}
+      {{ ns.items }}
 
 - name: Mount the virtual filesystems and python-nest in /tuxifier-sysroot
   ansible.builtin.include_tasks: mount_tuxifier_sysroot.yml

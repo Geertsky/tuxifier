@@ -25,8 +25,15 @@
   notify: Relabel sysroot
   ansible.builtin.copy:
     dest: /tuxifier-sysroot/etc/fstab
-    content: "{{ _fstab.content | b64decode | regex_replace('(?m)^(\\S+\\s+)/tuxifier-sysroot/?(\\S*)', '\\1/\\2') }}"
+    content: "{{ _fstab.content | b64decode | regex_replace('(?m)^(\\S+\\s+)/tuxifier-sysroot/?(\\S*)', '\\1/\\2') ~ (_esp_fstab_lines | default('', true)) }}"
     mode: '0644'
+  vars:
+    # TEMPORARY, see check_or_create_storage_layout.yml: the storage role did not write the ESP to the fstab.
+    # Empty without an ESP, which Ansible turns into None: default('', true) above keeps that out of the fstab.
+    _esp_fstab_lines: |-
+      {% for mount in _efi_mounts %}
+      {{ mount.src }} {{ mount.path }} vfat defaults 0 2
+      {% endfor %}
 
 - name: Stat resolv.conf
   ansible.builtin.stat:
