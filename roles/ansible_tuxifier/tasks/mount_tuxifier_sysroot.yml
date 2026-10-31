@@ -3,6 +3,24 @@
 # Mounts what the chroot needs besides the filesystems of the storage layout, which the storage role has mounted already.
 # Included with ansible_shell_executable: /tmp/namespaced-ansible-shell, so that the mounts end up in the namespace of
 # /tuxifier-sysroot.
+# TEMPORARY, see check_or_create_storage_layout.yml. The mount point does not exist in the freshly mounted /boot.
+- name: Create the mount point of the ESP
+  ansible.builtin.file:
+    path: "/tuxifier-sysroot{{ item.path }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ _efi_mounts }}"
+  changed_when: false
+
+- name: Mount the ESP
+  ansible.posix.mount:
+    path: "/tuxifier-sysroot{{ item.path }}"
+    src: "{{ item.src }}"
+    fstype: vfat
+    state: ephemeral
+  loop: "{{ _efi_mounts }}"
+  changed_when: false
+
 - name: Stat /dev /sys and /proc
   ansible.builtin.stat:
     path: "/tuxifier-sysroot{{ item }}"
