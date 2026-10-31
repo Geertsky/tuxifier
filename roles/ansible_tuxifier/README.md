@@ -23,9 +23,10 @@ Alternatively use a git checkout in the `roles_path`
 so it can not be listed in the `dependencies` of `galaxy.yml` (`ansible-galaxy collection build` rejects a role name there); `galaxy.yml` names it in a comment and points to `requirements.yml`.
 
 >[!IMPORTANT]
->The version matters. `tuxifier` needs the `main` branch of the role, at commit `579d32a` or newer, and not the latest release (1.22.1) that `ansible-galaxy role install` fetches.
+>The version matters. `tuxifier` needs the `main` branch of the role, at commit `2204524` or newer, and not the latest release (1.22.1) that `ansible-galaxy role install` fetches.
 >The release lacks the `storage_destroy_partition_device` variable and the handling of a partition that is planned but not created yet.
 >Without them the storage step fails on a fresh disk with `device is not in the tree`.
+>From commit `2204524` the role mounts the volumes parent first (`/` before `/boot` before `/boot/efi`), which tuxifier relies on to mount the installed system below `/tuxifier-sysroot`.
 >If the checkout is linked or bind mounted into the `roles_path`, check that the link is still there after a reboot.
 
 ## Supported distributions
@@ -57,7 +58,7 @@ See: the [dracut-incubator](https://github.com/Geertsky/dracut-incubator) git re
 
 | Variable                                         | Type | Description                                                                                                                                                                                   |
 |--------------------------------------------------|------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `installdisk`                                    | list | The storage of the install target: a list of `storage_pools` exactly as accepted by the [linux-system-roles.storage](https://github.com/linux-system-roles/storage) role (`type: partition` or `lvm`). `mount_point`s are given as seen from the installed system (`/`, `/boot`, `/boot/efi`). |
+| `installdisk`                                    | list | The storage of the install target: a list of `storage_pools` exactly as accepted by the [linux-system-roles.storage](https://github.com/linux-system-roles/storage) role (`type: partition` or `lvm`). `mount_point`s are given as seen from the installed system (`/`, `/boot`, `/boot/efi`); tuxifier prepends them with `/tuxifier-sysroot` for the storage role. |
 | `installdisk_boot_disk`                          | str  | The disk to install the boot loader on. Optional. Defaults to the disk of the `partition` pool with the volume mounted at `/boot`, or else at `/boot/efi`.                                                                                         |
 | `storage_disklabel_type`                         | str  | Variable of the storage role, e.g. `gpt`. Can be set in the host_vars as usual.                                                                                                              |
 | `installdistribution`                            | dict | Dict describing the distribution to be installed.                                                                                                                                             |
@@ -77,17 +78,18 @@ can be used. The storage role needs `python3-blivet` and its dependencies in the
 `packages_installed` and `cryptsetup_services` are skipped (`storage_skip_checks`).
 
 The storage role is called once, inside the private namespace of `/tuxifier-sysroot`, with the pools in the order listed. A pool
-that uses a partition (`disks: [/dev/vda4]`) has to be listed after the `partition` pool that creates it. Existing volume groups
-of `installdisk` are activated first, because the storage role does not activate them and would otherwise format the logical
-volumes again on every run.
+that uses a partition (`disks: [/dev/vda4]`) has to be listed after the `partition` pool that creates it. The member disks of
+the pools with a `raid_level` are assembled first (`mdadm --incremental`), because the initramfs does not assemble md arrays,
+and the existing volume groups of `installdisk` are activated. The storage role does neither, and would otherwise create the
+arrays and format the logical volumes again on every run.
 
-The storage role is given the pools without `mount_point`, so it only creates the block devices and neither mounts them nor
-writes `/etc/fstab`. Tuxifier mounts the filesystems itself below `/tuxifier-sysroot`, sorted by mount point, so parents are
-mounted before their children. The order of the pools and volumes does not matter for the mounts. These mounts are not written
-to the `/etc/fstab` of the initramfs.
+Tuxifier prepends every `mount_point` of `installdisk` with `/tuxifier-sysroot` (`/` becomes `/tuxifier-sysroot`) before it hands
+the pools to the storage role. The storage role mounts the filesystems there, parents before children, so the order of the
+pools and volumes does not matter, and writes them to the `/etc/fstab` of the initramfs.
 
-The `/etc/fstab` of the installed system, `/tuxifier-sysroot/etc/fstab`, gets an entry for every volume with a `mount_point`
-and for every swap volume. The filesystems are identified as the storage role reports them, normally by `UUID=`.
+The `/etc/fstab` of the installed system, `/tuxifier-sysroot/etc/fstab`, is a copy of that file without the `/tuxifier-sysroot`
+prefix. It has an entry for every volume with a `mount_point` and for every swap volume, identified as the storage role
+reports them, normally by `UUID=`. The file is written as a whole on every run, so manual changes to it are lost.
 
 The `name` of a volume in a `partition` pool is its partition number (`"1"`, `"2"`, ...). Tuxifier uses it to find the partition
 of the boot loader.

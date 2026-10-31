@@ -1,13 +1,8 @@
 ---
 
-# Mounts everything the chroot needs, parent first. Included with ansible_shell_executable: /tmp/namespaced-ansible-shell,
-# so that the mounts end up in the namespace of /tuxifier-sysroot.
-- name: Mount the filesystems parent first
-  ansible.builtin.include_tasks: mount_one.yml
-  loop: "{{ _sysroot_volumes | rejectattr('fstype', 'equalto', 'swap') | list }}"
-  loop_control:
-    loop_var: _mount
-
+# Mounts what the chroot needs besides the filesystems of the storage layout, which the storage role has mounted already.
+# Included with ansible_shell_executable: /tmp/namespaced-ansible-shell, so that the mounts end up in the namespace of
+# /tuxifier-sysroot.
 - name: Mkdirs /dev /sys and /proc
   notify: Relabel sysroot
   ansible.builtin.file:
