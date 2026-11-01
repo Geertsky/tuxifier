@@ -1,0 +1,10 @@
+---
+# Check the installed system, booted from the install target (tox env qemu-rocky<N>).
+- name: The installed system
+  hosts: installer
+  gather_facts: false
+  vars_files:
+    - vars/qemu_rocky.yml
+  tasks:
+    - name: Verify the installed system
+      ansible.builtin.include_tasks: tasks/verify_installed.yml

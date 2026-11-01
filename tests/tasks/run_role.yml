@@ -1,0 +1,11 @@
+---
+# Runs the role in the initramfs.
+# Input:
+# - __sr_tasks_from: tasks_from to run, like tasks_from of include_role (default main)
+- name: Run the role with the tools of python-nest
+  environment: "{{ __test_python_nest_environment }}"
+  block:
+    - name: Run the role
+      ansible.builtin.include_role:
+        name: geertsky.tuxifier.ansible_tuxifier
+        tasks_from: "{{ __sr_tasks_from | default('main') }}"

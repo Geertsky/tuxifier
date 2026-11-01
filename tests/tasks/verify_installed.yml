@@ -1,0 +1,25 @@
+---
+# Checks the installed system, booted from the install target.
+# Only raw commands are used: EL8 has no python that the current ansible-core supports on a target.
+- name: Read the distribution
+  ansible.builtin.raw: . /etc/os-release && echo "$ID $VERSION_ID"
+  register: __test_os
+  changed_when: false
+
+- name: Read the filesystems
+  ansible.builtin.raw: findmnt --noheadings --raw --output TARGET,SOURCE,FSTYPE
+  register: __test_findmnt
+  changed_when: false
+
+- name: Read the logical volumes
+  ansible.builtin.raw: lvm lvs --noheadings --options lv_name,vg_name
+  register: __test_lvs
+  changed_when: false
+
+- name: Check the installed system
+  ansible.builtin.assert:
+    that:
+      - __test_os.stdout_lines[0] | trim is match('^' ~ __test_distro_name ~ ' ' ~ __test_distro_version ~ '(\\.|$)')
+      - __test_findmnt.stdout_lines | map('trim') | select('match', '^/ /dev/mapper/vg.test-root ' ~ __test_fs_type) | list | length == 1
+      - __test_findmnt.stdout_lines | map('trim') | select('match', '^/boot /dev/vda2 ' ~ __test_fs_type) | list | length == 1
+      - "'root' in __test_lvs.stdout and 'swap' in __test_lvs.stdout and 'vg.test' in __test_lvs.stdout"
