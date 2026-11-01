@@ -2,3 +2,7 @@ scripts
 tmp
 plugins/modules/__pycache__/
 __pycache__/
+.tox/
+.ansible/
+.pytest_cache/
+!/tests/scripts/
