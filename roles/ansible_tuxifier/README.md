@@ -5,11 +5,11 @@ Description: Partition and install a server from the initramfs built with dracut
 ## Dependencies
 
 ### ansible-core
-ansible-core 2.21 or newer. The role gathers the packages of an already installed system with `package_facts` in the chroot.
-From 2.21 the rpm backend of that module runs the `rpm` command (`rpm -qa`) from the `PATH`, and in the chroot that is the `rpm` of the
-python-nest environment. It looks for its database in the python-nest prefix by default (`_dbpath` is `/local/conda/envs/python-nest/var/lib/rpm`),
-not in `/var/lib/rpm` of the installed system. The role therefore writes `/root/.rpmmacros` in the chroot from `rpm_macros` while it installs, and
-removes it afterwards. Without it `package_facts` finds no database and a second run of the role without `tuxifier_reinstall` fails with `package ... is already installed`.
+ansible-core 2.15 or newer.
+
+The role does not use `package_facts` to read the packages of an already installed system: up to ansible-core 2.20 the rpm backend of that module uses
+the rpm python bindings, which look for the database in the python-nest prefix and can not be given the rpm macros. The role runs `rpm -qa` of the
+python-nest environment in the chroot with the macros of `rpm_macros` instead, which works with every ansible-core version.
 
 ### Roles
 The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage) has to be installed as a role (not as the `fedora.linux_system_roles` collection),
@@ -264,7 +264,7 @@ The packages of `distribution.minimalpackages` are installed in two stages, beca
 chroot but link to the glibc of the distribution and need a shell there:
 
 1. The glibc packages of the distribution and what they need (a shell among them) are installed from the namespace with the `rpm` of python-nest and `--root`.
-2. In the chroot, `package_facts` with the python of python-nest tells which packages are missing, and they are installed from inside the chroot.
+2. In the chroot, `rpm -qa` of python-nest tells which packages are missing, and they are installed from inside the chroot.
 
 `/proc`, `/sys` and `/dev` have to be mounted in the chroot before python-nest runs there, the role does that when it mounts `/tuxifier-sysroot`.
 
@@ -281,7 +281,7 @@ reached the `rpm` package) and the rpm database files, together with the major v
 | yes | yes | yes | yes | inconsistent | inconsistent |
 
 Every other combination is inconsistent and stops the run, use `tuxifier_reinstall`. The files tell how far the install is, not if it is complete: the packages that are missing are
-always installed from the result of `package_facts`.
+always installed from the result of `rpm -qa`.
 
 The `rpm` of python-nest writes a sqlite database. The `rpm` of version 8 uses bdb, reads a sqlite database but does not write one, and uses it as long as one exists.
 It is written by the `rpm` that can: python-nest for sqlite, the `rpm` of the distribution once the database is bdb. On version 8 the sqlite database is therefore converted when

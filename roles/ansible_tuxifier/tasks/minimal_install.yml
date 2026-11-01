@@ -4,7 +4,7 @@
 # glibc of the distribution and need a shell there:
 #  1. From the namespace, without chroot: the glibc of the distribution and what it needs (a shell among them) are installed with
 #     the rpm of python-nest and --root.
-#  2. In the chroot, with python-nest: package_facts tells what is missing, and the missing packages are installed.
+#  2. In the chroot, with python-nest: rpm -qa tells what is missing, and the missing packages are installed.
 # The rpm of python-nest writes a sqlite rpm database, which the rpm of version 8 only reads. On version 8 the database is
 # converted at the end. classify_sysroot.yml tells in which state a previous run left the install, so that a run can continue.
 
@@ -161,12 +161,15 @@
     ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
     ansible_python_interpreter: "{{ python_interpreter }}"
 
-# The rpm of python-nest is first in the PATH of the shells. It reads the bdb database of version 8 as well.
-- name: Gather the packages of the installed system
-  ansible.builtin.package_facts:
-    manager: rpm
+# The rpm of python-nest reads the bdb database of version 8 as well. It is run as a command and not through package_facts, which
+# needs ansible-core 2.21 for this: up to 2.20 its rpm backend uses the python rpm bindings, that look for the database in the
+# python-nest prefix and can not be given macros.
+- name: Query the packages of the installed system
+  ansible.builtin.command:
+    argv: "{{ [rpm_bin] + rpm_define_args + ['-qa', '--queryformat', '%{NAME}\\n'] }}"
+  register: _installed_packages
+  changed_when: false
   delegate_to: "{{ _chroot_host }}"
-  delegate_facts: true
   vars:
     ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
     ansible_python_interpreter: "{{ python_interpreter }}"
@@ -189,7 +192,7 @@
   ansible.builtin.set_fact:
     _missing_urls: >-
       {{ generate_minimal_install.packages
-         | rejectattr('name', 'in', _chroot_facts['packages'].keys() | list)
+         | rejectattr('name', 'in', _installed_packages.stdout_lines)
          | map(attribute='url') | list }}
 
 # The rpm that can write the database: python-nest writes sqlite, and only the rpm of the distribution writes the bdb database of
