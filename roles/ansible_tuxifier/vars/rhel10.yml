@@ -8,7 +8,8 @@ distribution:
   # Matches the path of the loader in a line of efibootmgr -v; the format depends on the efibootmgr version.
   efi_entry_regex: 'HD\([^)]*\)/(.*)$'
   grub_cfg: '/boot/grub2/grub.cfg'
+  # RHEL mirrors are not public: set installdistribution.repo to the BaseOS repository of your mirror.
   repo:
-    type: 'mirrorlist'
-    url: 'https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-10'
+    type: 'baseurl'
+    url: '<rhel mirror url>'
 gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release

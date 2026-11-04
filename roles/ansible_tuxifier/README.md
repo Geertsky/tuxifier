@@ -35,8 +35,8 @@ so it can not be listed in the `dependencies` of `galaxy.yml` (`ansible-galaxy c
 |--------------|----------|--------|
 | Rocky Linux  | 8, 9, 10 | installed in the BIOS and UEFI test VMs |
 | AlmaLinux    | 9, 10    | installed in the BIOS and UEFI test VMs |
-| RHEL         | 8 (`vars/rhel8.yml` exists, untested), 9, 10 | 9 and 10 installed in the BIOS and UEFI test VMs |
-| Fedora       | 38, 44   | `vars/` files exist (`fedora38.yml`, `fedora44.yml`), untested |
+| RHEL         | 8, 9, 10 | installed in the BIOS and UEFI test VMs, from a local mirror (`installdistribution.repo` is required) |
+| Fedora       | 38, 44   | installed in the BIOS and UEFI test VMs |
 
 The version of a distribution is the major version, given as a string (`installdistribution.version: "9"`).
 
@@ -195,7 +195,7 @@ installdistribution:
     type: mirrorlist
     url: https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-9&country=ch
 ```
-_`repo` is optional but defaults to the general mirrorlist of the distribution. An added `country=` can improve download speed and reliability._
+_`repo` is optional but defaults to the general mirrorlist of the distribution. For RHEL it is required: RHEL mirrors are not public, the default is the placeholder `<rhel mirror url>`; give the `baseurl` of the BaseOS repository of your mirror. An added `country=` can improve download speed and reliability._
 
 ## Optional variables
 
@@ -317,7 +317,7 @@ In such a distribution file the following variable are set:
 | distribution.grub_cfg        | str  | The path of the grub configuration read at boot, relative to the root of the installed system.  |
 | distribution.repo            | dict | The `repo` dictionary is describes the repository where the packages can be retrieved.         |
 | distribution.repo.type       | str  | The `type` of URL used for this repository.                                                    |
-| distribution.repo.url        | str  | The `url` to the repository.                                                                   |
+| distribution.repo.url        | str  | The `url` to the repository. For RHEL the placeholder `<rhel mirror url>`: set `installdistribution.repo`.  |
 | gpg_key                      | str  | The path to the GPG key relative to the `files/` directory to verify the validity of the rpms. |
 
 

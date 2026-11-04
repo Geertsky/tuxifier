@@ -9,7 +9,7 @@ distribution:
   efi_entry_regex: 'HD\([^)]*\)/File\((.*)\)'
   grub_cfg: '/boot/grub2/grub.cfg'
   grub_cfg_full_on_esp: true
-  repo: "{{ installdistribution.repo | default({'type': 'mirrorlist', 'url': 'https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-8'}) }}"
+  repo: "{{ installdistribution.repo | default({'type': 'baseurl', 'url': '<rhel mirror url>'}) }}"
   minimalpackages:
     - '@Core'
     - 'util-linux'
