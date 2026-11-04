@@ -8,8 +8,8 @@
 #   smoke    every distribution x bios/uefi x the layout lvm x poweroff/continue                  (26 envs)
 #   layouts  rocky8, rocky9, rocky10 x every layout x bios/uefi x poweroff/continue                (72 envs)
 #   full     the install matrix of every distribution x every layout x bios/uefi x poweroff/continue, and the scenarios
-#            keys, selinux and negative on every distribution, distchange and kernelmismatch on rocky8, rocky9 and
-#            rocky10, each on bios and uefi                                                       (228 envs, hours)
+#            keys, selinux, negative and demo on every distribution, distchange and kernelmismatch on rocky8, rocky9 and
+#            rocky10, each on bios and uefi                                                       (248 envs, hours)
 #
 # continue_install=true needs the kernel of the initramfs in the repository of the distribution (see kernelmismatch). The
 # initramfs comes from a rocky sysimage, so only the rocky distributions have the mode continue; the others run poweroff.
@@ -80,7 +80,7 @@ case "$TIER" in
     layouts) envs="$(matrix "${selected_rocky[*]}" "${LAYOUTS[*]}")" ;;
     full)
         envs="$(matrix "${selected_all[*]}" "${LAYOUTS[*]}")"
-        for s in keys selinux negative; do envs+=$'\n'"$(scenarios "$s" "${selected_all[*]}")"; done
+        for s in keys selinux negative demo; do envs+=$'\n'"$(scenarios "$s" "${selected_all[*]}")"; done
         for s in distchange kernelmismatch; do envs+=$'\n'"$(scenarios "$s" "${selected_rocky[*]}")"; done
         ;;
     *) echo "unknown tier '$TIER', use smoke, layouts or full" >&2; exit 2 ;;

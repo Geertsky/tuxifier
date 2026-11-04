@@ -137,6 +137,7 @@ Other scenarios are named `qemu-<distro>-<firmware>-<scenario>`:
 - `distchange`: one distribution installed over another on the same disk (rocky only).
 - `negative`: calls with wrong input fail with a clear message and leave the disk as it was.
 - `kernelmismatch`: `continue_install` with a kernel that is not in the repository (rocky only).
+- `demo`: the demo site of tuxifier-playbook (httpd, the page and the firewall) is set up on the booted installed system and the page is fetched through a forwarded port. rhel needs a mirror (`QEMU_REPO_URL`) for this, else it is skipped.
 
 The initramfs always comes from a Rocky sysimage. The mode `continue` needs the kernel of the initramfs in the repository of the installed distribution, so it only works for the Rocky distributions.
 
