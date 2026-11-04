@@ -1,0 +1,24 @@
+---
+# L2: partitions only, no LVM: / and swap are partitions of /dev/vda.
+installdisk:
+  - name: /dev/vda
+    type: partition
+    disks: [/dev/vda]
+    volumes: "{{ __test_boot_volumes + __test_partitions }}"
+
+__test_partitions:
+  - name: "3"
+    size: 5GiB
+    fs_type: "{{ __test_fs_type }}"
+    fs_label: root
+    fs_create_options: "-O ^orphan_file"
+    mount_point: /
+  - name: "4"
+    size: 512MiB
+    fs_type: swap
+    fs_label: swap
+
+__test_mounts: "{{ __test_boot_mounts + [{'target': '/', 'source': '/dev/vda3', 'fstype': __test_fs_type}] }}"
+__test_lvs: []
+__test_luks_devices: []
+__test_raid: false

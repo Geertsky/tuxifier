@@ -1,0 +1,17 @@
+---
+# The first partitions of /dev/vda on BIOS: biosboot and /boot. The layouts continue with partition 3.
+# The ext4 of python-nest has the orphan_file feature, that the e2fsck of the distributions does not know yet.
+__test_boot_volumes:
+  - name: "1"
+    size: 1MiB
+    fs_type: biosboot
+  - name: "2"
+    size: 1022MiB
+    fs_type: "{{ __test_fs_type }}"
+    fs_label: boot
+    fs_create_options: "-O ^orphan_file"
+    mount_point: /boot
+__test_boot_mounts:
+  - {target: /boot, source: /dev/vda2, fstype: "{{ __test_fs_type }}"}
+# The partition of /boot, see permissive-first-boot of qemu-vm.sh.
+__test_boot_device: /dev/vda2

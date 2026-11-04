@@ -1,0 +1,32 @@
+---
+# L6: the root logical volume is encrypted. The passphrase is asked at boot (crypttab key field none): the boot of the
+# installed system waits for it at the console (QEMU_LUKS_PASSPHRASE, see qemu-vm.sh).
+luks_passphrase: luks-passphrase
+tuxifier_crypttab_options: luks
+installdisk:
+  - name: /dev/vda
+    type: partition
+    disks: [/dev/vda]
+    volumes: "{{ __test_boot_volumes + [{'name': '3', 'size': '0', 'fs_type': 'lvmpv'}] }}"
+  - name: vg.test
+    type: lvm
+    disks: [/dev/vda3]
+    volumes:
+      - name: swap
+        size: 512M
+        fs_type: swap
+        fs_label: swap
+      - name: root
+        size: 5GiB
+        fs_type: "{{ __test_fs_type }}"
+        fs_label: root
+        fs_create_options: "-O ^orphan_file"
+        encryption: true
+        encryption_password: "{{ luks_passphrase }}"
+        mount_point: /
+
+__test_mounts: >-
+  {{ __test_boot_mounts + [{'target': '/', 'source': '/dev/mapper/luks-[0-9a-f-]+', 'fstype': __test_fs_type}] }}
+__test_lvs: [vg.test-root, vg.test-swap]
+__test_luks_devices: [/dev/mapper/vg.test-root]
+__test_raid: false

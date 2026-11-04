@@ -11,15 +11,63 @@
   register: __test_findmnt
   changed_when: false
 
-- name: Read the logical volumes
-  ansible.builtin.raw: lvm lvs --noheadings --options lv_name,vg_name
-  register: __test_lvs
+- name: Check for the EFI interface of the firmware
+  ansible.builtin.raw: test -d /sys/firmware/efi && echo uefi || echo bios
+  register: __test_firmware_seen
   changed_when: false
+
+- name: Read the boot entries
+  when: __test_firmware == 'uefi'
+  ansible.builtin.raw: efibootmgr --verbose
+  register: __test_efibootmgr
+  changed_when: false
+
+- name: Read the logical volumes
+  ansible.builtin.raw: lvm lvs --noheadings --separator - --options vg_name,lv_name
+  register: __test_lvs_seen
+  changed_when: false
+
+- name: Read the crypttab
+  ansible.builtin.raw: cat /etc/crypttab
+  register: __test_crypttab
+  changed_when: false
+  when: __test_luks_devices | length > 0
+
+- name: Check the LUKS headers
+  ansible.builtin.raw: cryptsetup isLuks {{ item }} && echo luks
+  register: __test_luks
+  changed_when: false
+  failed_when: "'luks' not in __test_luks.stdout"
+  loop: "{{ __test_luks_devices }}"
+
+- name: Read the md RAID arrays
+  ansible.builtin.raw: cat /proc/mdstat
+  register: __test_mdstat
+  changed_when: false
+  when: __test_raid | bool
 
 - name: Check the installed system
   ansible.builtin.assert:
     that:
-      - __test_os.stdout_lines[0] | trim is match('^' ~ __test_distro_name ~ ' ' ~ __test_distro_version ~ '(\\.|$)')
-      - __test_findmnt.stdout_lines | map('trim') | select('match', '^/ /dev/mapper/vg.test-root ' ~ __test_fs_type) | list | length == 1
-      - __test_findmnt.stdout_lines | map('trim') | select('match', '^/boot /dev/vda2 ' ~ __test_fs_type) | list | length == 1
-      - "'root' in __test_lvs.stdout and 'swap' in __test_lvs.stdout and 'vg.test' in __test_lvs.stdout"
+      - __test_os.stdout_lines[0] | trim is match('^' ~ __test_os_id ~ ' ' ~ __test_distro_version ~ '(\\.|$)')
+      - __test_firmware_seen.stdout_lines[0] | trim == __test_firmware
+      - >-
+        __test_firmware == 'bios' or
+        __test_efibootmgr.stdout is regex('(?i)\\\\EFI\\\\' ~ __test_efi_dir ~ '\\\\shimx64\\.efi')
+      - >-
+        __test_raid | bool is false or
+        (__test_mdstat.stdout is search('raid1') and __test_mdstat.stdout is search('\\[UU\\]'))
+
+- name: Check the mounts
+  ansible.builtin.assert:
+    that: >-
+      __test_findmnt.stdout_lines | map('trim')
+      | select('match', '^' ~ item.target ~ ' ' ~ item.source ~ ' ' ~ item.fstype ~ '$') | list | length == 1
+    fail_msg: "{{ item.target }} is not on {{ item.source }} as {{ item.fstype }}: {{ __test_findmnt.stdout }}"
+  loop: "{{ __test_mounts }}"
+
+- name: Check the logical volumes
+  ansible.builtin.assert:
+    that: item in __test_lvs_seen.stdout_lines | map('trim') | list
+    fail_msg: "{{ item }} is missing: {{ __test_lvs_seen.stdout }}"
+  loop: "{{ __test_lvs }}"

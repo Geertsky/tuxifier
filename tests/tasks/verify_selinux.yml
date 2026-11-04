@@ -1,0 +1,20 @@
+---
+# Input: __test_expect_labeled, whether the files that the role wrote have a label after the first boot (strict_selinux true).
+# The files that come from rpm packages, like /etc/passwd, have their label in either case; the fstab is written by the role.
+- name: Read the label of the fstab
+  ansible.builtin.raw: ls -Z /etc/fstab
+  register: __test_label
+  changed_when: false
+
+- name: Read the file of the pending relabel
+  ansible.builtin.raw: test -e /.autorelabel && echo present || echo absent
+  register: __test_autorelabel
+  changed_when: false
+
+- name: Check the labels
+  ansible.builtin.assert:
+    that:
+      - (__test_label.stdout is search('etc_t')) == (__test_expect_labeled | bool)
+      - (__test_label.stdout is search('unlabeled_t')) != (__test_expect_labeled | bool)
+      - __test_autorelabel.stdout_lines[0] | trim == 'absent'
+    fail_msg: "strict_selinux: expected labeled {{ __test_expect_labeled }}, got {{ __test_label.stdout }}"

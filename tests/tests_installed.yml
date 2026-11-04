@@ -5,6 +5,16 @@
   gather_facts: false
   vars_files:
     - vars/qemu_rocky.yml
+    - "vars/qemu_boot_{{ lookup('ansible.builtin.env', 'QEMU_FIRMWARE') | default('bios', true) }}.yml"
+    - "vars/qemu_layout_{{ lookup('ansible.builtin.env', 'QEMU_LAYOUT') | default('lvm', true) }}.yml"
   tasks:
     - name: Verify the installed system
       ansible.builtin.include_tasks: tasks/verify_installed.yml
+
+    - name: Verify the keys and the root password
+      ansible.builtin.include_tasks: tasks/verify_keys.yml
+      when: __test_with_extra_key | bool
+
+    - name: Verify the SELinux labels
+      ansible.builtin.include_tasks: tasks/verify_selinux.yml
+      when: __test_expect_labeled is defined

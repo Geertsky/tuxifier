@@ -1,0 +1,51 @@
+---
+# L5: the layout of L4 with an encrypted logical volume, /secure, in the volume group on the RAID1.
+luks_passphrase: luks-passphrase
+tuxifier_crypttab_options: luks,nofail
+installdisk:
+  - name: /dev/vda
+    type: partition
+    disks: [/dev/vda]
+    volumes: "{{ __test_boot_volumes + [{'name': '3', 'size': '0', 'fs_type': 'lvmpv'}] }}"
+  - name: vg.test
+    type: lvm
+    disks: [/dev/vda3]
+    volumes:
+      - name: swap
+        size: 512M
+        fs_type: swap
+        fs_label: swap
+      - name: root
+        size: 5GiB
+        fs_type: "{{ __test_fs_type }}"
+        fs_label: root
+        fs_create_options: "-O ^orphan_file"
+        mount_point: /
+  - name: vg.data
+    type: lvm
+    disks: [/dev/vdb, /dev/vdc]
+    raid_level: raid1
+    raid_device_count: 2
+    volumes:
+      - name: data
+        size: 1GiB
+        fs_type: "{{ __test_fs_type }}"
+        fs_label: data
+        fs_create_options: "-O ^orphan_file"
+        mount_point: /data
+      - name: secure
+        size: 1GiB
+        fs_type: "{{ __test_fs_type }}"
+        fs_label: secure
+        fs_create_options: "-O ^orphan_file"
+        encryption: true
+        encryption_password: "{{ luks_passphrase }}"
+        mount_point: /secure
+        mount_options: defaults,nofail
+
+__test_mounts: >-
+  {{ __test_boot_mounts + [{'target': '/', 'source': '/dev/mapper/vg.test-root', 'fstype': __test_fs_type},
+  {'target': '/data', 'source': '/dev/mapper/vg.data-data', 'fstype': __test_fs_type}] }}
+__test_lvs: [vg.test-root, vg.test-swap, vg.data-data, vg.data-secure]
+__test_luks_devices: [/dev/mapper/vg.data-secure]
+__test_raid: true

@@ -1,15 +1,26 @@
 ---
 # Variables shared by the tests that run in the qemu VM of tox env qemu-rocky<N> (see tests/scripts/qemu-vm.sh).
 #
-# QEMU_DISTRO     rocky8, rocky9 or rocky10 (default rocky9)
+# QEMU_DISTRO     rocky, rhel, almalinux or fedora with the major version, like rocky9 or fedora44 (default rocky9)
 # QEMU_REPO_URL   baseurl of the BaseOS repository to install from; without it the repository of the role is used
+# QEMU_FIRMWARE   bios or uefi (default bios)
+# QEMU_LAYOUT     lvm, parts, luks, raid or raidluks (default lvm), see vars/qemu_layout_<layout>.yml
+__test_firmware: "{{ lookup('ansible.builtin.env', 'QEMU_FIRMWARE') | default('bios', true) }}"
 __test_distro: "{{ lookup('ansible.builtin.env', 'QEMU_DISTRO') | default('rocky9', true) }}"
 __test_distro_name: "{{ __test_distro | regex_replace('[0-9]+$', '') }}"
 __test_distro_version: "{{ __test_distro | regex_replace('^[a-z]+', '') }}"
+# The ID of os-release and the directory of the boot loader on the ESP per distribution.
+__test_distros:
+  rocky: {id: rocky, efi_dir: rocky}
+  rhel: {id: rhel, efi_dir: redhat}
+  almalinux: {id: almalinux, efi_dir: almalinux}
+  fedora: {id: fedora, efi_dir: fedora}
+__test_os_id: "{{ __test_distros[__test_distro_name].id }}"
+__test_efi_dir: "{{ __test_distros[__test_distro_name].efi_dir }}"
 __test_repo_url: "{{ lookup('ansible.builtin.env', 'QEMU_REPO_URL') }}"
 
 # The grub of EL8 can not read the ext4 that is made with the current e2fsprogs (grub2-install: unknown filesystem).
-__test_fs_type: "{{ 'ext3' if __test_distro == 'rocky8' else 'ext4' }}"
+__test_fs_type: "{{ 'ext3' if __test_distro_version == '8' else 'ext4' }}"
 
 # The tools of the initramfs live in the python-nest conda environment.
 __test_python_nest_environment:
@@ -22,6 +33,10 @@ installdistribution: >-
      | combine({'repo': {'type': 'baseurl', 'url': __test_repo_url}} if __test_repo_url else {}) }}
 rootpw: rootpw
 continue_install: false
+# The test of root_authorized_keys: QEMU_EXTRA_KEY=1 adds the second test key, see common.sh.
+__test_with_extra_key: "{{ lookup('ansible.builtin.env', 'QEMU_EXTRA_KEY') | length > 0 }}"
+__test_extra_key_pub: "{{ lookup('ansible.builtin.env', 'TUXIFIER_TEST_DIR') | default(lookup('ansible.builtin.env', 'HOME') ~ '/.cache/tuxifier-tests', true) }}/id_ed25519_extra.pub"
+root_authorized_keys: "{{ [lookup('ansible.builtin.file', __test_extra_key_pub) | trim] if __test_with_extra_key else [] }}"
 # Relabels the installed system at its first boot, without it sshd can not read the authorized_keys.
 strict_selinux: true
 storage_disklabel_type: gpt
