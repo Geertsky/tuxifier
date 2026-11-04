@@ -89,6 +89,10 @@ gpgkey=$gpgkeys
 REPO
 }
 write_repo "$distro-BaseOS" "$baseos"
+if [[ -n "$appstream" ]] && ! curl -sfI -m 10 "${appstream}repodata/repomd.xml" > /dev/null; then
+    echo "no AppStream repository at $appstream, using BaseOS only" >&2
+    appstream=""
+fi
 [[ -z "$appstream" ]] || write_repo "$distro-AppStream" "$appstream"
 
 echo "creating the sysimage $root from $baseos"
@@ -120,10 +124,17 @@ for plugin in 50-dracut.install 51-dracut-rescue.install; do
 done
 sudo mount -t tmpfs tmpfs "$root/run"
 mounts+=("$root/run")
-sudo dnf -y --installroot="$root" --releasever="$release" --setopt=reposdir="$repodir" \
-    --setopt=install_weak_deps=False --setopt=tsflags=nodocs,noscripts install \
-    kernel dracut dracut-network NetworkManager openssh-server mdadm lvm2 cryptsetup \
-    e2fsprogs xfsprogs dosfstools iproute util-linux kmod systemd-udev "$releasepkg"
+dnf_root() { sudo dnf -y --installroot="$root" --releasever="$release" --setopt=reposdir="$repodir" --setopt=install_weak_deps=False "$@"; }
+# dracut-network does not exist everywhere (fedora has no such package)
+packages=(kernel dracut NetworkManager openssh-server mdadm lvm2 cryptsetup e2fsprogs xfsprogs dosfstools iproute
+    util-linux kmod systemd-udev "$releasepkg")
+if [[ -n "$(dnf_root --quiet repoquery --available dracut-network 2> /dev/null)" ]]; then
+    packages+=(dracut-network)
+fi
+# filesystem creates the usr-merge symlinks (/lib64, ...) in a scriptlet of its own, so it is installed with scriptlets
+dnf_root --setopt=tsflags=nodocs install filesystem
+# the scriptlet of kernel-core fails in the root (see above), so the rest is installed without scriptlets
+dnf_root --setopt=tsflags=nodocs,noscripts install "${packages[@]}"
 
 sudo cp -a "$sshd_module" "$root/usr/lib/dracut/modules.d/46sshd"
 sudo chroot "$root" ssh-keygen -A
