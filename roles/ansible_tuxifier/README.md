@@ -197,6 +197,8 @@ installdistribution:
 ```
 _`repo` is optional but defaults to the general mirrorlist of the distribution. For RHEL it is required: RHEL mirrors are not public, the default is the placeholder `<rhel mirror url>`; give the `baseurl` of the BaseOS repository of your mirror. An added `country=` can improve download speed and reliability._
 
+_Downloads of rpm are aborted after five minutes and retried._
+
 ## Optional variables
 
 Below the list of Optional `host_vars`, followed by more extensive explanation and an example for each.
@@ -297,7 +299,7 @@ In the role a number of variables are defined in different var files.
 |------------------------------------------------|------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | ansible_interpreter_python_fallback | list | The `ansible_interpreter_python_fallback` var is extended with the python interpreter of the python-nest environment available in the initramfs                                         |
 | rpm_directory_macros | dict | The rpm macros whose value is a directory, as macro name and path, for example `_dbpath: /var/lib/rpm`. These directories are created in `/tuxifier-sysroot`. |
-| rpm_other_macros | dict | The other rpm macros, for example the `curl` that rpm uses to download packages. |
+| rpm_other_macros | dict | The other rpm macros, for example the `curl` that rpm uses to download packages (retried, and aborted after five minutes per download with `--max-time=300`). |
 | rpm_macros | dict | The rpm macros defined for the rpm commands executed by `tuxifier`: `rpm_directory_macros` and `rpm_other_macros` together. They are also written to `/root/.rpmmacros` in the chroot while the packages are installed. |
 | virtual_filesystems | list | The list of virtual filesystems mounted in the `/tuxifier-sysroot` for the installation.                                                                                                                    |
 
