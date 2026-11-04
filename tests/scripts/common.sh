@@ -30,7 +30,21 @@ sysimage_kernel_version() {
     fi
 }
 
+# A second key, for the test of root_authorized_keys: the installed system has to accept it too.
+EXTRA_KEY="$TUXIFIER_TEST_DIR/id_ed25519_extra"
+
 ensure_test_key() {
     mkdir -p "$TUXIFIER_TEST_DIR"
     [[ -f "$TEST_KEY" ]] || ssh-keygen -q -t ed25519 -N '' -C tuxifier-tests -f "$TEST_KEY"
+    [[ -f "$EXTRA_KEY" ]] || ssh-keygen -q -t ed25519 -N '' -C tuxifier-tests-extra -f "$EXTRA_KEY"
+}
+
+# The distribution that the distribution change test (tox factor distchange) installs after the one of QEMU_DISTRO.
+change_target_distro() {
+    case "$1" in
+        rocky8) echo rhel8 ;;
+        rocky9) echo almalinux9 ;;
+        rocky10) echo almalinux10 ;;
+        *) echo "no distribution to change to from $1" >&2; return 1 ;;
+    esac
 }

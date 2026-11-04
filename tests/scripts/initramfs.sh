@@ -37,6 +37,9 @@ up_to_date() {
     [[ -z "$newer" ]]
 }
 
+# Envs that run in parallel build an initramfs once.
+exec 8> "$out/.lock"
+flock 8
 if up_to_date; then
     echo "initramfs $image is up to date" >&2
 else
