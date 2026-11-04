@@ -12,8 +12,7 @@
 # dracut_authorized_keys of the sysimage say: the file is covered by a bind mount during the build and the
 # sysimage itself is not changed. The python-nest.squashfs of the dracut-incubator checkout is used; if it is
 # missing, build it first (/tuxifier:rebuild-env) or download it, see the README of dracut-incubator.
-# The role needs chroot in the initramfs. dracut of EL installs it (module base), dracut of fedora does not, so it is
-# added here. Needs root rights (sudo).
+# Needs root rights (sudo).
 set -euo pipefail
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -73,7 +72,7 @@ else
     [[ -e "$root/root/.ssh/dracut_authorized_keys" ]] || sudo touch "$root/root/.ssh/dracut_authorized_keys"
     bind "$keyfile" "$root/root/.ssh/dracut_authorized_keys"
 
-    sudo chroot "$root" dracut -NM -a incubator -I chroot --force /tuxifier-test-initramfs.img "$version" >&2
+    sudo chroot "$root" dracut -NM -a incubator --force /tuxifier-test-initramfs.img "$version" >&2
     sudo install -o "$(id -u)" -g "$(id -g)" -m 0644 "$root/tuxifier-test-initramfs.img" "$image"
     sudo rm -f "$root/tuxifier-test-initramfs.img"
     echo "$version" > "$out/kernel-version"
