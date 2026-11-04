@@ -29,7 +29,9 @@
 # Only the names are used: the urls are the ones of generate_minimal_install, so that both stages install the same versions.
 - name: Resolve the packages of the first stage
   geertsky.tuxifier.generate_minimal_install_info:
-    distribution: "{{ distribution | combine({'minimalpackages': ['glibc']}) }}"
+    distribution: >-
+      {{ distribution | combine({'repo': installdistribution.repo | default(distribution.repo),
+                                 'minimalpackages': ['glibc']}) }}
   register: generate_bootstrap_install
   delegate_to: localhost
   vars:
