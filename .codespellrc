@@ -1,0 +1,4 @@
+[codespell]
+check-hidden = true
+ignore-words = .codespell_ignores
+skip = .git,.tox,.ansible,*.crt,RPM-GPG-KEY-*,__pycache__
