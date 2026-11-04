@@ -1,0 +1,93 @@
+---
+# The role fails with a clear message on wrong input and leaves the install target as it was. The target has been installed
+# by tests_install.yml before (see the tox envs qemu-<distro>-<fw>-negative). The failures that come before the first
+# task that writes are the ones that can promise this: with tuxifier_reinstall=true the disks are wiped first, by design.
+- name: A role call without installdisk
+  hosts: installer
+  gather_facts: false
+  vars_files:
+    - vars/qemu_rocky.yml
+  environment: "{{ __test_python_nest_environment }}"
+  tasks:
+    - name: Fingerprint the install target before
+      ansible.builtin.include_tasks: tasks/disk_fingerprint.yml
+
+    - name: Call the role without installdisk
+      block:
+        - name: Run the role
+          ansible.builtin.include_role:
+            name: geertsky.tuxifier.ansible_tuxifier
+        - name: The role did not fail
+          ansible.builtin.set_fact: {__test_failed_task: "", __test_failed_msg: ""}
+      rescue:
+        - name: Keep the failure
+          ansible.builtin.set_fact:
+            __test_failed_task: "{{ ansible_failed_task.name }}"
+            __test_failed_msg: "{{ (ansible_failed_result.msg | default('') | string) ~ ' ' ~ (ansible_failed_result.message | default('') | string) }}"
+
+    - name: Check the failure
+      ansible.builtin.include_tasks: tasks/check_failure.yml
+      vars:
+        __test_expect_task: Validating arguments
+        __test_expect_msg: installdisk
+        __test_fingerprint_before: "{{ __test_fingerprint }}"
+
+- name: Role calls with wrong input
+  hosts: installer
+  gather_facts: false
+  vars_files:
+    - vars/qemu_rocky.yml
+    - "vars/qemu_boot_{{ lookup('ansible.builtin.env', 'QEMU_FIRMWARE') | default('bios', true) }}.yml"
+    - "vars/qemu_layout_{{ lookup('ansible.builtin.env', 'QEMU_LAYOUT') | default('lvm', true) }}.yml"
+  environment: "{{ __test_python_nest_environment }}"
+  tasks:
+    - name: Fingerprint the install target before
+      ansible.builtin.include_tasks: tasks/disk_fingerprint.yml
+
+    - name: Call the role with an unknown distribution
+      block:
+        - name: Run the role
+          ansible.builtin.include_role:
+            name: geertsky.tuxifier.ansible_tuxifier
+          vars:
+            installdistribution: {name: nosuchlinux, version: "1"}
+        - name: The role did not fail
+          ansible.builtin.set_fact: {__test_failed_task: "", __test_failed_msg: ""}
+      rescue:
+        - name: Keep the failure
+          ansible.builtin.set_fact:
+            __test_failed_task: "{{ ansible_failed_task.name }}"
+            __test_failed_msg: "{{ (ansible_failed_result.msg | default('') | string) ~ ' ' ~ (ansible_failed_result.message | default('') | string) }}"
+
+    - name: Check the failure
+      ansible.builtin.include_tasks: tasks/check_failure.yml
+      vars:
+        __test_expect_task: Set the install distribution vars
+        __test_expect_msg: nosuchlinux1
+        __test_fingerprint_before: "{{ __test_fingerprint }}"
+
+    - name: Call the role with a repository that does not exist, on an installed target
+      block:
+        - name: Run the role
+          ansible.builtin.include_role:
+            name: geertsky.tuxifier.ansible_tuxifier
+          vars:
+            tuxifier_reinstall: false
+            installdistribution:
+              name: "{{ __test_distro_name }}"
+              version: "{{ __test_distro_version }}"
+              repo: {type: baseurl, url: "http://127.0.0.1:9/no-such-repository/"}
+        - name: The role did not fail
+          ansible.builtin.set_fact: {__test_failed_task: "", __test_failed_msg: ""}
+      rescue:
+        - name: Keep the failure
+          ansible.builtin.set_fact:
+            __test_failed_task: "{{ ansible_failed_task.name }}"
+            __test_failed_msg: "{{ (ansible_failed_result.msg | default('') | string) ~ ' ' ~ (ansible_failed_result.message | default('') | string) }}"
+
+    - name: Check the failure
+      ansible.builtin.include_tasks: tasks/check_failure.yml
+      vars:
+        __test_expect_task: Resolve install packages
+        __test_expect_msg: .+
+        __test_fingerprint_before: "{{ __test_fingerprint }}"

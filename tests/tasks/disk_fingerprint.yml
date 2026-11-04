@@ -1,0 +1,12 @@
+---
+# Sets __test_fingerprint: the first 4 MiB of /dev/vda (the partition table and the boot sector) and the signatures
+# of its partitions, to see whether a run has written to the install target.
+- name: Fingerprint the install target
+  ansible.builtin.raw: >-
+    dd if=/dev/vda bs=1M count=4 2> /dev/null | sha256sum; blkid | sort
+  register: __test_fingerprint_raw
+  changed_when: false
+
+- name: Set the fingerprint
+  ansible.builtin.set_fact:
+    __test_fingerprint: "{{ __test_fingerprint_raw.stdout }}"

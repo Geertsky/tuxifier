@@ -1,0 +1,25 @@
+---
+# Checks the failure of a call of the role that was expected to fail and that the install target has not been written to.
+# Input:
+# - __test_failed_task, __test_failed_msg: the task and the message of the failure, empty when the role did not fail
+# - __test_expect_task: part of the name of the task that fails
+# - __test_expect_msg: a regular expression that the message of the failure matches
+# - __test_fingerprint_before: the fingerprint of the install target before the call (optional)
+- name: Check the failure
+  ansible.builtin.assert:
+    that:
+      - __test_failed_task | length > 0
+      - __test_failed_task is search(__test_expect_task)
+      - __test_failed_msg is search(__test_expect_msg)
+    fail_msg: >-
+      The role failed in the task '{{ __test_failed_task }}' with '{{ __test_failed_msg }}', expected the task
+      '{{ __test_expect_task }}' and the message '{{ __test_expect_msg }}'
+
+- name: Fingerprint the install target after the failure
+  when: __test_fingerprint_before is defined
+  ansible.builtin.include_tasks: disk_fingerprint.yml
+
+- name: The install target has not been written to
+  when: __test_fingerprint_before is defined
+  ansible.builtin.assert:
+    that: __test_fingerprint == __test_fingerprint_before
