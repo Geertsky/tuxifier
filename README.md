@@ -105,16 +105,54 @@ Version 9 and 10 are installed in the BIOS and UEFI test VMs, Rocky Linux 8 too.
 
 ## Development
 
-The unit tests need the collection to be in a directory called `ansible_collections/geertsky/tuxifier`:
-
-```
-mkdir -p /tmp/ac/ansible_collections/geertsky
-ln -s "$PWD" /tmp/ac/ansible_collections/geertsky/tuxifier
-cd /tmp/ac/ansible_collections/geertsky/tuxifier
-PYTHONPATH=/tmp/ac python3 -m pytest tests/unit
-```
-
 Commit messages in this repository start with the area they change, for example `Scope: role|Gather the facts of the installed system and check its distribution` or `Docs: ...`.
+
+## Testing
+
+The tests are run with [tox](https://tox.wiki). It has no plugins; the settings are in `tox.ini`, the tools are installed by tox itself.
+
+### Linters, unit tests and ansible-test
+
+`tox` without arguments runs the default environments: `yamllint`, `ansible-lint`, `codespell`, `markdownlint`, `shellcheck`, `flake8`, `pylint`, `black`, `py314` (pytest of the module, `tests/unit`), `ansible-test-sanity` and `ansible-test-units`. The ansible-test environments copy the repository to `ansible_collections/geertsky/tuxifier` in a temporary directory, because ansible-test needs that path. They run with the ansible-core that tox installs; set `ANSIBLE_TEST_PYTHON` for another Python.
+
+The environments report what they find; they do not fix it. The findings that exist are listed in `.plan/FINDINGS.md` of the project, and are not fixed yet.
+
+### Installing in a virtual machine
+
+The role is tested by installing a distribution in a throwaway qemu VM that boots the initramfs of dracut-incubator. The environments are called
+
+```
+qemu-<distro>-<firmware>-<mode>-<layout>
+```
+
+- `<distro>`: `rocky8`, `rocky9`, `rocky10`, `rhel8`, `rhel9`, `rhel10`, `almalinux9`, `almalinux10`, `fedora38` or `fedora44`: the distribution that is installed.
+- `<firmware>`: `bios` or `uefi` (OVMF).
+- `<mode>`: `poweroff` runs the role with `continue_install: false`: the VM powers off, is started again for the second run (idempotence), and the installed system is booted from its disk and checked. `continue` runs it with `continue_install: true`: the initramfs boots on into the installed system, which is checked, powered off and started again for the second run.
+- `<layout>`: the storage of the install target, a file `tests/vars/qemu_layout_<layout>.yml`: `lvm`, `parts` (no LVM), `luks` (an encrypted logical volume), `raid` (a volume group on md RAID1 of two extra disks), `raidluks` and `cryptroot` (an encrypted root; the passphrase is typed at the serial console).
+
+Other scenarios are named `qemu-<distro>-<firmware>-<scenario>`:
+
+- `keys`: `root_authorized_keys` and `rootpw`, with a login with the second key.
+- `selinux`: `strict_selinux` false and true on the same disk.
+- `distchange`: one distribution installed over another on the same disk (rocky only).
+- `negative`: calls with wrong input fail with a clear message and leave the disk as it was.
+- `kernelmismatch`: `continue_install` with a kernel that is not in the repository (rocky only).
+
+The initramfs always comes from a Rocky sysimage. The mode `continue` needs the kernel of the initramfs in the repository of the installed distribution, so it only works for the Rocky distributions.
+
+Requirements: KVM, `qemu-img`, `qemu-nbd`, OVMF (`/usr/share/OVMF`), `sudo` (to build the initramfs with dracut in the sysimage, and to add `enforcing=0` to the boot entries of the install target over nbd), the dracut-incubator checkout with `94incubator/python-nest.squashfs`, and the sysimages `rocky8`, `rocky9` and `rocky10`. `tests/scripts/sysimage.sh` can create a sysimage, but only the existing ones have been used so far. The directories and the repository are set with environment variables, see `tests/scripts/common.sh` and the head of `tests/scripts/qemu-vm.sh`: `SYSIMAGE_DIR`, `DRACUT_INCUBATOR`, `DRACUT_SSHD`, `TUXIFIER_TEST_DIR` (the test keys and the initramfs images), `QEMU_REPO_URL`, `QEMU_MIRROR`, `QEMU_MEMORY` and `QEMU_OVMF_CODE`.
+
+Without `QEMU_REPO_URL` the repositories of the role are used. The package list is resolved on the machine that runs tox, so the URL has to work there and in the VM. `tests/scripts/mirror-url.sh` maps a distribution to the layout of a local mirror.
+
+### Running many environments
+
+`tests/scripts/run-parallel.sh ENV...` runs environments in parallel (4 by default, 2 GiB of memory each), with a log per environment and a time limit of 40 minutes. `tests/scripts/run-tier.sh` runs a set of them:
+
+- `smoke`: every distribution on `bios` and `uefi` with the layout `lvm`.
+- `layouts`: the Rocky distributions with every layout.
+- `full`: the install matrix of every distribution and layout, and all scenarios.
+
+`run-tier.sh -n TIER` only lists the environments, `-d rocky9,rhel9` limits the distributions and `-m http://192.168.122.1` uses a local mirror. An environment takes about four minutes, `smoke` about 30 minutes and `full` hours. Runs of different environments can overlap: the scripts lock the nbd device, the choice of the forwarded port and the build of the initramfs.
 
 ## License
 
