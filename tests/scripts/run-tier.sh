@@ -5,14 +5,15 @@
 #   run-tier.sh [-n] [-d DISTROS] [-j JOBS] [-l LOGDIR] [-t MINUTES] [-m MIRROR] TIER
 #
 # TIER:
-#   smoke    every distribution x bios/uefi x the layout lvm x poweroff/continue                  (26 envs)
+#   smoke    every distribution x bios/uefi x the layout lvm x poweroff/continue                  (40 envs)
 #   layouts  rocky8, rocky9, rocky10 x every layout x bios/uefi x poweroff/continue                (72 envs)
 #   full     the install matrix of every distribution x every layout x bios/uefi x poweroff/continue, and the scenarios
 #            keys, selinux, negative and demo on every distribution, distchange and kernelmismatch on rocky8, rocky9 and
-#            rocky10, each on bios and uefi                                                       (248 envs, hours)
+#            rocky10, each on bios and uefi                                                       (332 envs, hours)
 #
 # continue_install=true needs the kernel of the initramfs in the repository of the distribution (see kernelmismatch). The
-# initramfs comes from a rocky sysimage, so only the rocky distributions have the mode continue; the others run poweroff.
+# initramfs comes from the sysimage of the distribution, so every distribution needs its sysimage in SYSIMAGE_DIR
+# (rocky ones are created, build the others with sysimage_build.sh and the url of mirror-url.sh).
 #
 # -n           only print the envs, one per line, and check that tox knows them
 # -d DISTROS   only these distributions, comma separated, like rocky9,rhel9
@@ -56,7 +57,6 @@ matrix() { # distros layouts
     for d in "${distros[@]}"; do
         for f in "${FIRMWARES[@]}"; do
             for m in "${MODES[@]}"; do
-                [[ "$m" == poweroff || "$d" == rocky* ]] || continue
                 for l in "${layouts[@]}"; do echo "qemu-$d-$f-$m-$l"; done
             done
         done

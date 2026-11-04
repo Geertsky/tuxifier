@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: EUPL-1.2
-# Start and stop the throwaway qemu VM of the tox envs "qemu-rocky{8,9,10}", booted from the incubator initramfs.
+# Start and stop the throwaway qemu VM of the tox envs "qemu-<distro>-...", booted from the incubator initramfs.
 #
 #   qemu-vm.sh start          boot the initramfs of QEMU_DISTRO on an empty install target (/dev/vda) and write
 #                             $QEMU_WORKDIR/inventory.ini; ansible uses the python of python-nest
@@ -17,8 +17,8 @@
 #   QEMU_WORKDIR      directory for the disks, key, pid file and inventory (required)
 #   QEMU_DISTRO       the distribution to install: rocky, rhel, almalinux or fedora with the major version, like rocky9
 #                     or fedora44 (default: rocky9)
-#   QEMU_INITRAMFS    the sysimage that the initramfs comes from: rocky8, rocky9 or rocky10 (default: the major version of
-#                     QEMU_DISTRO, rocky10 for fedora)
+#   QEMU_INITRAMFS    the sysimage that the initramfs comes from, like rocky9 or rhel9 (default: the sysimage of
+#                     QEMU_DISTRO if it exists, else the rocky one of the same major version, rocky10 for fedora)
 #   QEMU_FIRMWARE     bios or uefi (default: bios)
 #   QEMU_OVMF_CODE    OVMF firmware code for uefi (default: /usr/share/OVMF/OVMF_CODE.fd)
 #   QEMU_OVMF_VARS    OVMF variables template for uefi (default: /usr/share/OVMF/OVMF_VARS.fd); every VM gets its own copy,
@@ -42,10 +42,13 @@ EXTRA_DISKS="${QEMU_EXTRA_DISKS:-0}"
 EXTRA_SIZE="${QEMU_EXTRA_SIZE:-3G}"
 MEMORY="${QEMU_MEMORY:-2048}"
 DISTRO="${QEMU_DISTRO:-rocky9}"
-case "$DISTRO" in
-    fedora*) INITRAMFS_DISTRO="${QEMU_INITRAMFS:-rocky10}" ;;
-    *) INITRAMFS_DISTRO="${QEMU_INITRAMFS:-rocky${DISTRO//[^0-9]/}}" ;;
-esac
+if [[ -d "$SYSIMAGE_DIR/$DISTRO/lib/modules" ]]; then
+    INITRAMFS_DISTRO="${QEMU_INITRAMFS:-$DISTRO}"
+elif [[ "$DISTRO" == fedora* ]]; then
+    INITRAMFS_DISTRO="${QEMU_INITRAMFS:-rocky10}"
+else
+    INITRAMFS_DISTRO="${QEMU_INITRAMFS:-rocky${DISTRO//[^0-9]/}}"
+fi
 FIRMWARE="${QEMU_FIRMWARE:-bios}"
 OVMF_CODE="${QEMU_OVMF_CODE:-/usr/share/OVMF/OVMF_CODE.fd}"
 OVMF_VARS="${QEMU_OVMF_VARS:-/usr/share/OVMF/OVMF_VARS.fd}"

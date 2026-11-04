@@ -101,7 +101,7 @@ The [tuxifier-playbook repository](https://github.com/Geertsky/tuxifier-playbook
 
 Rocky Linux, AlmaLinux, RHEL and Fedora, see [Supported distributions](roles/ansible_tuxifier/README.md#supported-distributions) in the role README for the versions and how far each of them is tested.
 
-Version 9 and 10 are installed in the BIOS and UEFI test VMs, Rocky Linux 8 too. Version 8 differs in its `platform-python` 3.6, its Berkeley DB rpm database and its EFI `grub.cfg`; see the [note in the role README](roles/ansible_tuxifier/README.md#supported-distributions).
+Every version in the table is installed in the BIOS and UEFI test VMs, see [Testing](#testing). Version 8 differs in its `platform-python` 3.6, its Berkeley DB rpm database and its EFI `grub.cfg`; see the [note in the role README](roles/ansible_tuxifier/README.md#supported-distributions).
 
 ## Development
 
@@ -115,7 +115,7 @@ The tests are run with [tox](https://tox.wiki). It has no plugins; the settings 
 
 `tox` without arguments runs the default environments: `yamllint`, `ansible-lint`, `codespell`, `markdownlint`, `shellcheck`, `flake8`, `pylint`, `black`, `py314` (pytest of the module, `tests/unit`), `ansible-test-sanity` and `ansible-test-units`. The ansible-test environments copy the repository to `ansible_collections/geertsky/tuxifier` in a temporary directory, because ansible-test needs that path. They run with the ansible-core that tox installs; set `ANSIBLE_TEST_PYTHON` for another Python.
 
-The environments report what they find; they do not fix it. The findings that exist are listed in `.plan/FINDINGS.md` of the project, and are not fixed yet.
+The environments report what they find; they do not fix it. The findings that exist are listed in `.plan/FINDINGS.md` of the tuxifier_project superproject, and most are not fixed yet.
 
 ### Installing in a virtual machine
 
@@ -139,11 +139,11 @@ Other scenarios are named `qemu-<distro>-<firmware>-<scenario>`:
 - `kernelmismatch`: `continue_install` with a kernel that is not in the repository (rocky only).
 - `demo`: the demo site of tuxifier-playbook (httpd, the page and the firewall) is set up on the booted installed system and the page is fetched through a forwarded port. rhel needs a mirror (`QEMU_REPO_URL`) for this, else it is skipped.
 
-The initramfs always comes from a Rocky sysimage. The mode `continue` needs the kernel of the initramfs in the repository of the installed distribution, so it only works for the Rocky distributions.
+The initramfs comes from the sysimage of the distribution that is installed (`QEMU_INITRAMFS` selects another one), because the mode `continue` needs the kernel of the initramfs in the repository of that distribution. The sysimages `rocky8` to `fedora44` are directories in `SYSIMAGE_DIR` (default `~/work/tuxifier`). The Rocky ones are created when missing; build the others with `tests/scripts/sysimage_build.sh`, for example `sysimage_build.sh $(tests/scripts/mirror-url.sh http://192.168.122.1 rhel9)`. It works for every distribution and does not depend on the tests.
 
-Requirements: KVM, `qemu-img`, `qemu-nbd`, OVMF (`/usr/share/OVMF`), `sudo` (to build the initramfs with dracut in the sysimage, and to add `enforcing=0` to the boot entries of the install target over nbd), the dracut-incubator checkout with `94incubator/python-nest.squashfs`, and the sysimages `rocky8`, `rocky9` and `rocky10`. `tests/scripts/sysimage_build.sh BASEOS_URL` builds the sysimage of any distribution from its repository, for example `sysimage_build.sh http://192.168.122.1/rhel/9.8/BaseOS/` creates `rhel9` (it does not depend on the tests or on `continue_install`; `tests/scripts/sysimage.sh rocky9` is a wrapper that picks the Rocky mirror). The directories and the repository are set with environment variables, see `tests/scripts/common.sh` and the head of `tests/scripts/qemu-vm.sh`: `SYSIMAGE_DIR`, `DRACUT_INCUBATOR`, `DRACUT_SSHD`, `TUXIFIER_TEST_DIR` (the test keys and the initramfs images), `QEMU_REPO_URL`, `QEMU_MIRROR`, `QEMU_MEMORY` and `QEMU_OVMF_CODE`.
+Requirements: KVM, `qemu-img`, `qemu-nbd`, OVMF (`/usr/share/OVMF`), `sudo` (dracut and dnf in the sysimage, and `enforcing=0` in the boot entries of the install target over nbd) and the dracut-incubator checkout with `94incubator/python-nest.squashfs`. The directories and the repository are set with environment variables, for example `SYSIMAGE_DIR`, `DRACUT_INCUBATOR`, `DRACUT_SSHD`, `TUXIFIER_TEST_DIR`, `QEMU_REPO_URL`, `QEMU_MIRROR` and `QEMU_MEMORY`; [tests/README.md](tests/README.md) has the full description.
 
-Without `QEMU_REPO_URL` the repositories of the role are used. The package list is resolved on the machine that runs tox, so the URL has to work there and in the VM. `tests/scripts/mirror-url.sh` maps a distribution to the layout of a local mirror.
+Without `QEMU_REPO_URL` the repositories of the role are used. For RHEL a mirror is required, as RHEL mirrors are not public. The package list is resolved on the machine that runs tox, so the URL has to work there and in the VM. `tests/scripts/mirror-url.sh` maps a distribution to the layout of a local mirror.
 
 ### Running many environments
 

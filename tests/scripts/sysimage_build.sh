@@ -68,7 +68,8 @@ if [[ -z "$appstream" && "$distro" != fedora && "$baseos" == */BaseOS/* ]]; then
 fi
 
 if [[ -d "$root/lib/modules" ]] && [[ -n "$(sysimage_kernel_version "$root")" ]] \
-    && [[ -e "$root/lib/modules/$(sysimage_kernel_version "$root")/modules.dep" ]]; then
+    && [[ -e "$root/lib/modules/$(sysimage_kernel_version "$root")/modules.dep" ]] \
+    && [[ -e "$root/boot/vmlinuz-$(sysimage_kernel_version "$root")" ]]; then
     echo "sysimage $root exists (kernel $(sysimage_kernel_version "$root"))"
     exit 0
 fi
@@ -125,12 +126,14 @@ done
 sudo mount -t tmpfs tmpfs "$root/run"
 mounts+=("$root/run")
 dnf_root() { sudo dnf -y --installroot="$root" --releasever="$release" --setopt=reposdir="$repodir" --setopt=install_weak_deps=False "$@"; }
-# dracut-network does not exist everywhere (fedora has no such package)
 packages=(kernel dracut NetworkManager openssh-server mdadm lvm2 cryptsetup e2fsprogs xfsprogs dosfstools iproute
     util-linux kmod systemd-udev "$releasepkg")
-if [[ -n "$(dnf_root --quiet repoquery --available dracut-network 2> /dev/null)" ]]; then
-    packages+=(dracut-network)
-fi
+# dracut-network does not exist everywhere, and it brings dhcp-client on EL, but not on fedora, where the dracut module network needs it
+for optional in dracut-network dhcp-client; do
+    if [[ -n "$(dnf_root --quiet repoquery --available "$optional" 2> /dev/null)" ]]; then
+        packages+=("$optional")
+    fi
+done
 # filesystem creates the usr-merge symlinks (/lib64, ...) in a scriptlet of its own, so it is installed with scriptlets
 dnf_root --setopt=tsflags=nodocs install filesystem
 # the scriptlet of kernel-core fails in the root (see above), so the rest is installed without scriptlets
@@ -138,8 +141,9 @@ dnf_root --setopt=tsflags=nodocs,noscripts install "${packages[@]}"
 
 sudo cp -a "$sshd_module" "$root/usr/lib/dracut/modules.d/46sshd"
 sudo chroot "$root" ssh-keygen -A
-# the scriptlets are skipped, so do their depmod and ldconfig here
+# the scriptlets are skipped, so do what they do here: the kernel in /boot, depmod and ldconfig
 kernel="$(sudo ls "$root/lib/modules" | grep -v '+debug$' | sort -V | tail -1)"
+sudo install -D -m 0755 "$root/lib/modules/$kernel/vmlinuz" "$root/boot/vmlinuz-$kernel"
 sudo chroot "$root" depmod -a "$kernel"
 sudo chroot "$root" ldconfig
 echo "$kernel" | sudo tee "$root/VERSION" > /dev/null
