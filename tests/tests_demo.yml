@@ -1,0 +1,66 @@
+---
+# The demo site of tuxifier-playbook on the installed system: the installed system is booted from its disk (tox env
+# qemu-<distro>-<fw>-demo), the tasks that the playbook runs after an install set it up (tasks/demo_site.yml), and the page is
+# fetched from the controller through the forwarded port 80.
+#
+# rhel has no repository after the install (redhat-release has none), so httpd comes from the mirror of QEMU_REPO_URL: without
+# it the demo is skipped for rhel. The python of EL8 is too old for ansible-core: the test installs python3.12, that the role only
+# queues for continue_install.
+- name: The demo site on the installed system
+  hosts: installer
+  gather_facts: false
+  vars_files:
+    - vars/qemu_rocky.yml
+  vars:
+    ansible_python_interpreter: "{{ '/usr/bin/python3.12' if __test_distro_version == '8' else 'auto_silent' }}"
+  tasks:
+    - name: Skip rhel without a repository
+      when: __test_distro_name == 'rhel' and not __test_repo_url
+      block:
+        - name: Say that the demo is skipped
+          ansible.builtin.debug:
+            msg: "Skipped: rhel has no repository without QEMU_REPO_URL (run-parallel.sh -m MIRROR sets it)"
+        - name: End the play
+          ansible.builtin.meta: end_play
+
+    - name: Write the repositories of the mirror for rhel
+      when: __test_distro_name == 'rhel'
+      ansible.builtin.raw: |
+        cat > /etc/yum.repos.d/tuxifier-test.repo <<'REPO'
+        [tuxifier-test-baseos]
+        name=tuxifier test BaseOS
+        baseurl={{ __test_repo_url }}
+        gpgcheck=0
+        [tuxifier-test-appstream]
+        name=tuxifier test AppStream
+        baseurl={{ __test_repo_url | regex_replace('/BaseOS/?$', '/AppStream/') }}
+        gpgcheck=0
+        REPO
+      changed_when: true
+
+    - name: Install python3.12 on EL8
+      when: __test_distro_version == '8'
+      ansible.builtin.raw: dnf install -y python3.12
+      changed_when: true
+
+    - name: Gather the facts
+      ansible.builtin.setup:
+
+    - name: Set up the demo site
+      ansible.builtin.include_tasks: tasks/demo_site.yml
+
+    - name: Fetch the demo page from the controller
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ demo_http_port }}/"
+        return_content: true
+      delegate_to: localhost
+      register: __test_page
+      until: __test_page.status | default(0) == 200
+      retries: 30
+      delay: 5
+
+    - name: Check the demo page
+      ansible.builtin.assert:
+        that:
+          - "'Hello, World!' in __test_page.content"
+          - "'Freshly installed Webserver' in __test_page.content"

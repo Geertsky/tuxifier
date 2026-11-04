@@ -1,0 +1,80 @@
+---
+# The demo site of tuxifier-playbook: a copy of the tasks of its continue_install.yml that set the hostname, install httpd, put the
+# demo page, open the firewall and start the services. Keep it the same as the playbook (it is a copy, so that these tests do not
+# need the repository of the playbook). Without the check of the SELinux labels, that is tested by the scenario selinux.
+
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ hostname | default('installer') }}"
+
+- name: Install Apache
+  ansible.builtin.package:
+    name: httpd
+
+- name: Install demo page
+  ansible.builtin.copy:
+    dest: /var/www/html/index.html
+    mode: "0644"
+    owner: apache
+    group: apache
+    content: >
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+      <meta charset="utf-8">
+      <title>Freshly installed Webserver</title>
+      </head>
+      <body>
+      <h1>Hello, World!</h1>
+      I am a freshly installed webserver using Ansible and tuxifier!
+      </body>
+      </html>
+      <html>
+# The firewall bindings of the python that runs the modules of version 8 do not exist, so the module cannot be used.
+- name: Open firewall http service
+  when: ansible_facts['distribution_major_version'] != '8'
+  ansible.posix.firewalld:
+    service: http
+    state: enabled
+    permanent: true
+    immediate: true
+    offline: true
+
+- name: Open firewall http service on version 8
+  when: ansible_facts['distribution_major_version'] == '8'
+  block:
+    - name: Query firewall http service
+      ansible.builtin.command:
+        argv:
+          - firewall-offline-cmd
+          - --query-service=http
+      register: _firewall_http
+      changed_when: false
+      failed_when: _firewall_http.rc not in [0, 1]
+
+    - name: Enable firewall http service
+      ansible.builtin.command:
+        argv:
+          - firewall-offline-cmd
+          - --add-service=http
+      when: _firewall_http.rc == 1
+      register: _firewall_http_added
+
+    # firewalld is already running on the first boot of the installed system and does not read the files that firewall-offline-cmd wrote.
+    - name: Restart firewalld to load the http service
+      ansible.builtin.systemd_service:
+        name: firewalld
+        state: restarted
+      when: _firewall_http_added is changed
+
+- name: Enable and start Firewalld
+  ansible.builtin.systemd_service:
+    name: firewalld
+    enabled: true
+    state: started
+
+- name: Enable and start httpd
+  ansible.builtin.systemd_service:
+    name: httpd
+    enabled: true
+    state: started

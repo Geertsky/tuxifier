@@ -202,18 +202,21 @@ start_initramfs() {
 }
 
 boot_disk() {
-    local port
+    local port http_port
     [[ -s "$PIDFILE" ]] && kill -0 "$(cat "$PIDFILE")" 2> /dev/null && { echo "VM still running" >&2; exit 1; }
     lock_ports
     port="$(free_port)"
+    # the web server of the demo site is forwarded too; another port than the one of ssh
+    http_port="$(free_port)"
+    while [[ "$http_port" == "$port" ]]; do http_port="$(free_port)"; done
     # shellcheck disable=SC2046 # firmware_args and serial_args print separate words
     qemu-system-x86_64 -enable-kvm -cpu host -smp 2 -m "$MEMORY" -display none -daemonize $(firmware_args) $(serial_args) \
         -pidfile "$PIDFILE" \
         -monitor "unix:$MONITOR_SOCK,server,nowait" \
         -drive "file=$QEMU_WORKDIR/target.qcow2,if=virtio,format=qcow2" $(extra_disk_args) \
-        -nic "user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:$port-:22"
+        -nic "user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:$port-:22,hostfwd=tcp:127.0.0.1:$http_port-:80"
     unlock_ports
-    write_inventory "$TEST_KEY" "$port"
+    write_inventory "$TEST_KEY" "$port" "demo_http_port=$http_port"
     if [[ -n "${QEMU_EXTRA_KEY:-}" ]]; then
         cp "$QEMU_WORKDIR/inventory.ini" "$QEMU_WORKDIR/inventory-extrakey.ini"
         sed -i "s|^ansible_ssh_private_key_file=.*|ansible_ssh_private_key_file=$EXTRA_KEY|" "$QEMU_WORKDIR/inventory-extrakey.ini"
