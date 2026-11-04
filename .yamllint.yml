@@ -1,0 +1,18 @@
+---
+extends: default
+ignore: |
+  /.tox/
+  /.ansible/
+  /.git/
+  .markdownlint.yaml
+  /inventory/host_vars/installer*
+rules:
+  line-length:
+    max: 160
+    level: warning
+  truthy:
+    allowed-values: ["true", "false"]
+  # required by ansible-lint
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: false
