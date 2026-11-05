@@ -24,7 +24,7 @@ description:
 author:
   - Geert Geurts (@Geertsky)
 
-version_added: "1.0.0"
+version_added: "0.1.0"
 
 options:
   distribution:
