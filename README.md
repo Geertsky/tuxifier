@@ -109,7 +109,7 @@ Commit messages in this repository start with the area they change, for example 
 
 ## Testing
 
-The tests are run with [tox](https://tox.wiki). It has no plugins; the settings are in `tox.ini`, the tools are installed by tox itself.
+The tests are run with [tox](https://tox.wiki). It has no plugins; the settings are in `tox.ini`, the tools are installed by tox itself. The complete description of the test environment (scripts, sysimages, flows, variables, how to extend and repair it) is in [tests/README.md](tests/README.md).
 
 ### Linters, unit tests and ansible-test
 
