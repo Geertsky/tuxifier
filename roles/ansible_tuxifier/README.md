@@ -40,15 +40,6 @@ so it can not be listed in the `dependencies` of `galaxy.yml` (`ansible-galaxy c
 
 The version of a distribution is the major version, given as a string (`installdistribution.version: "9"`).
 
->[!NOTE]
->Version 8 (Rocky Linux, RHEL; AlmaLinux 8 is not supported) differs from 9 and 10 in three ways, which the role handles:
->
->* The Python of version 8, `platform-python` 3.6, is not a target that current ansible-core versions run modules on. The role runs the modules of the chroot with the Python of the python-nest environment. With `continue_install` the installed system gets `python3.12` from a job of `at` on its first boot (`post_minimal_install.yml`), because the playbook needs a Python on the target to continue. Its `python3-firewall` can only be imported by `platform-python`, so `continue_install.yml` of the playbook opens the firewall with `firewall-offline-cmd`.
->* The rpm database of version 8 is Berkeley DB, while the `rpm` of the initramfs writes sqlite. The database is converted when the install is done, see below.
->* On version 8 the `grub.cfg` on the EFI system partition is the full configuration, not a pointer to the one in `/boot` (`grub_cfg_full_on_esp` in `vars/rocky8.yml`).
->
->Version 8 has its own `minimalpackages` in its vars file, which replaces the common list of `vars/main.yml`.
-
 ### Initramfs image generation
 For using `tuxifier`, the machine has to be booted using an initramfs image with the [dracut-incubator](https://github.com/geertsky/dracut-incubator) module included.
 See: the [dracut-incubator](https://github.com/Geertsky/dracut-incubator) git repository for the steps to create the initramfs.

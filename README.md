@@ -101,7 +101,7 @@ The [tuxifier-playbook repository](https://github.com/Geertsky/tuxifier-playbook
 
 Rocky Linux, AlmaLinux, RHEL and Fedora, see [Supported distributions](roles/ansible_tuxifier/README.md#supported-distributions) in the role README for the versions and how far each of them is tested.
 
-Every version in the table is installed in the BIOS and UEFI test VMs, see [Testing](#testing). Version 8 differs in its `platform-python` 3.6, its Berkeley DB rpm database and its EFI `grub.cfg`; see the [note in the role README](roles/ansible_tuxifier/README.md#supported-distributions).
+Every version in the table is installed in the BIOS and UEFI test VMs, see [Testing](#testing).
 
 ## Development
 
