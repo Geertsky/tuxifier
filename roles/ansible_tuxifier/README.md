@@ -23,10 +23,10 @@ Alternatively use a git checkout in the `roles_path`
 so it can not be listed in the `dependencies` of `galaxy.yml` (`ansible-galaxy collection build` rejects a role name there); `galaxy.yml` names it in a comment and points to `requirements.yml`.
 
 >[!IMPORTANT]
->The version matters. `tuxifier` needs the `main` branch of the role, at commit `2204524` or newer, and not the latest release (1.22.1) that `ansible-galaxy role install` fetches.
+>The version matters. `tuxifier` needs the `main` branch of the role, at commit `919b193` or newer, and not the latest release (1.22.1) that `ansible-galaxy role install` fetches.
 >The release lacks the `storage_destroy_partition_device` variable and the handling of a partition that is planned but not created yet.
 >Without them the storage step fails on a fresh disk with `device is not in the tree`.
->From commit `2204524` the role mounts the volumes parent first (`/` before `/boot` before `/boot/efi`), which tuxifier relies on to mount the installed system below `/tuxifier-sysroot`.
+>The role mounts the volumes parent first (`/` before `/boot` before `/boot/efi`) from commit `2204524`, which tuxifier relies on to mount the installed system below `/tuxifier-sysroot`, and from commit `919b193` it mounts an `efi` volume as `vfat`, so the EFI system partition is mounted and gets its fstab entry from the storage role.
 >If the checkout is linked or bind mounted into the `roles_path`, check that the link is still there after a reboot.
 
 ## Supported distributions
