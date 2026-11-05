@@ -31,6 +31,12 @@
     mode: '0755'
   changed_when: false
 
+- name: Unmount python-nest from the chroot to keep the next ephemeral bind mount idempotent
+  ansible.posix.mount:
+    path: /tuxifier-sysroot/local/conda/envs/python-nest
+    state: unmounted
+  changed_when: false
+
 - name: Bind mount python-nest in the chroot
   ansible.posix.mount:
     path: /tuxifier-sysroot/local/conda/envs/python-nest
