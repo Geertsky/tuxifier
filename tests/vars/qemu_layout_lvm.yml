@@ -1,6 +1,6 @@
 ---
 # L1: /dev/vda has a physical volume with the volume group vg.test, that holds swap and /.
-installdisk:
+ansible_tuxifier__installdisk:
   - name: /dev/vda
     type: partition
     disks: [/dev/vda]

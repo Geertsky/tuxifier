@@ -30,7 +30,7 @@ sysimage_kernel_version() {
     fi
 }
 
-# A second key, for the test of root_authorized_keys: the installed system has to accept it too.
+# A second key, for the test of ansible_tuxifier__root_authorized_keys: the installed system has to accept it too.
 EXTRA_KEY="$TUXIFIER_TEST_DIR/id_ed25519_extra"
 
 ensure_test_key() {

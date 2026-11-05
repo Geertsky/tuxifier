@@ -1,6 +1,6 @@
 ---
 # L2: partitions only, no LVM: / and swap are partitions of /dev/vda.
-installdisk:
+ansible_tuxifier__installdisk:
   - name: /dev/vda
     type: partition
     disks: [/dev/vda]

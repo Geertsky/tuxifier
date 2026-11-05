@@ -11,7 +11,7 @@
 #            keys, selinux, negative and demo on every distribution, distchange and kernelmismatch on rocky8, rocky9 and
 #            rocky10, each on bios and uefi                                                       (332 envs, hours)
 #
-# continue_install=true needs the kernel of the initramfs in the repository of the distribution (see kernelmismatch). The
+# ansible_tuxifier__continue_install=true needs the kernel of the initramfs in the repository of the distribution (see kernelmismatch). The
 # initramfs comes from the sysimage of the distribution, so every distribution needs its sysimage in SYSIMAGE_DIR
 # (rocky ones are created, build the others with sysimage_build.sh and the url of mirror-url.sh).
 #

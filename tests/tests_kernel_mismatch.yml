@@ -1,8 +1,8 @@
 ---
-# continue_install needs the kernel of the initramfs in the installed system. When the repository of the distribution does not
+# ansible_tuxifier__continue_install needs the kernel of the initramfs in the installed system. When the repository of the distribution does not
 # have it, here because the initramfs of another major version is booted (see the tox envs qemu-<distro>-<fw>-kernelmismatch),
 # the role stops at the resolution of the packages and names the kernel.
-- name: continue_install with a kernel that is not in the repository
+- name: Do not continue_install with a kernel that is not in the repository
   hosts: installer
   gather_facts: false
   vars_files:
@@ -11,13 +11,13 @@
     - "vars/qemu_layout_{{ lookup('ansible.builtin.env', 'QEMU_LAYOUT') | default('lvm', true) }}.yml"
   environment: "{{ __test_python_nest_environment }}"
   tasks:
-    - name: Run the role with continue_install
+    - name: Run the role with ansible_tuxifier__continue_install
       block:
         - name: Run the role
           ansible.builtin.include_role:
             name: geertsky.tuxifier.ansible_tuxifier
           vars:
-            continue_install: true
+            ansible_tuxifier__continue_install: true
         - name: The role did not fail
           ansible.builtin.set_fact: {__test_failed_task: "", __test_failed_msg: ""}
       rescue:

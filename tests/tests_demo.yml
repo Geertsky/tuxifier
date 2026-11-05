@@ -5,7 +5,7 @@
 #
 # rhel has no repository after the install (redhat-release has none), so httpd comes from the mirror of QEMU_REPO_URL: without
 # it the demo is skipped for rhel. The python of EL8 is too old for ansible-core: the test installs python3.12, that the role only
-# queues for continue_install.
+# queues for ansible_tuxifier__continue_install.
 - name: The demo site on the installed system
   hosts: installer
   gather_facts: false

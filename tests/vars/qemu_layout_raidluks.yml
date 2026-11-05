@@ -1,8 +1,8 @@
 ---
 # L5: the layout of L4 with an encrypted logical volume, /secure, in the volume group on the RAID1.
 luks_passphrase: luks-passphrase
-tuxifier_crypttab_options: luks,nofail
-installdisk:
+ansible_tuxifier__crypttab_options: luks,nofail
+ansible_tuxifier__installdisk:
   - name: /dev/vda
     type: partition
     disks: [/dev/vda]

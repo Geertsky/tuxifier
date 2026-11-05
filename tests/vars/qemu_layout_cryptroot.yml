@@ -2,8 +2,8 @@
 # L6: the root logical volume is encrypted. The passphrase is asked at boot (crypttab key field none): the boot of the
 # installed system waits for it at the console (QEMU_LUKS_PASSPHRASE, see qemu-vm.sh).
 luks_passphrase: luks-passphrase
-tuxifier_crypttab_options: luks
-installdisk:
+ansible_tuxifier__crypttab_options: luks
+ansible_tuxifier__installdisk:
   - name: /dev/vda
     type: partition
     disks: [/dev/vda]

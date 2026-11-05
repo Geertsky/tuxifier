@@ -1,7 +1,7 @@
 ---
 # Run the role on a VM that booted the incubator initramfs of QEMU_DISTRO (see tox env qemu-rocky<N> and
 # tests/scripts/qemu-vm.sh). The install target is /dev/vda. The role installs the distribution and, as
-# continue_install is false, the VM powers off. tox runs this playbook twice, with tuxifier_reinstall true and false.
+# ansible_tuxifier__continue_install is false, the VM powers off. tox runs this playbook twice, with ansible_tuxifier__reinstall true and false.
 - name: Role ansible_tuxifier in the incubator initramfs
   hosts: installer
   gather_facts: false

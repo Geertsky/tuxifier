@@ -28,7 +28,7 @@ tests/
   tests_install.yml          the role run (installs the distribution in the VM)
   tests_installed.yml        checks of the booted installed system
   tests_negative.yml         wrong input fails clearly and leaves the disk alone
-  tests_kernel_mismatch.yml  continue_install with a kernel that is not in the repository
+  tests_kernel_mismatch.yml  ansible_tuxifier__continue_install with a kernel that is not in the repository
   tests_demo.yml             the demo site of tuxifier-playbook works on the installed system
   tasks/                     shared task files (run_role, verify_*, check_failure, disk_fingerprint, demo_site)
   vars/                      qemu_rocky.yml (distribution), qemu_boot_<fw>.yml, qemu_layout_<layout>.yml
@@ -61,17 +61,17 @@ qemu-<distro>-<firmware>-<scenario>          the scenarios
 - `layout`: `lvm`, `parts`, `luks`, `raid`, `raidluks`, `cryptroot`.
 - `scenario`: `keys`, `selinux`, `negative`, `demo` (all distributions); `distchange`, `kernelmismatch` (rocky only).
 
-The flow of mode `poweroff` (`continue_install: false`):
+The flow of mode `poweroff` (`ansible_tuxifier__continue_install: false`):
 
 1. `qemu-vm.sh start`: boot the initramfs on the empty disk.
-2. `tests_install.yml -e tuxifier_reinstall=true`: the role installs; the initramfs powers the VM off.
+2. `tests_install.yml -e ansible_tuxifier__reinstall=true`: the role installs; the initramfs powers the VM off.
 3. `qemu-vm.sh wait-poweroff`, then `restart` on the same disk.
-4. `tests_install.yml -e tuxifier_reinstall=false`: the second run must change nothing.
+4. `tests_install.yml -e ansible_tuxifier__reinstall=false`: the second run must change nothing.
 5. `permissive-first-boot`: add `enforcing=0` to the boot entries of the disk (over nbd, needs sudo).
 6. `boot-disk`: boot the installed system from the disk; `tests_installed.yml` checks mounts, logical volumes, LUKS, RAID and
    (UEFI) the boot entry.
 
-The flow of mode `continue` (`continue_install: true`): the role runs, the initramfs boots on into the installed system, which
+The flow of mode `continue` (`ansible_tuxifier__continue_install: true`): the role runs, the initramfs boots on into the installed system, which
 is checked; the VM is powered off from inside, restarted, the role runs a second time, and the system is checked again. This
 only works when the repository of the distribution has the kernel of the initramfs, which is why each distribution has its own
 sysimage.

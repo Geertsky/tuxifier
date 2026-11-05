@@ -1,5 +1,5 @@
 ---
-# The second test key is in authorized_keys of root and the root password is rootpw. That the installed system accepts a
+# The second test key is in authorized_keys of root and the root password is ansible_tuxifier__rootpw. That the installed system accepts a
 # login with the key is checked by running the play with the inventory that has it (inventory-extrakey.ini of qemu-vm.sh).
 - name: Read the authorized keys of root
   ansible.builtin.raw: cat /root/.ssh/authorized_keys
@@ -12,11 +12,11 @@
   changed_when: false
 
 # chpasswd makes sha512 ($6$) or yescrypt ($y$), depending on the distribution. sha512 is made again on the controller
-# with the salt of the installed hash; for the others the installed system hashes rootpw with its own libcrypt.
-- name: Make the hash of rootpw with the salt of the installed system
+# with the salt of the installed hash; for the others the installed system hashes ansible_tuxifier__rootpw with its own libcrypt.
+- name: Make the hash of ansible_tuxifier__rootpw with the salt of the installed system
   when: __test_hash_id == '6'
   ansible.builtin.command:
-    argv: [openssl, passwd, -6, -salt, "{{ __test_hash.split('$')[2] }}", "{{ rootpw }}"]
+    argv: [openssl, passwd, -6, -salt, "{{ __test_hash.split('$')[2] }}", "{{ ansible_tuxifier__rootpw }}"]
   delegate_to: localhost
   register: __test_expected_hash
   changed_when: false
@@ -24,11 +24,11 @@
     __test_hash: "{{ __test_root_hash.stdout_lines[0] | trim }}"
     __test_hash_id: "{{ __test_hash.split('$')[1] }}"
 
-- name: Check the hash of rootpw with the libcrypt of the installed system
+- name: Check the hash of ansible_tuxifier__rootpw with the libcrypt of the installed system
   when: __test_hash_id != '6'
   ansible.builtin.raw: >-
     for p in python3 /usr/libexec/platform-python; do command -v $p > /dev/null && exec $p -c
-    "import crypt, sys; print(crypt.crypt(sys.argv[1], sys.argv[2]) == sys.argv[2])" '{{ rootpw }}' '{{ __test_hash }}' 2> /dev/null; done
+    "import crypt, sys; print(crypt.crypt(sys.argv[1], sys.argv[2]) == sys.argv[2])" '{{ ansible_tuxifier__rootpw }}' '{{ __test_hash }}' 2> /dev/null; done
   register: __test_crypt_check
   changed_when: false
   vars:
@@ -46,4 +46,4 @@
       - >-
         (__test_hash_id == '6' and __test_expected_hash.stdout | trim == __test_hash) or
         (__test_hash_id != '6' and __test_crypt_check.stdout_lines | last | trim == 'True')
-    fail_msg: "The root password is not rootpw (hash type {{ __test_hash_id }}), or the key is missing"
+    fail_msg: "The root password is not ansible_tuxifier__rootpw (hash type {{ __test_hash_id }}), or the key is missing"

@@ -1,8 +1,8 @@
 ---
 # The role fails with a clear message on wrong input and leaves the install target as it was. The target has been installed
 # by tests_install.yml before (see the tox envs qemu-<distro>-<fw>-negative). The failures that come before the first
-# task that writes are the ones that can promise this: with tuxifier_reinstall=true the disks are wiped first, by design.
-- name: A role call without installdisk
+# task that writes are the ones that can promise this: with ansible_tuxifier__reinstall=true the disks are wiped first, by design.
+- name: A role call without ansible_tuxifier__installdisk
   hosts: installer
   gather_facts: false
   vars_files:
@@ -12,7 +12,7 @@
     - name: Fingerprint the install target before
       ansible.builtin.include_tasks: tasks/disk_fingerprint.yml
 
-    - name: Call the role without installdisk
+    - name: Call the role without ansible_tuxifier__installdisk
       block:
         - name: Run the role
           ansible.builtin.include_role:
@@ -29,7 +29,7 @@
       ansible.builtin.include_tasks: tasks/check_failure.yml
       vars:
         __test_expect_task: Validating arguments
-        __test_expect_msg: installdisk
+        __test_expect_msg: ansible_tuxifier__installdisk
         __test_fingerprint_before: "{{ __test_fingerprint }}"
 
 - name: Role calls with wrong input
@@ -50,7 +50,7 @@
           ansible.builtin.include_role:
             name: geertsky.tuxifier.ansible_tuxifier
           vars:
-            installdistribution: {name: nosuchlinux, version: "1"}
+            ansible_tuxifier__installdistribution: {name: nosuchlinux, version: "1"}
         - name: The role did not fail
           ansible.builtin.set_fact: {__test_failed_task: "", __test_failed_msg: ""}
       rescue:
@@ -72,8 +72,8 @@
           ansible.builtin.include_role:
             name: geertsky.tuxifier.ansible_tuxifier
           vars:
-            tuxifier_reinstall: false
-            installdistribution:
+            ansible_tuxifier__reinstall: false
+            ansible_tuxifier__installdistribution:
               name: "{{ __test_distro_name }}"
               version: "{{ __test_distro_version }}"
               repo: {type: baseurl, url: "http://127.0.0.1:9/no-such-repository/"}

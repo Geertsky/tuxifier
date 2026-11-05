@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 # Build a sysimage from a repository: the directory tree dracut runs in to build the incubator initramfs (kernel,
 # dracut with the dracut-sshd module, mdadm, lvm2, cryptsetup). Works for every distribution tuxifier knows and does
-# not depend on the tests or on continue_install. An existing sysimage is left alone.
+# not depend on the tests or on ansible_tuxifier__continue_install. An existing sysimage is left alone.
 #
 #   sysimage_build.sh [-n NAME] [-r RELEASEVER] [-a APPSTREAM_URL] [-k GPGKEY] [-o DIR] BASEOS_URL
 #

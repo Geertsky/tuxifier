@@ -28,15 +28,15 @@ __test_python_nest_environment:
   CONDA_PREFIX: "/local/conda/envs/python-nest"
 
 # Role variables. They are play variables, not facts: the host <host>_chroot that the role adds does not get facts.
-installdistribution: >-
+ansible_tuxifier__installdistribution: >-
   {{ {'name': __test_distro_name, 'version': __test_distro_version}
      | combine({'repo': {'type': 'baseurl', 'url': __test_repo_url}} if __test_repo_url else {}) }}
-rootpw: rootpw
-continue_install: false
-# The test of root_authorized_keys: QEMU_EXTRA_KEY=1 adds the second test key, see common.sh.
+ansible_tuxifier__rootpw: rootpw
+ansible_tuxifier__continue_install: false
+# The test of ansible_tuxifier__root_authorized_keys: QEMU_EXTRA_KEY=1 adds the second test key, see common.sh.
 __test_with_extra_key: "{{ lookup('ansible.builtin.env', 'QEMU_EXTRA_KEY') | length > 0 }}"
 __test_extra_key_pub: "{{ lookup('ansible.builtin.env', 'TUXIFIER_TEST_DIR') | default(lookup('ansible.builtin.env', 'HOME') ~ '/.cache/tuxifier-tests', true) }}/id_ed25519_extra.pub"
-root_authorized_keys: "{{ [lookup('ansible.builtin.file', __test_extra_key_pub) | trim] if __test_with_extra_key else [] }}"
+ansible_tuxifier__root_authorized_keys: "{{ [lookup('ansible.builtin.file', __test_extra_key_pub) | trim] if __test_with_extra_key else [] }}"
 # Relabels the installed system at its first boot, without it sshd can not read the authorized_keys.
-strict_selinux: true
+ansible_tuxifier__strict_selinux: true
 storage_disklabel_type: gpt

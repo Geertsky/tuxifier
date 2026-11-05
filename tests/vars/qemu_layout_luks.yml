@@ -2,8 +2,8 @@
 # L3: the layout of L1 with an encrypted logical volume, /secure. The passphrase is asked at boot (crypttab key field
 # none); nofail lets the boot continue without the volume.
 luks_passphrase: luks-passphrase
-tuxifier_crypttab_options: luks,nofail
-installdisk:
+ansible_tuxifier__crypttab_options: luks,nofail
+ansible_tuxifier__installdisk:
   - name: /dev/vda
     type: partition
     disks: [/dev/vda]

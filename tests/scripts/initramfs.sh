@@ -6,7 +6,7 @@
 #
 # SYSIMAGE is the name of a directory in SYSIMAGE_DIR, like rocky9 or rhel9. The rocky sysimages are created when they
 # are missing; build the others with sysimage_build.sh. The sysimage of a distribution gives an initramfs with the
-# kernel of that distribution, which is what continue_install needs.
+# kernel of that distribution, which is what ansible_tuxifier__continue_install needs.
 #
 # The image is $TUXIFIER_TEST_DIR/<distro>/initramfs.img. It lets the test key log in as root, whatever the
 # dracut_authorized_keys of the sysimage say: the file is covered by a bind mount during the build and the

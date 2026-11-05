@@ -52,7 +52,7 @@
       changed_when: false
       failed_when: _firewall_http.rc not in [0, 1]
 
-    - name: Enable firewall http service
+    - name: Enable firewall http service  # noqa: no-changed-when
       ansible.builtin.command:
         argv:
           - firewall-offline-cmd
@@ -61,7 +61,7 @@
       register: _firewall_http_added
 
     # firewalld is already running on the first boot of the installed system and does not read the files that firewall-offline-cmd wrote.
-    - name: Restart firewalld to load the http service
+    - name: Restart firewalld to load the http service # noqa: no-handler
       ansible.builtin.systemd_service:
         name: firewalld
         state: restarted

@@ -1,6 +1,6 @@
 ---
 # L4: the layout of L1, and a volume group vg.data on an md RAID1 of /dev/vdb and /dev/vdc with /data.
-installdisk:
+ansible_tuxifier__installdisk:
   - name: /dev/vda
     type: partition
     disks: [/dev/vda]

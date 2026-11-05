@@ -7,7 +7,7 @@
 #   qemu-vm.sh restart        the same, on the install target the previous run left (the VM has powered off)
 #   qemu-vm.sh wait-poweroff  wait until the VM has powered off (the initramfs does that after a finished install)
 #   qemu-vm.sh permissive-first-boot  add enforcing=0 to the boot entries of the powered off install target (sudo)
-#   qemu-vm.sh wait-installed  wait until the VM runs the installed system (continue_install=true: the initramfs boots on)
+#   qemu-vm.sh wait-installed  wait until the VM runs the installed system (ansible_tuxifier__continue_install=true: the initramfs boots on)
 #   qemu-vm.sh poweroff-installed  power the running installed system off and wait for it
 #   qemu-vm.sh boot-disk      boot the installed system from the install target; ansible uses the system python
 #   qemu-vm.sh change-vars    print the extra vars of ansible-playbook for the distribution change test
@@ -238,7 +238,7 @@ claim_nbd() {
     NBD=/dev/nbd0
 }
 
-# The installed system may need SELinux in permissive mode at its first boot (see strict_selinux in the README of the
+# The installed system may need SELinux in permissive mode at its first boot (see ansible_tuxifier__strict_selinux in the README of the
 # role); tuxifier leaves the kernel arguments to the administrator. This adds enforcing=0 to the boot entries and to the
 # grubenv kernelopts on /boot of the install target (partition $BOOT_PARTITION), the same as the initramfs boot has it on its command line.
 permissive_first_boot() {
@@ -286,7 +286,7 @@ ssh_vm() {
         -o BatchMode=yes -o ConnectTimeout=3 root@127.0.0.1 "$@"
 }
 
-# continue_install=true: the sshd of the initramfs goes away at the switch root and the one of the installed system
+# ansible_tuxifier__continue_install=true: the sshd of the initramfs goes away at the switch root and the one of the installed system
 # comes up on the same forwarded port. The installed system is recognised by a root on a block device; the initramfs has a rootfs.
 wait_installed() {
     echo "waiting for the installed system"
