@@ -1,18 +1,21 @@
+---
+
 namespace: geertsky
 
 # The name of the collection. Has the same character restrictions as 'namespace'
 name: tuxifier
 
 # The version of the collection. Must be compatible with semantic versioning
-version: 1.0.0
+version: 0.1.0
 
+min_ansible_version: "2.15"
 # The path to the Markdown (.md) readme file. This path is relative to the root of the collection
 readme: README.md
 
 # A list of the collection's content authors. Can be just the name or in the format 'Full Name <email> (url)
 # @nicks:irc/im.site#channel'
 authors:
-- geert geurts <geert@verweggistan.eu>
+  - geert geurts <geert@verweggistan.eu>
 
 
 ### OPTIONAL but strongly recommended
@@ -23,6 +26,8 @@ license:
   - EUPL-1.2
 
 tags:
+  - infrastructure
+  - linux
   - installation
   - baremetal
   - initramfs
@@ -44,4 +49,3 @@ dependencies:
 
 # The URL of the originating SCM repository
 repository: https://github.com/geertsky/tuxifier
-
