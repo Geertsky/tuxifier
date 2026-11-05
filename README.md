@@ -115,8 +115,6 @@ The tests are run with [tox](https://tox.wiki). It has no plugins; the settings 
 
 `tox` without arguments runs the default environments: `yamllint`, `ansible-lint`, `codespell`, `markdownlint`, `shellcheck`, `flake8`, `pylint`, `black`, `py314` (pytest of the module, `tests/unit`), `ansible-test-sanity` and `ansible-test-units`. The ansible-test environments copy the repository to `ansible_collections/geertsky/tuxifier` in a temporary directory, because ansible-test needs that path. They run with the ansible-core that tox installs; set `ANSIBLE_TEST_PYTHON` for another Python.
 
-The environments report what they find; they do not fix it. The findings that exist are listed in `.plan/FINDINGS.md` of the tuxifier_project superproject, and most are not fixed yet.
-
 ### Installing in a virtual machine
 
 The role is tested by installing a distribution in a throwaway qemu VM that boots the initramfs of dracut-incubator. The environments are called
