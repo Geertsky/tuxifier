@@ -1,7 +1,10 @@
 ---
+skip_list:
+  - yaml[line-length]
+  - yaml[document-start]
+
 profile: production
 exclude_paths:
   - .tox/
   - .ansible/
   - .git/
-  - tests/roles/
