@@ -18,55 +18,55 @@ ansible_interpreter_python_fallback:
   - python3
 
 # The directories of the rpm macros must exist in /tuxifier-sysroot.
-rpm_directory_macros:
+ansible_tuxifier__rpm_directory_macros:
   _dbpath: /var/lib/rpm
   _var: /var
   _tmppath: /var/tmp
 
-rpm_other_macros:
+ansible_tuxifier__rpm_other_macros:
   __urlhelpercmd: /local/conda/envs/python-nest/bin/curl
   # --max-time: a download that takes longer than 5 minutes is aborted (and retried), so a stalled mirror cannot hang the install.
-  __urlhelper_localopts: --retry=10 --retry-all-errors --max-time=300 --cacert=/local/conda/envs/python-nest/ssl/cacert.pem
+  __urlhelper_localopts: --retry=5 --retry-all-errors --max-time=300 --cacert=/local/conda/envs/python-nest/ssl/cacert.pem
   # The unshare plugin of the rpm of python-nest changes the mount propagation of /, which fails in a chroot: the scriptlets exit 126.
   __transaction_unshare: '%{nil}'
 
 # The rpm of python-nest by path, it is first in the PATH of the shells, but the installed system gets its own rpm.
-rpm_bin: /local/conda/envs/python-nest/bin/rpm
-rpmkeys_bin: /local/conda/envs/python-nest/bin/rpmkeys
+ansible_tuxifier__rpm_bin: /local/conda/envs/python-nest/bin/rpm
+ansible_tuxifier__rpmkeys_bin: /local/conda/envs/python-nest/bin/rpmkeys
 
-# rpm_macros as arguments of an rpm command: --define "name value"
-rpm_define_args: "{{ rpm_macros.items() | map('join', ' ') | map('regex_replace', '^', '--define=') | list }}"
+# ansible_tuxifier__rpm_macros as arguments of an rpm command: --define "name value"
+ansible_tuxifier__rpm_define_args: "{{ ansible_tuxifier__rpm_macros.items() | map('join', ' ') | map('regex_replace', '^', '--define=') | list }}"
 
-rpm_macros: "{{ rpm_directory_macros | combine(rpm_other_macros) }}"
+ansible_tuxifier__rpm_macros: "{{ ansible_tuxifier__rpm_directory_macros | combine(ansible_tuxifier__rpm_other_macros) }}"
 
-efi_virtual_filesystem:
-  - { path: /sys/firmware/efi/efivars, src: efivarfs, opts: "rw,nosuid,nodev,noexec,relatime" }
+ansible_tuxifier__efi_virtual_filesystem:
+  - {path: /sys/firmware/efi/efivars, src: efivarfs, opts: "rw,nosuid,nodev,noexec,relatime"}
 
-generic_virtual_filesystems:
-  - { path: /proc, src: proc, opts: "rw,nosuid,nodev,noexec,relatime" }
-  - { path: /sys, src: sysfs, opts: "rw,nosuid,nodev,noexec,relatime" }
-  - { path: /sys/kernel/security, src: securityfs, opts: "rw,nosuid,nodev,noexec,relatime" }
-  - { path: /sys/fs/cgroup, src: cgroup2, opts: "rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot" }
-  - { path: /sys/fs/pstore, src: pstore, opts: "rw,nosuid,nodev,noexec,relatime" }
-  - { path: /sys/fs/bpf, src: bpf, opts: "rw,nosuid,nodev,noexec,relatime,mode=700" }
-  - { path: /sys/kernel/config, src: configfs, opts: "rw,nosuid,nodev,noexec,relatime" }
-  - { path: /dev, src: devtmpfs, opts: "rw,nosuid,mode=755" }
-  - { path: /dev/shm, src: tmpfs, opts: "rw,nosuid,nodev" }
-  - { path: /dev/pts, src: devpts, opts: "rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000" }
+ansible_tuxifier__generic_virtual_filesystems:
+  - {path: /proc, src: proc, opts: "rw,nosuid,nodev,noexec,relatime"}
+  - {path: /sys, src: sysfs, opts: "rw,nosuid,nodev,noexec,relatime"}
+  - {path: /sys/kernel/security, src: securityfs, opts: "rw,nosuid,nodev,noexec,relatime"}
+  - {path: /sys/fs/cgroup, src: cgroup2, opts: "rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot"}
+  - {path: /sys/fs/pstore, src: pstore, opts: "rw,nosuid,nodev,noexec,relatime"}
+  - {path: /sys/fs/bpf, src: bpf, opts: "rw,nosuid,nodev,noexec,relatime,mode=700"}
+  - {path: /sys/kernel/config, src: configfs, opts: "rw,nosuid,nodev,noexec,relatime"}
+  - {path: /dev, src: devtmpfs, opts: "rw,nosuid,mode=755"}
+  - {path: /dev/shm, src: tmpfs, opts: "rw,nosuid,nodev"}
+  - {path: /dev/pts, src: devpts, opts: "rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000"}
 
-virtual_filesystems: "{{ generic_virtual_filesystems + (efi_virtual_filesystem if efi_booted else []) }}"
+ansible_tuxifier__virtual_filesystems: "{{ ansible_tuxifier__generic_virtual_filesystems + (ansible_tuxifier__efi_virtual_filesystem if ansible_tuxifier__efi_booted else []) }}"
 
 # The inventory host of the chroot, see minimal_install.yml.
-_chroot_host: "{{ inventory_hostname }}_chroot"
+__chroot_host: "{{ inventory_hostname }}_chroot"  # noqa: var-naming[no-role-prefix]
 
-# The continue_install extra var can be the string 'false', so it is normalised once.
-_continue_install: "{{ continue_install | bool }}"
+# The ansible_tuxifier__continue_install extra var can be the string 'false', so it is normalised once.
+__continue_install: "{{ ansible_tuxifier__continue_install | bool }}"  # noqa: var-naming[no-role-prefix]
 # Whether the initramfs continues into the installed system, or powers off.
-_boot_installed_system: "{{ _continue_install and current_version_installed }}"
+__boot_installed_system: "{{ __continue_install and ansible_tuxifier__current_version_installed }}"  # noqa: var-naming[no-role-prefix]
 
-# The packages of distribution.minimalpackages, see minimal_install.yml. The kernel of the installer is
+# The packages of ansible_tuxifier__distribution.minimalpackages, see minimal_install.yml. The kernel of the installer is
 # installed when continuing, so the installed system boots the same version.
-minimal_packages_common:
+ansible_tuxifier__minimal_packages_common:
   - '@Core'
   - util-linux
   - lvm2
@@ -74,14 +74,14 @@ minimal_packages_common:
   - mdadm
   - python3
   - selinux-policy-targeted
-minimal_packages_efi:
+ansible_tuxifier__minimal_packages_efi:
   - grub2-efi-x64
   - grub2-tools-efi
   - efibootmgr
   - shim-x64
-minimal_packages_bios:
+ansible_tuxifier__minimal_packages_bios:
   - grub2-pc
-minimal_packages: >-
-  {{ [('kernel-' ~ ansible_facts['kernel']) if _continue_install else 'kernel']
-     + minimal_packages_common
-     + (minimal_packages_efi if efi_booted else minimal_packages_bios) }}
+ansible_tuxifier__minimal_packages: >-
+  {{ [('kernel-' ~ ansible_facts['kernel']) if __continue_install else 'kernel']
+     + ansible_tuxifier__minimal_packages_common
+     + (ansible_tuxifier__minimal_packages_efi if ansible_tuxifier__efi_booted else ansible_tuxifier__minimal_packages_bios) }}

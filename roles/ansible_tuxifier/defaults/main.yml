@@ -1,6 +1,6 @@
 ---
 # defaults file for tuxifier role
-continue_install: false
-root_authorized_keys: []
-tuxifier_reinstall: false # When true, wipe the signatures of all installdisk disks before the storage layout is created
-tuxifier_crypttab_options: luks # The options field of the crypttab entries. The key field is always none: the passphrase is asked at boot
+ansible_tuxifier__continue_install: false
+ansible_tuxifier__root_authorized_keys: []
+ansible_tuxifier__reinstall: false # When true, wipe the signatures of all ansible_tuxifier__installdisk disks before the storage layout is created
+ansible_tuxifier__crypttab_options: luks # The options field of the crypttab entries. The key field is always none: the passphrase is asked at boot

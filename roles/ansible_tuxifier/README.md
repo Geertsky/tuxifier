@@ -9,7 +9,7 @@ ansible-core 2.15 or newer.
 
 The role does not use `package_facts` to read the packages of an already installed system: up to ansible-core 2.20 the rpm backend of that module uses
 the rpm python bindings, which look for the database in the python-nest prefix and can not be given the rpm macros. The role runs `rpm -qa` of the
-python-nest environment in the chroot with the macros of `rpm_macros` instead, which works with every ansible-core version.
+python-nest environment in the chroot with the macros of `ansible_tuxifier__rpm_macros` instead, which works with every ansible-core version.
 
 ### Roles
 The role [linux-system-roles.storage](https://github.com/linux-system-roles/storage) has to be installed as a role (not as the `fedora.linux_system_roles` collection),
@@ -31,14 +31,14 @@ so it can not be listed in the `dependencies` of `galaxy.yml` (`ansible-galaxy c
 
 ## Supported distributions
 
-| distribution | versions | status |
-|--------------|----------|--------|
-| Rocky Linux  | 8, 9, 10 | installed in the BIOS and UEFI test VMs |
-| AlmaLinux    | 9, 10    | installed in the BIOS and UEFI test VMs |
-| RHEL         | 8, 9, 10 | installed in the BIOS and UEFI test VMs, from a local mirror (`installdistribution.repo` is required) |
-| Fedora       | 38, 44   | installed in the BIOS and UEFI test VMs |
+| ansible_tuxifier__distribution | versions | status                                                                                                                  |
+|--------------------------------|----------|-------------------------------------------------------------------------------------------------------------------------|
+| Rocky Linux                    | 8, 9, 10 | installed in the BIOS and UEFI test VMs                                                                                 |
+| AlmaLinux                      | 9, 10    | installed in the BIOS and UEFI test VMs                                                                                 |
+| RHEL                           | 8, 9, 10 | installed in the BIOS and UEFI test VMs, from a local mirror (`ansible_tuxifier__installdistribution.repo` is required) |
+| Fedora                         | 38, 44   | installed in the BIOS and UEFI test VMs                                                                                 |
 
-The version of a distribution is the major version, given as a string (`installdistribution.version: "9"`).
+The version of a distribution is the major version, given as a string (`ansible_tuxifier__installdistribution.version: "9"`).
 
 ### Initramfs image generation
 For using `tuxifier`, the machine has to be booted using an initramfs image with the [dracut-incubator](https://github.com/geertsky/dracut-incubator) module included.
@@ -47,34 +47,34 @@ See: the [dracut-incubator](https://github.com/Geertsky/dracut-incubator) git re
 ## Role Variables
 ### host_vars
 
-| Variable                                         | Type | Description                                                                                                                                                                                   |
-|--------------------------------------------------|------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `installdisk`                                    | list | The storage of the install target: a list of `storage_pools` exactly as accepted by the [linux-system-roles.storage](https://github.com/linux-system-roles/storage) role (`type: partition` or `lvm`). `mount_point`s are given as seen from the installed system (`/`, `/boot`, `/boot/efi`); tuxifier prepends them with `/tuxifier-sysroot` for the storage role. |
-| `installdisk_boot_disk`                          | str  | The disk to install the boot loader on. Optional. Defaults to the disk of the `partition` pool with the volume mounted at `/boot`, or else at `/boot/efi`.                                                                                         |
-| `storage_disklabel_type`                         | str  | Variable of the storage role, e.g. `gpt`. Can be set in the host_vars as usual.                                                                                                              |
-| `installdistribution`                            | dict | Dict describing the distribution to be installed.                                                                                                                                             |
-| `installdistribution.name`                       | str  | The name of the distribution. The combination `name` and `version` corresponds to the distribution file in `vars/`                                                                            |
-| `installdistribution.version`                    | str  | The version of the distribution. The combination `name` and `version` corresponds to the distribution file in `vars/`                                                                         |
-| `installdistribution.repo`                       | dict | Optional dict describing an override for the `repo` described in the `vars/` for the combination of `name` and `version` of this `installdistribution`                                        |
-| `installdistribution.repo.type`                  | str  | Type of the repository URL. Either `metalink`, `mirrorlist` or `baseurl`                                                                                                                      |
-| `installdistribution.repo.url`                   | str  | URL for the repository. This should be a BaseOS repository.                                                                                                                                   |
-| `rootpw`                                         | str  | The root password for the installed OS. Should be set in a vault...                                                                                                                           |
+| Variable                                          | Type | Description                                                                                                                                                                                                                                                                                                                                                          |
+|---------------------------------------------------|------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ansible_tuxifier__installdisk`                   | list | The storage of the install target: a list of `storage_pools` exactly as accepted by the [linux-system-roles.storage](https://github.com/linux-system-roles/storage) role (`type: partition` or `lvm`). `mount_point`s are given as seen from the installed system (`/`, `/boot`, `/boot/efi`); tuxifier prepends them with `/tuxifier-sysroot` for the storage role. |
+| `ansible_tuxifier__installdisk_boot_disk`         | str  | The disk to install the boot loader on. Optional. Defaults to the disk of the `partition` pool with the volume mounted at `/boot`, or else at `/boot/efi`.                                                                                                                                                                                                           |
+| `storage_disklabel_type`                          | str  | Variable of the storage role, e.g. `gpt`. Can be set in the host_vars as usual.                                                                                                                                                                                                                                                                                      |
+| `ansible_tuxifier__installdistribution`           | dict | Dict describing the distribution to be installed.                                                                                                                                                                                                                                                                                                                    |
+| `ansible_tuxifier__installdistribution.name`      | str  | The name of the distribution. The combination `name` and `version` corresponds to the distribution file in `vars/`                                                                                                                                                                                                                                                   |
+| `ansible_tuxifier__installdistribution.version`   | str  | The version of the distribution. The combination `name` and `version` corresponds to the distribution file in `vars/`                                                                                                                                                                                                                                                |
+| `ansible_tuxifier__installdistribution.repo`      | dict | Optional dict describing an override for the `repo` described in the `vars/` for the combination of `name` and `version` of this `ansible_tuxifier__installdistribution`                                                                                                                                                                                             |
+| `ansible_tuxifier__installdistribution.repo.type` | str  | Type of the repository URL. Either `metalink`, `mirrorlist` or `baseurl`                                                                                                                                                                                                                                                                                             |
+| `ansible_tuxifier__installdistribution.repo.url`  | str  | URL for the repository. This should be a BaseOS repository.                                                                                                                                                                                                                                                                                                          |
+| `ansible_tuxifier__rootpw`                        | str  | The root password for the installed OS. Should be set in a vault...                                                                                                                                                                                                                                                                                                  |
 > :warning:
 The storage is managed by the [linux-system-roles.storage](https://github.com/linux-system-roles/storage) role in
-`storage_safe_mode: false`. Existing partitions, volume groups and filesystems on the disks specified by `installdisk` that
-do not match the layout are removed without asking for confirmation, and `tuxifier_reinstall: true` wipes the disks first!!!
+`storage_safe_mode: false`. Existing partitions, volume groups and filesystems on the disks specified by `ansible_tuxifier__installdisk` that
+do not match the layout are removed without asking for confirmation, and `ansible_tuxifier__reinstall: true` wipes the disks first!!!
 
-`installdisk` is passed as `storage_pools` to the storage role, so everything that role supports for partition and LVM pools
+`ansible_tuxifier__installdisk` is passed as `storage_pools` to the storage role, so everything that role supports for partition and LVM pools
 can be used. The storage role needs `python3-blivet` and its dependencies in the initramfs; its checks `blivet_available`,
 `packages_installed` and `cryptsetup_services` are skipped (`storage_skip_checks`).
 
 The storage role is called once, inside the private namespace of `/tuxifier-sysroot`, with the pools in the order listed. A pool
 that uses a partition (`disks: [/dev/vda4]`) has to be listed after the `partition` pool that creates it. The member disks of
 the pools with a `raid_level` are assembled first (`mdadm --incremental`), because the initramfs does not assemble md arrays,
-and the existing volume groups of `installdisk` are activated. The storage role does neither, and would otherwise create the
+and the existing volume groups of `ansible_tuxifier__installdisk` are activated. The storage role does neither, and would otherwise create the
 arrays and format the logical volumes again on every run.
 
-Tuxifier prepends every `mount_point` of `installdisk` with `/tuxifier-sysroot` (`/` becomes `/tuxifier-sysroot`) before it hands
+Tuxifier prepends every `mount_point` of `ansible_tuxifier__installdisk` with `/tuxifier-sysroot` (`/` becomes `/tuxifier-sysroot`) before it hands
 the pools to the storage role. The storage role mounts the filesystems there, parents before children, so the order of the
 pools and volumes does not matter, and writes them to the `/etc/fstab` of the initramfs.
 
@@ -100,10 +100,10 @@ of its `disks`. The initramfs needs the dracut modules `crypt` and `mdraid` for 
 
 After the storage is created and before the minimal install, tuxifier looks at the device facts and writes in
 `/tuxifier-sysroot`:
-* `/etc/crypttab`, with an entry `luks-<uuid> UUID=<uuid> none <tuxifier_crypttab_options>` per LUKS device,
+* `/etc/crypttab`, with an entry `luks-<uuid> UUID=<uuid> none <ansible_tuxifier__crypttab_options>` per LUKS device,
 * `/etc/mdadm.conf`, with an `ARRAY` line per md array.
 
-The `crypttab` key field is `none`: the passphrase is asked at boot. Add `nofail` to `tuxifier_crypttab_options` and to the
+The `crypttab` key field is `none`: the passphrase is asked at boot. Add `nofail` to `ansible_tuxifier__crypttab_options` and to the
 `mount_options` of the volume to let the boot continue without the encrypted volume.
 
 `encryption_password` is stored in the LUKS header and is visible in the host_vars, so keep it in a variable in an Ansible Vault:
@@ -111,7 +111,7 @@ The `crypttab` key field is `none`: the passphrase is asked at boot. Add `nofail
 luks_passphrase: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   ...
-installdisk:
+ansible_tuxifier__installdisk:
   - name: vg.data
     type: lvm
     disks: [/dev/vdb, /dev/vdc]
@@ -128,10 +128,10 @@ installdisk:
 ```
 Working examples are in the `tuxifier-playbook` host_vars `rocky9-uefi-raid1.yml`, `rocky9-uefi-luks.yml` and `rocky9-uefi-raid1-luks.yml`.
 
-#### Example installdisk:
+#### Example ansible_tuxifier__installdisk:
 ```
 storage_disklabel_type: gpt
-installdisk:
+ansible_tuxifier__installdisk:
   - name: /dev/vda
     type: partition
     disks: [/dev/vda]
@@ -177,9 +177,9 @@ installdisk:
         mount_options: defaults
 ```
 
-#### example installdistribution
+#### example ansible_tuxifier__installdistribution
 ```
-installdistribution:
+ansible_tuxifier__installdistribution:
   name: rocky
   version: "9"
   repo:
@@ -194,49 +194,49 @@ _Downloads of rpm are aborted after five minutes and retried._
 
 Below the list of Optional `host_vars`, followed by more extensive explanation and an example for each.
 
-| Variable               | Type |                                                                         Description                                                                                                     |
-|------------------------|------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `root_authorized_keys` | list | A list of ssh pub keys to be added to the `authorized_keys` file of the root user. This list is added to the list off ssh keys of [dracut-sshd](https://github.com/gsauthof/dracut-sshd)|
-| `strict_selinux`       | bool | Relabel the installed system at its first boot, see [strict_selinux](#strict_selinux).                                                                                                                     |
-| `continue_install`     | bool | Continue booting the installed system (`true`) or power off (`false`, default) after the install, see [continue_install](#continue_install).                                                                                                          |
-| `tuxifier_reinstall`   | bool | Wipe the install disks before creating the storage layout. Default `false`.                                                                                                             |
-| `tuxifier_crypttab_options` | str | The options field of the `/etc/crypttab` entries of the LUKS devices. Default `luks`.                                                                                             |
+| Variable                                 | Type | Description                                                                                                                                                                              |
+|------------------------------------------|------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ansible_tuxifier__root_authorized_keys` | list | A list of ssh pub keys to be added to the `authorized_keys` file of the root user. This list is added to the list off ssh keys of [dracut-sshd](https://github.com/gsauthof/dracut-sshd) |
+| `ansible_tuxifier__strict_selinux`       | bool | Relabel the installed system at its first boot, see [ansible_tuxifier__strict_selinux](#ansible_tuxifier__strict_selinux).                                                               |
+| `ansible_tuxifier__continue_install`     | bool | Continue booting the installed system (`true`) or power off (`false`, default) after the install, see [ansible_tuxifier__continue_install](#ansible_tuxifier__continue_install).         |
+| `ansible_tuxifier__reinstall`            | bool | Wipe the install disks before creating the storage layout. Default `false`.                                                                                                              |
+| `ansible_tuxifier__crypttab_options`     | str  | The options field of the `/etc/crypttab` entries of the LUKS devices. Default `luks`.                                                                                                    |
 
-### tuxifier_reinstall
+### ansible_tuxifier__reinstall
 
-When `true` (default `false`) the signatures of all disks in `installdisk` (the disks of the `partition` pools and the whole disks used by other pools) are wiped before the storage is created.
+When `true` (default `false`) the signatures of all disks in `ansible_tuxifier__installdisk` (the disks of the `partition` pools and the whole disks used by other pools) are wiped before the storage is created.
 Without it the layout is only made to match, so re-running the role changes nothing. Meant to be passed on the command line:
 
 ```
-ansible-playbook -e tuxifier_reinstall=true ...
+ansible-playbook -e ansible_tuxifier__reinstall=true ...
 ```
 
-### tuxifier_crypttab_options
+### ansible_tuxifier__crypttab_options
 
-The options field written to `/etc/crypttab` for every LUKS device of `installdisk` (default `luks`), for example `luks,nofail`.
+The options field written to `/etc/crypttab` for every LUKS device of `ansible_tuxifier__installdisk` (default `luks`), for example `luks,nofail`.
 See [Encrypted volumes and RAID](#encrypted-volumes-and-raid).
 
-### root_authorized_keys
-The `root_authorized_keys` variable is a list of public ssh keys that are added for the root user of the installed system. This list is added to the authorized_keys that are installed in the initramfs by `dracut-sshd`.
+### ansible_tuxifier__root_authorized_keys
+The `ansible_tuxifier__root_authorized_keys` variable is a list of public ssh keys that are added for the root user of the installed system. This list is added to the authorized_keys that are installed in the initramfs by `dracut-sshd`.
 
 #### Example:
 
 ```
-root_authorized_keys:
+ansible_tuxifier__root_authorized_keys:
 - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILsoXSAw7Gfqfk9tMQiAmSLRMXI1jZ/tpOjQ6OMRzd5J rocky@localhost.localdomain'
 ```
 
-### strict_selinux
-`strict_selinux: true` makes tuxifier relabel the installed system at its first boot: everything tuxifier writes to `/tuxifier-sysroot` notifies
+### ansible_tuxifier__strict_selinux
+`ansible_tuxifier__strict_selinux: true` makes tuxifier relabel the installed system at its first boot: everything tuxifier writes to `/tuxifier-sysroot` notifies
 the `Relabel sysroot` handler, which runs `fixfiles -F onboot` in the chroot. It does not enable or disable SELinux; that is up to the
 installed packages (`selinux-policy-targeted`) and their configuration.
-The relabel is skipped when `continue_install` is `true`.
+The relabel is skipped when `ansible_tuxifier__continue_install` is `true`.
 
 Depending on the distribution, it might be required to have the first boot in a `selinux` `permissive` mode. Tuxifier does not set
 this: add `enforcing=0` to the kernel arguments of grub yourself if needed.
 
-### continue_install
-With the `continue_install` host_var (default `false`) we can control what should happen after the minimal install is finished.<br>
+### ansible_tuxifier__continue_install
+With the `ansible_tuxifier__continue_install` host_var (default `false`) we can control what should happen after the minimal install is finished.<br>
 Either:
 * `false`: power off the machine and wait for the admin to detach the initramfs to boot the freshly installed system.
 * `true`: tell dracut to continue its normal flow of operation and finish the boot of the freshly installed system. After the boot is finished, we can continue our setup using Ansible.
@@ -244,16 +244,16 @@ Either:
 Both are done by `continue_install.yml`: it creates `/tmp/ansible-finished`, which lets the initramfs continue its boot, and for the
 power off it first installs a `pre-pivot` hook that runs `systemctl poweroff`.
 
-`continue_install: true` needs the same kernel version in the freshly installed system as the one running the initramfs.
-For this, the currently active kernel version, the one used to boot the initramfs, is added to the kernel package in the `minimalpackages` list of the `distribution` var.
+`ansible_tuxifier__continue_install: true` needs the same kernel version in the freshly installed system as the one running the initramfs.
+For this, the currently active kernel version, the one used to boot the initramfs, is added to the kernel package in the `minimalpackages` list of the `ansible_tuxifier__distribution` var.
 Tuxifier checks that `/boot/vmlinuz-<running kernel>` exists in the installed system. When it does not, the machine is powered off as if
-`continue_install` was `false`.
+`ansible_tuxifier__continue_install` was `false`.
 
 This can cause the `geertsky.tuxifier.generate_minimal_install_info` module to fail in resolving the URLs to the `minimalpackages` when the major version of the distribution used to generate the initramfs is not the same as the major version of the distribution that is being installed.
 Additionally, it can be that the kernel version used to generate the initramfs is not the latest available for this distribution. When that happens it means that the installation performed is not the latest available.
 
 ## Install of the packages
-The packages of `distribution.minimalpackages` are installed in two stages, because the python, `rpm` and `curl` of python-nest are bind mounted in the
+The packages of `ansible_tuxifier__distribution.minimalpackages` are installed in two stages, because the python, `rpm` and `curl` of python-nest are bind mounted in the
 chroot but link to the glibc of the distribution and need a shell there:
 
 1. The glibc packages of the distribution and what they need (a shell among them) are installed from the namespace with the `rpm` of python-nest and `--root`.
@@ -264,16 +264,16 @@ chroot but link to the glibc of the distribution and need a shell there:
 A run starts from what a previous run left, which `tasks/classify_sysroot.yml` finds out from the existence of `/bin/sh` (first stage done), `/usr/bin/rpm` (second stage
 reached the `rpm` package) and the rpm database files, together with the major version of the distribution:
 
-| /bin/sh | /usr/bin/rpm | `Packages` (bdb) | `rpmdb.sqlite` | Version 8 | Version 9 and 10 |
-|---|---|---|---|---|---|
-| no  | no  | no  | no  | empty, first stage | empty, first stage |
-| no  | no  | no  | yes | first stage was interrupted, again | first stage was interrupted, again |
-| yes | no  | no  | yes | first stage done | first stage done |
-| yes | yes | no  | yes | second stage done, convert the database | complete |
-| yes | yes | yes | no  | complete | inconsistent |
-| yes | yes | yes | yes | inconsistent | inconsistent |
+| /bin/sh | /usr/bin/rpm | `Packages` (bdb) | `rpmdb.sqlite` | Version 8                               | Version 9 and 10                   |
+|---------|--------------|------------------|----------------|-----------------------------------------|------------------------------------|
+| no      | no           | no               | no             | empty, first stage                      | empty, first stage                 |
+| no      | no           | no               | yes            | first stage was interrupted, again      | first stage was interrupted, again |
+| yes     | no           | no               | yes            | first stage done                        | first stage done                   |
+| yes     | yes          | no               | yes            | second stage done, convert the database | complete                           |
+| yes     | yes          | yes              | no             | complete                                | inconsistent                       |
+| yes     | yes          | yes              | yes            | inconsistent                            | inconsistent                       |
 
-Every other combination is inconsistent and stops the run, use `tuxifier_reinstall`. The files tell how far the install is, not if it is complete: the packages that are missing are
+Every other combination is inconsistent and stops the run, use `ansible_tuxifier__reinstall`. The files tell how far the install is, not if it is complete: the packages that are missing are
 always installed from the result of `rpm -qa`.
 
 The `rpm` of python-nest writes a sqlite database. The `rpm` of version 8 uses bdb, reads a sqlite database but does not write one, and uses it as long as one exists.
@@ -286,53 +286,53 @@ anything fails before that the old database is put back. A run that finds a conv
 In the role a number of variables are defined in different var files.
 ### main.yml
 
-| Variable                                       | Type | Description                                                                                                                                                                      |
-|------------------------------------------------|------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| ansible_interpreter_python_fallback | list | The `ansible_interpreter_python_fallback` var is extended with the python interpreter of the python-nest environment available in the initramfs                                         |
-| rpm_directory_macros | dict | The rpm macros whose value is a directory, as macro name and path, for example `_dbpath: /var/lib/rpm`. These directories are created in `/tuxifier-sysroot`. |
-| rpm_other_macros | dict | The other rpm macros, for example the `curl` that rpm uses to download packages (retried, and aborted after five minutes per download with `--max-time=300`). |
-| rpm_macros | dict | The rpm macros defined for the rpm commands executed by `tuxifier`: `rpm_directory_macros` and `rpm_other_macros` together. They are also written to `/root/.rpmmacros` in the chroot while the packages are installed. |
-| virtual_filesystems | list | The list of virtual filesystems mounted in the `/tuxifier-sysroot` for the installation.                                                                                                                    |
+| Variable                               | Type | Description                                                                                                                                                                                                                                                 |
+|----------------------------------------|------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ansible_interpreter_python_fallback    | list | The `ansible_interpreter_python_fallback` var is extended with the python interpreter of the python-nest environment available in the initramfs                                                                                                             |
+| ansible_tuxifier__rpm_directory_macros | dict | The rpm macros whose value is a directory, as macro name and path, for example `_dbpath: /var/lib/rpm`. These directories are created in `/tuxifier-sysroot`.                                                                                               |
+| ansible_tuxifier__rpm_other_macros     | dict | The other rpm macros, for example the `curl` that rpm uses to download packages (retried, and aborted after five minutes per download with `--max-time=300`).                                                                                               |
+| ansible_tuxifier__rpm_macros           | dict | The rpm macros defined for the rpm commands executed by `tuxifier`: `ansible_tuxifier__rpm_directory_macros` and `ansible_tuxifier__rpm_other_macros` together. They are also written to `/root/.rpmmacros` in the chroot while the packages are installed. |
+| ansible_tuxifier__virtual_filesystems  | list | The list of virtual filesystems mounted in the `/tuxifier-sysroot` for the installation.                                                                                                                                                                    |
 
-### {{ distribution.name + distribution.version }}.yml Distribution vars
+### Distribution vars: `<name><version>.yml`
 
-The distribution variable are set in a file named `{{distribution.name + distribution.version }}.yml` so for rocky 9 it would be `rocky9.yml`.
+The distribution variables are set in a file named after the `name` and `version` of `ansible_tuxifier__installdistribution`, so for rocky 9 it is `rocky9.yml`.
 In such a distribution file the following variable are set:
-| Var                          | Type | Value                                                                                          |
-|------------------------------|------|------------------------------------------------------------------------------------------------|
-| distribution                 | dict | The distribution dict describes the distribution to install.                                   |
-| distribution.name            | str  | The `name` of the distribution.                                                                |
-| distribution.version         | str  | The `version` of the distribution.                                                             |
-| distribution.arch            | str  | The `architecture` to install.                                                                 |
-| distribution.efi_vendor_dir  | str  | The directory below `EFI/` on the ESP with the boot loader of the distribution (e.g. `redhat`, `rocky`, `almalinux`, `fedora`). |
-| distribution.efi_loader      | str  | The file name of the shim EFI binary in `distribution.efi_vendor_dir` (e.g. `shimx64.efi`).     |
-| distribution.efi_entry_regex | str  | A regular expression with one group that captures the path of the loader in a line of `efibootmgr -v`; the output format depends on the `efibootmgr` version of the distribution. |
-| distribution.grub_cfg        | str  | The path of the grub configuration read at boot, relative to the root of the installed system.  |
-| distribution.grub_cfg_full_on_esp | bool | Optional. Only version 8 sets it (`true`): the `grub.cfg` on the EFI system partition is the full configuration.  |
-| distribution.minimalpackages | list | Optional. Replaces the common list of packages of `vars/main.yml` (version 8 has its own).      |
-| distribution.repo            | dict | The `repo` dictionary is describes the repository where the packages can be retrieved.         |
-| distribution.repo.type       | str  | The `type` of URL used for this repository.                                                    |
-| distribution.repo.url        | str  | The `url` to the repository. For RHEL the placeholder `<rhel mirror url>`: set `installdistribution.repo`.  |
-| gpg_key                      | str  | The path to the GPG key relative to the `files/` directory to verify the validity of the rpms. |
+| Var                                                 | Type | Value                                                                                                                                                                             |
+|-----------------------------------------------------|------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ansible_tuxifier__distribution                      | dict | The distribution dict describes the distribution to install.                                                                                                                      |
+| ansible_tuxifier__distribution.name                 | str  | The `name` of the distribution.                                                                                                                                                   |
+| ansible_tuxifier__distribution.version              | str  | The `version` of the distribution.                                                                                                                                                |
+| ansible_tuxifier__distribution.arch                 | str  | The `architecture` to install.                                                                                                                                                    |
+| ansible_tuxifier__distribution.efi_vendor_dir       | str  | The directory below `EFI/` on the ESP with the boot loader of the distribution (e.g. `redhat`, `rocky`, `almalinux`, `fedora`).                                                   |
+| ansible_tuxifier__distribution.efi_loader           | str  | The file name of the shim EFI binary in `ansible_tuxifier__distribution.efi_vendor_dir` (e.g. `shimx64.efi`).                                                                     |
+| ansible_tuxifier__distribution.efi_entry_regex      | str  | A regular expression with one group that captures the path of the loader in a line of `efibootmgr -v`; the output format depends on the `efibootmgr` version of the distribution. |
+| ansible_tuxifier__distribution.grub_cfg             | str  | The path of the grub configuration read at boot, relative to the root of the installed system.                                                                                    |
+| ansible_tuxifier__distribution.grub_cfg_full_on_esp | bool | Optional. Only version 8 sets it (`true`): the `grub.cfg` on the EFI system partition is the full configuration.                                                                  |
+| ansible_tuxifier__distribution.minimalpackages      | list | Optional. Replaces the common list of packages of `vars/main.yml` (version 8 has its own).                                                                                        |
+| ansible_tuxifier__distribution.repo                 | dict | The `repo` dictionary describes the repository where the packages can be retrieved.                                                                                               |
+| ansible_tuxifier__distribution.repo.type            | str  | The `type` of URL used for this repository.                                                                                                                                       |
+| ansible_tuxifier__distribution.repo.url             | str  | The `url` to the repository. For RHEL the placeholder `<rhel mirror url>`: set `ansible_tuxifier__installdistribution.repo`.                                                      |
+| ansible_tuxifier__gpg_key                           | str  | The path to the GPG key relative to the `files/` directory to verify the validity of the rpms.                                                                                    |
 
 
 ### Example host_vars
 
 ```
-installdistribution:
+ansible_tuxifier__installdistribution:
   name: rocky
   version: "9"
 
-root_authorized_keys:
+ansible_tuxifier__root_authorized_keys:
   - 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOm4c78woS/1JU/A+jeAuKjuThZSH7qUbzuS+ldogq2v geert@clt-mgt05'
 
-strict_selinux: true # Touches /.autorelabel
+ansible_tuxifier__strict_selinux: true # Touches /.autorelabel
 
-continue_install: false # When true, then it needs kernel version == installed kernel version. This is forced by tuxifier.
+ansible_tuxifier__continue_install: false # When true, then it needs kernel version == installed kernel version. This is forced by tuxifier.
 
-rootpw: rootpw
+ansible_tuxifier__rootpw: rootpw
 storage_disklabel_type: gpt
-installdisk:
+ansible_tuxifier__installdisk:
   - name: /dev/vda
     type: partition
     disks: [/dev/vda]

@@ -1,5 +1,5 @@
 ---
-distribution:
+ansible_tuxifier__distribution:
   name: 'rocky'
   arch: 'x86_64'
   version: '10'
@@ -11,4 +11,4 @@ distribution:
   repo:
     type: 'mirrorlist'
     url: 'https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-10'
-gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-Rocky-10
+ansible_tuxifier__gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-Rocky-10

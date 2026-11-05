@@ -28,14 +28,14 @@
       - mdadm
       - --incremental
       - "{{ item }}"
-  loop: "{{ installdisk | selectattr('raid_level', 'defined') | map(attribute='disks') | flatten | unique | list }}"
-  when: not (tuxifier_reinstall | bool)
-  register: _mdadm_incremental
+  loop: "{{ ansible_tuxifier__installdisk | selectattr('raid_level', 'defined') | map(attribute='disks') | flatten | unique | list }}"
+  when: not (ansible_tuxifier__reinstall | bool)
+  register: __mdadm_incremental
   changed_when: false
   failed_when:
-    - _mdadm_incremental.rc != 0
-    - "'no recognisable superblock' not in _mdadm_incremental.stderr"
-    - "'Device or resource busy' not in _mdadm_incremental.stderr"
+    - __mdadm_incremental.rc != 0
+    - "'no recognisable superblock' not in __mdadm_incremental.stderr"
+    - "'Device or resource busy' not in __mdadm_incremental.stderr"
 
 # The arrays and their volume groups exist now, and the swap usage has to be known to switch it off below.
 - name: Refresh the device and swap facts
@@ -49,9 +49,9 @@
   community.general.lvg:
     vg: "{{ item }}"
     state: active
-  loop: "{{ installdisk | selectattr('type', 'equalto', 'lvm') | map(attribute='name') | list }}"
+  loop: "{{ ansible_tuxifier__installdisk | selectattr('type', 'equalto', 'lvm') | map(attribute='name') | list }}"
   when:
-    - not (tuxifier_reinstall | bool)
+    - not (ansible_tuxifier__reinstall | bool)
     - item in (ansible_facts['lvm']['vgs'] | default({}))
   changed_when: false
 
@@ -76,7 +76,7 @@
     # are seen from the installed system, so they are prepended with /tuxifier-sysroot here; / becomes /tuxifier-sysroot.
     storage_pools: >-
       {%- set ns = namespace(disks=[]) -%}
-      {%- for disk in installdisk -%}
+      {%- for disk in ansible_tuxifier__installdisk -%}
         {%- set vols = namespace(items=[]) -%}
         {%- for vol in disk.volumes | default([]) -%}
           {%- if vol.mount_point | default('') -%}
@@ -99,6 +99,6 @@
 - name: Update message
   ansible.builtin.copy:
     dest: /tmp/message
-    content: Installdisk partitioned and mounted
+    content: "{{ ansible_tuxifier__installdisk }} partitioned and mounted"
     mode: "0644"
   changed_when: false

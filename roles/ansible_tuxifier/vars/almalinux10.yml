@@ -1,5 +1,5 @@
 ---
-distribution:
+ansible_tuxifier__distribution:
   name: 'almalinux'
   arch: 'x86_64'
   version: '10'
@@ -12,4 +12,4 @@ distribution:
     type: 'mirrorlist'
     url: 'https://mirrors.almalinux.org/mirrorlist/10/baseos'
 
-gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux-10
+ansible_tuxifier__gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux-10

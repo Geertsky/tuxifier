@@ -19,31 +19,31 @@
     path: "{{ sysroot }}{{ item }}"
     follow: true
   loop: [/bin/sh, /usr/bin/rpm, /var/lib/rpm/Packages, /var/lib/rpm/rpmdb.sqlite, /var/lib/rpm-sqlite, /var/lib/rpm-sqlite/rpmdb.sqlite]
-  register: _marks
+  register: __marks
 
 - name: Set_fact the state of the sysroot
   ansible.builtin.set_fact:
-    _state_key: "{{ _bits[:4] | join('') }}+{{ _bits[4:] | join('') }}"
-    _sysroot_state: "{{ _swap_state if _swap_state is mapping else (_state_table[_class][_bits[:4] | join('')] | default(_unknown)) }}"
-    _sysroot_bdb: "{{ _bits[2] == 1 }}"
+    __state_key: "{{ __bits[:4] | join('') }}+{{ __bits[4:] | join('') }}"
+    __sysroot_state: "{{ __swap_state if __swap_state is mapping else (__state_table[__class][__bits[:4] | join('')] | default(__unknown)) }}"
+    __sysroot_bdb: "{{ __bits[2] == 1 }}"
   vars:
-    _bits: "{{ _marks.results | map(attribute='stat.exists') | map('int') | list }}"
-    _class: "{{ 'native_bdb' if (version | string) == '8' else 'native_sqlite' }}"
-    _unknown: {state: INCONSISTENT}
+    __bits: "{{ __marks.results | map(attribute='stat.exists') | map('int') | list }}"
+    __class: "{{ 'native_bdb' if (version | string) == '8' else 'native_sqlite' }}"
+    __unknown: {state: INCONSISTENT}
     # only version 8 has a conversion, so only there the old database can exist. The live database in /var/lib/rpm is B (bdb only),
     # S (sqlite, with or without bdb) or N (none).
-    _live: "{{ 'S' if _bits[3] else ('B' if _bits[2] else 'N') }}"
-    _swap_state: "{{ _swap[(_bits[4:] | join('')) ~ _live] | default('') if _class == 'native_bdb' else '' }}"
+    __live: "{{ 'S' if __bits[3] else ('B' if __bits[2] else 'N') }}"
+    __swap_state: "{{ __swap[(__bits[4:] | join('')) ~ __live] | default('') if __class == 'native_bdb' else '' }}"
     # While the old database has its file the conversion is not finished, whatever the new database in /var/lib/rpm looks like: the old
     # one is put back and the conversion starts again. Without its file the new database was complete and the old directory is left over.
-    _swap:
+    __swap:
       '11N': {state: CONVERSION_RESTORE, stage1: false}
       '11B': {state: CONVERSION_RESTORE, stage1: false}
       '10B': {state: CONVERSION_CLEANUP, stage1: false}
       '11S': {state: INCONSISTENT}
       '10N': {state: INCONSISTENT}
       '10S': {state: INCONSISTENT}
-    _state_table:
+    __state_table:
       native_bdb:
         '0000': {state: EMPTY, stage1: true}
         '0001': {state: STAGE1_PARTIAL, stage1: true}

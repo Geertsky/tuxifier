@@ -12,25 +12,26 @@
   ansible.builtin.file:
     path: "/tuxifier-sysroot{{ item }}"
     state: directory
-  loop: "{{ rpm_directory_macros.values() | sort }}"
+    mode: "0755"
+  loop: "{{ ansible_tuxifier__rpm_directory_macros.values() | sort }}"
 
 - name: Resolve install packages
   geertsky.tuxifier.generate_minimal_install_info:
     distribution: >-
-      {{ distribution | combine({'repo': installdistribution.repo | default(distribution.repo),
-                                 'minimalpackages': distribution.minimalpackages | default(minimal_packages)}) }}
-  register: generate_minimal_install
+      {{ ansible_tuxifier__distribution | combine({'repo': ansible_tuxifier__installdistribution.repo | default(ansible_tuxifier__distribution.repo),
+                                 'minimalpackages': ansible_tuxifier__distribution.minimalpackages | default(ansible_tuxifier__minimal_packages)}) }}
+  register: ansible_tuxifier__generate_minimal_install
   delegate_to: localhost
   vars:
     ansible_shell_executable: /bin/sh
     ansible_python_interpreter: /usr/bin/python3
   changed_when: false
 
-# Only the names are used: the urls are the ones of generate_minimal_install, so that both stages install the same versions.
-- name: Resolve the packages of the first stage
+# Only the names are used: the urls are the ones of ansible_tuxifier__generate_minimal_install, so that both stages install the same versions.
+- name: Resolve the packages of the first stage  # noqa: var-naming[no-role-prefix]
   geertsky.tuxifier.generate_minimal_install_info:
     distribution: >-
-      {{ distribution | combine({'repo': installdistribution.repo | default(distribution.repo),
+      {{ ansible_tuxifier__distribution | combine({'repo': ansible_tuxifier__installdistribution.repo | default(ansible_tuxifier__distribution.repo),
                                  'minimalpackages': ['glibc']}) }}
   register: generate_bootstrap_install
   delegate_to: localhost
@@ -41,48 +42,48 @@
 
 - name: Set_fact the packages of the first stage
   ansible.builtin.set_fact:
-    _stage1_packages: >-
-      {{ generate_minimal_install.packages
+    __stage1_packages: >-
+      {{ ansible_tuxifier__generate_minimal_install.packages
          | selectattr('name', 'in', generate_bootstrap_install.packages | map(attribute='name') | list) | list }}
 
 - name: Check that the first stage is part of the install
   ansible.builtin.assert:
-    that: _stage1_packages | length == generate_bootstrap_install.packages | length
+    that: __stage1_packages | length == generate_bootstrap_install.packages | length
     fail_msg: "The glibc packages {{ generate_bootstrap_install.packages | map(attribute='name') | list }} are not all in the packages to install."
 
 - name: Classify the install state of /tuxifier-sysroot
   ansible.builtin.include_tasks: classify_sysroot.yml
   vars:
     sysroot: /tuxifier-sysroot
-    version: "{{ distribution.version }}"
+    version: "{{ ansible_tuxifier__distribution.version }}"
 
 - name: Stop when /tuxifier-sysroot is in a state that tuxifier does not know
   ansible.builtin.assert:
-    that: _sysroot_state.state not in ['INCONSISTENT', 'BOTH_DATABASES']
+    that: __sysroot_state.state not in ['INCONSISTENT', 'BOTH_DATABASES']
     fail_msg: >-
-      The install in /tuxifier-sysroot is in the state {{ _sysroot_state.state }} (key {{ _state_key }}: /bin/sh, /usr/bin/rpm,
+      The install in /tuxifier-sysroot is in the state {{ __sysroot_state.state }} (key {{ __state_key }}: /bin/sh, /usr/bin/rpm,
       the bdb and the sqlite rpm database, and the staging and old database of the conversion). Run the playbook with
-      -e tuxifier_reinstall=true to install it again.
+      -e ansible_tuxifier__reinstall=true to install it again.
 
 # Version 8 only: the conversion moves the sqlite database to /var/lib/rpm-sqlite and makes the bdb database in /var/lib/rpm. As long as the
 # old database has its file the conversion is not finished: the old one is put back, and the conversion starts again. When the file is
 # gone the new database was complete, and the rest of the old directory is removed.
 - name: Finish or undo an interrupted conversion of the rpm database
-  when: _sysroot_state.state in ['CONVERSION_RESTORE', 'CONVERSION_CLEANUP']
+  when: __sysroot_state.state in ['CONVERSION_RESTORE', 'CONVERSION_CLEANUP']
   block:
     - name: Remove the new database
-      when: _sysroot_state.state == 'CONVERSION_RESTORE'
+      when: __sysroot_state.state == 'CONVERSION_RESTORE'
       ansible.builtin.file:
         path: /tuxifier-sysroot/var/lib/rpm
         state: absent
 
-    - name: Put the old database back
-      when: _sysroot_state.state == 'CONVERSION_RESTORE'
+    - name: Put the old database back  # noqa: no-changed-when
+      when: __sysroot_state.state == 'CONVERSION_RESTORE'
       ansible.builtin.command:
         argv: [mv, /tuxifier-sysroot/var/lib/rpm-sqlite, /tuxifier-sysroot/var/lib/rpm]
 
     - name: Remove the rest of the old database
-      when: _sysroot_state.state == 'CONVERSION_CLEANUP'
+      when: __sysroot_state.state == 'CONVERSION_CLEANUP'
       ansible.builtin.file:
         path: /tuxifier-sysroot/var/lib/rpm-sqlite
         state: absent
@@ -91,43 +92,43 @@
       ansible.builtin.include_tasks: classify_sysroot.yml
       vars:
         sysroot: /tuxifier-sysroot
-        version: "{{ distribution.version }}"
+        version: "{{ ansible_tuxifier__distribution.version }}"
 
 - name: Install the first stage
-  when: _sysroot_state.stage1
+  when: __sysroot_state.stage1
   block:
     - name: Query the installed packages
       ansible.builtin.command:
-        argv: "{{ [rpm_bin, '--root', '/tuxifier-sysroot'] + rpm_define_args + ['-qa', '--queryformat', '%{NAME}\\n'] }}"
-      register: _stage1_installed
+        argv: "{{ [ansible_tuxifier__rpm_bin, '--root', '/tuxifier-sysroot'] + ansible_tuxifier__rpm_define_args + ['-qa', '--queryformat', '%{NAME}\\n'] }}"
+      register: __stage1_installed
       changed_when: false
       # An empty root has no database yet.
       failed_when: false
 
     - name: Set_fact the packages of the first stage that are missing
       ansible.builtin.set_fact:
-        _stage1_missing_urls: >-
-          {{ _stage1_packages
-             | rejectattr('name', 'in', _stage1_installed.stdout.split() if _stage1_installed.rc == 0 else [])
+        __stage1_missing_urls: >-
+          {{ __stage1_packages
+             | rejectattr('name', 'in', __stage1_installed.stdout.split() if __stage1_installed.rc == 0 else [])
              | map(attribute='url') | list }}
 
     - name: Copy the rpm gpg key of the distribution
       ansible.builtin.copy:
-        src: "{{ gpg_key }}"
+        src: "{{ ansible_tuxifier__gpg_key }}"
         dest: /tmp/
         mode: "0644"
       changed_when: false
 
-    - name: Import the gpg key
-      when: _stage1_missing_urls | length > 0
+    - name: Import the gpg key  # noqa: no-changed-when
+      when: __stage1_missing_urls | length > 0
       ansible.builtin.command:
-        argv: "{{ [rpmkeys_bin, '--root', '/tuxifier-sysroot'] + rpm_define_args + ['--import', '/tmp/' ~ (gpg_key | basename)] }}"
+        argv: "{{ [ansible_tuxifier__rpmkeys_bin, '--root', '/tuxifier-sysroot'] + ansible_tuxifier__rpm_define_args + ['--import', '/tmp/' ~ (ansible_tuxifier__gpg_key | basename)] }}"
 
-    - name: Install the glibc packages and what they need
-      when: _stage1_missing_urls | length > 0
+    - name: Install the glibc packages and what they need  # noqa: no-changed-when
+      when: __stage1_missing_urls | length > 0
       notify: Relabel sysroot
       ansible.builtin.command:
-        argv: "{{ [rpm_bin, '--root', '/tuxifier-sysroot'] + rpm_define_args + ['--install'] + _stage1_missing_urls }}"
+        argv: "{{ [ansible_tuxifier__rpm_bin, '--root', '/tuxifier-sysroot'] + ansible_tuxifier__rpm_define_args + ['--install'] + __stage1_missing_urls }}"
 
 # The rpm commands in the chroot read their macros from here, without them they look for the database in the python-nest prefix.
 # Removed at the end of this file.
@@ -135,7 +136,7 @@
   ansible.builtin.copy:
     dest: /tuxifier-sysroot/root/.rpmmacros
     content: |
-      {% for name, value in rpm_macros.items() %}
+      {% for name, value in ansible_tuxifier__rpm_macros.items() %}
       %{{ name }} {{ value }}
       {% endfor %}
     mode: "0644"
@@ -157,7 +158,7 @@
 - name: Gather the facts of the installed system
   ansible.builtin.setup:
     gather_subset: min
-  delegate_to: "{{ _chroot_host }}"
+  delegate_to: "{{ __chroot_host }}"
   delegate_facts: true
   vars:
     ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
@@ -168,43 +169,43 @@
 # python-nest prefix and can not be given macros.
 - name: Query the packages of the installed system
   ansible.builtin.command:
-    argv: "{{ [rpm_bin] + rpm_define_args + ['-qa', '--queryformat', '%{NAME}\\n'] }}"
-  register: _installed_packages
+    argv: "{{ [ansible_tuxifier__rpm_bin] + ansible_tuxifier__rpm_define_args + ['-qa', '--queryformat', '%{NAME}\\n'] }}"
+  register: __installed_packages
   changed_when: false
-  delegate_to: "{{ _chroot_host }}"
+  delegate_to: "{{ __chroot_host }}"
   vars:
     ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
     ansible_python_interpreter: "{{ python_interpreter }}"
 
-- name: Set_fact _chroot_facts
+- name: Set_fact __chroot_facts
   ansible.builtin.set_fact:
-    _chroot_facts: "{{ hostvars[_chroot_host]['ansible_facts'] }}"
+    __chroot_facts: "{{ hostvars[__chroot_host]['ansible_facts'] }}"
 
 - name: Check that the installed system is the distribution to install
   ansible.builtin.assert:
     that:
-      - _chroot_facts['distribution'] | lower | replace('redhat', 'rhel') == distribution.name
-      - _chroot_facts['distribution_major_version'] == distribution.version
+      - __chroot_facts['distribution'] | lower | replace('redhat', 'rhel') == ansible_tuxifier__distribution.name
+      - __chroot_facts['distribution_major_version'] == ansible_tuxifier__distribution.version
     fail_msg: >-
-      /tuxifier-sysroot holds {{ _chroot_facts['distribution'] }} {{ _chroot_facts['distribution_version'] }},
-      this host is configured for {{ distribution.name }} {{ distribution.version }}.
-      Run the playbook with -e tuxifier_reinstall=true to install it over the existing system.
+      /tuxifier-sysroot holds {{ __chroot_facts['distribution'] }} {{ __chroot_facts['distribution_version'] }},
+      this host is configured for {{ ansible_tuxifier__distribution.name }} {{ ansible_tuxifier__distribution.version }}.
+      Run the playbook with -e ansible_tuxifier__reinstall=true to install it over the existing system.
 
 - name: Set_fact the packages of the second stage that are missing
   ansible.builtin.set_fact:
-    _missing_urls: >-
-      {{ generate_minimal_install.packages
-         | rejectattr('name', 'in', _installed_packages.stdout_lines)
+    __missing_urls: >-
+      {{ ansible_tuxifier__generate_minimal_install.packages
+         | rejectattr('name', 'in', __installed_packages.stdout_lines)
          | map(attribute='url') | list }}
 
 # The rpm that can write the database: python-nest writes sqlite, and only the rpm of the distribution writes the bdb database of
 # version 8. It runs in the chroot, which is why it has no --root.
-- name: Install the missing rpms
-  when: _missing_urls | length > 0
+- name: Install the missing rpms  # noqa: no-changed-when
+  when: __missing_urls | length > 0
   notify: Relabel sysroot
   ansible.builtin.command:
-    argv: "{{ [('/usr/bin/rpm' if _sysroot_bdb else rpm_bin), '--install'] + _missing_urls }}"
-  delegate_to: "{{ _chroot_host }}"
+    argv: "{{ [('/usr/bin/rpm' if __sysroot_bdb else ansible_tuxifier__rpm_bin), '--install'] + __missing_urls }}"
+  delegate_to: "{{ __chroot_host }}"
   vars:
     ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
     ansible_python_interpreter: "{{ python_interpreter }}"
@@ -213,21 +214,21 @@
   ansible.builtin.include_tasks: classify_sysroot.yml
   vars:
     sysroot: /tuxifier-sysroot
-    version: "{{ distribution.version }}"
+    version: "{{ ansible_tuxifier__distribution.version }}"
 
 # Version 8 only. The rpm of the distribution exports the sqlite database. It does not write one and uses it as long as one exists
 # in its directory, so the database is moved to /var/lib/rpm-sqlite and the rpm of the distribution imports the export into a new
 # /var/lib/rpm, in the format of its own. When both list the same packages, removing the file of the old database finishes the
 # conversion, and when anything fails before that the old database is put back.
 - name: Convert the rpm database to the format of the distribution
-  when: _sysroot_state.state == 'STAGE2_ON_SQLITE'
+  when: __sysroot_state.state == 'STAGE2_ON_SQLITE'
   block:
     - name: Export the database
       # executable: the shell module would otherwise start the shell of the connection, which does not exist in the chroot.
       ansible.builtin.shell:
         cmd: /usr/bin/rpmdb --exportdb > /var/tmp/tuxifier-rpmdb.export
         executable: /bin/sh
-      delegate_to: "{{ _chroot_host }}"
+      delegate_to: "{{ __chroot_host }}"
       vars:
         ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
         ansible_python_interpreter: "{{ python_interpreter }}"
@@ -236,14 +237,14 @@
     - name: List the packages of the database in use
       ansible.builtin.command:
         argv: [/usr/bin/rpm, -qa, --queryformat, '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n']
-      register: _db_live
-      delegate_to: "{{ _chroot_host }}"
+      register: __db_live
+      delegate_to: "{{ __chroot_host }}"
       vars:
         ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
         ansible_python_interpreter: "{{ python_interpreter }}"
       changed_when: false
 
-    - name: Move the old database away
+    - name: Move the old database away  # noqa: no-changed-when
       ansible.builtin.command:
         argv: [mv, /tuxifier-sysroot/var/lib/rpm, /tuxifier-sysroot/var/lib/rpm-sqlite]
 
@@ -253,12 +254,12 @@
         state: directory
         mode: "0755"
 
-    - name: Import the database
+    - name: Import the database  # noqa: no-changed-when
       notify: Relabel sysroot
       ansible.builtin.shell:
         cmd: /usr/bin/rpmdb --importdb < /var/tmp/tuxifier-rpmdb.export
         executable: /bin/sh
-      delegate_to: "{{ _chroot_host }}"
+      delegate_to: "{{ __chroot_host }}"
       vars:
         ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
         ansible_python_interpreter: "{{ python_interpreter }}"
@@ -266,8 +267,8 @@
     - name: List the packages of the new database
       ansible.builtin.command:
         argv: [/usr/bin/rpm, -qa, --queryformat, '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n']
-      register: _db_new
-      delegate_to: "{{ _chroot_host }}"
+      register: __db_new
+      delegate_to: "{{ __chroot_host }}"
       vars:
         ansible_shell_executable: /tmp/namespaced-chrooted-ansible-shell
         ansible_python_interpreter: "{{ python_interpreter }}"
@@ -275,7 +276,7 @@
 
     - name: Check that the new database lists the same packages
       ansible.builtin.assert:
-        that: _db_live.stdout_lines | sort == _db_new.stdout_lines | sort
+        that: __db_live.stdout_lines | sort == __db_new.stdout_lines | sort
         fail_msg: "The new rpm database does not list the packages of the old one, which is put back."
 
     # This is the end of the conversion: from here the new database is the one that counts.
@@ -296,23 +297,23 @@
     - name: See if the old database was moved away
       ansible.builtin.stat:
         path: /tuxifier-sysroot/var/lib/rpm-sqlite/rpmdb.sqlite
-      register: _old_db
+      register: __old_db
 
     - name: Remove the new database
-      when: _old_db.stat.exists
+      when: __old_db.stat.exists
       ansible.builtin.file:
         path: /tuxifier-sysroot/var/lib/rpm
         state: absent
 
-    - name: Put the old database back
-      when: _old_db.stat.exists
+    - name: Put the old database back  # noqa: no-changed-when
+      when: __old_db.stat.exists
       ansible.builtin.command:
         argv: [mv, /tuxifier-sysroot/var/lib/rpm-sqlite, /tuxifier-sysroot/var/lib/rpm]
 
     - name: Stop, the conversion of the rpm database failed
       ansible.builtin.fail:
         msg: >-
-          The conversion of the rpm database failed{{ ', the old database is in use again' if _old_db.stat.exists else '' }}.
+          The conversion of the rpm database failed{{ ', the old database is in use again' if __old_db.stat.exists else '' }}.
 
 - name: Remove the rpm macros from the chroot
   ansible.builtin.file:

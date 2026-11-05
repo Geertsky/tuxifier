@@ -21,7 +21,7 @@ The machine to install is booted with the initramfs. Ansible connects to it over
 
 | Role | Description |
 |------|-------------|
-| [`geertsky.tuxifier.ansible_tuxifier`](roles/ansible_tuxifier/README.md) | Creates the storage layout described by `installdisk` (partitions, LVM, LUKS and md RAID) with the [linux-system-roles.storage](https://github.com/linux-system-roles/storage) role, installs the distribution described by `installdistribution` into it, sets the root password, ssh keys and boot loader, and then powers off or continues the boot. Running it again changes nothing. |
+| [`geertsky.tuxifier.ansible_tuxifier`](roles/ansible_tuxifier/README.md) | Creates the storage layout described by `ansible_tuxifier__installdisk` (partitions, LVM, LUKS and md RAID) with the [linux-system-roles.storage](https://github.com/linux-system-roles/storage) role, installs the distribution described by `ansible_tuxifier__installdistribution` into it, sets the root password, ssh keys and boot loader, and then powers off or continues the boot. Running it again changes nothing. |
 
 The variables, the supported distributions and the behaviour of each option are described in the [role README](roles/ansible_tuxifier/README.md).
 
@@ -54,15 +54,15 @@ The second command needs the `requirements.yml` of this repository, so run it fr
 The host_vars of a machine with one disk, installed with Rocky Linux 9 on a BIOS machine:
 
 ```
-installdistribution:
+ansible_tuxifier__installdistribution:
   name: rocky
   version: "9"
 
-rootpw: rootpw        # keep this in an Ansible Vault
-strict_selinux: true  # relabel the installed system at its first boot
+ansible_tuxifier__rootpw: rootpw        # keep this in an Ansible Vault
+ansible_tuxifier__strict_selinux: true  # relabel the installed system at its first boot
 storage_disklabel_type: gpt
-installdisk_boot_disk: /dev/vda   # there is no /boot volume to take the boot disk from
-installdisk:
+ansible_tuxifier__installdisk_boot_disk: /dev/vda   # there is no /boot volume to take the boot disk from
+ansible_tuxifier__installdisk:
   - name: /dev/vda
     type: partition
     disks: [/dev/vda]
@@ -127,16 +127,16 @@ qemu-<distro>-<firmware>-<mode>-<layout>
 
 - `<distro>`: `rocky8`, `rocky9`, `rocky10`, `rhel8`, `rhel9`, `rhel10`, `almalinux9`, `almalinux10`, `fedora38` or `fedora44`: the distribution that is installed.
 - `<firmware>`: `bios` or `uefi` (OVMF).
-- `<mode>`: `poweroff` runs the role with `continue_install: false`: the VM powers off, is started again for the second run (idempotence), and the installed system is booted from its disk and checked. `continue` runs it with `continue_install: true`: the initramfs boots on into the installed system, which is checked, powered off and started again for the second run.
+- `<mode>`: `poweroff` runs the role with `ansible_tuxifier__continue_install: false`: the VM powers off, is started again for the second run (idempotence), and the installed system is booted from its disk and checked. `continue` runs it with `ansible_tuxifier__continue_install: true`: the initramfs boots on into the installed system, which is checked, powered off and started again for the second run.
 - `<layout>`: the storage of the install target, a file `tests/vars/qemu_layout_<layout>.yml`: `lvm`, `parts` (no LVM), `luks` (an encrypted logical volume), `raid` (a volume group on md RAID1 of two extra disks), `raidluks` and `cryptroot` (an encrypted root; the passphrase is typed at the serial console).
 
 Other scenarios are named `qemu-<distro>-<firmware>-<scenario>`:
 
-- `keys`: `root_authorized_keys` and `rootpw`, with a login with the second key.
-- `selinux`: `strict_selinux` false and true on the same disk.
+- `keys`: `ansible_tuxifier__root_authorized_keys` and `ansible_tuxifier__rootpw`, with a login with the second key.
+- `selinux`: `ansible_tuxifier__strict_selinux` false and true on the same disk.
 - `distchange`: one distribution installed over another on the same disk (rocky only).
 - `negative`: calls with wrong input fail with a clear message and leave the disk as it was.
-- `kernelmismatch`: `continue_install` with a kernel that is not in the repository (rocky only).
+- `kernelmismatch`: `ansible_tuxifier__continue_install` with a kernel that is not in the repository (rocky only).
 - `demo`: the demo site of tuxifier-playbook (httpd, the page and the firewall) is set up on the booted installed system and the page is fetched through a forwarded port. rhel needs a mirror (`QEMU_REPO_URL`) for this, else it is skipped.
 
 The initramfs comes from the sysimage of the distribution that is installed (`QEMU_INITRAMFS` selects another one), because the mode `continue` needs the kernel of the initramfs in the repository of that distribution. The sysimages `rocky8` to `fedora44` are directories in `SYSIMAGE_DIR` (default `~/work/tuxifier`). The Rocky ones are created when missing; build the others with `tests/scripts/sysimage_build.sh`, for example `sysimage_build.sh $(tests/scripts/mirror-url.sh http://192.168.122.1 rhel9)`. It works for every distribution and does not depend on the tests.

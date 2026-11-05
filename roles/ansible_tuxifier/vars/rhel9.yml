@@ -1,5 +1,5 @@
 ---
-distribution:
+ansible_tuxifier__distribution:
   name: 'rhel'
   arch: 'x86_64'
   version: '9'
@@ -8,9 +8,9 @@ distribution:
   # Matches the path of the loader in a line of efibootmgr -v; the format depends on the efibootmgr version.
   efi_entry_regex: 'HD\([^)]*\)/File\((.*)\)'
   grub_cfg: '/boot/grub2/grub.cfg'
-  # RHEL mirrors are not public: set installdistribution.repo to the BaseOS repository of your mirror.
+  # RHEL mirrors are not public: set ansible_tuxifier__installdistribution.repo to the BaseOS repository of your mirror.
   repo:
     type: 'baseurl'
     url: '<rhel mirror url>'
 
-gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+ansible_tuxifier__gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release

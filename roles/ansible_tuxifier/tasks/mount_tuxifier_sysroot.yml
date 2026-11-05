@@ -14,14 +14,14 @@
     - "/proc"
     - "/sys"
 
-- name: Mount all virtual_filesystems
+- name: Mount all ansible_tuxifier__virtual_filesystems
   ansible.posix.mount:
     path: "{{ '/tuxifier-sysroot' ~ item.path }}"
     src: "{{ item.src }}"
     fstype: "{{ item.src }}"
     opts: "{{ item.opts }}"
     state: ephemeral
-  loop: "{{ virtual_filesystems }}"
+  loop: "{{ ansible_tuxifier__virtual_filesystems }}"
   changed_when: false
 
 - name: Create the python-nest mountpoint in the chroot

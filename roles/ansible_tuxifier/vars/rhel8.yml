@@ -1,5 +1,5 @@
 ---
-distribution:
+ansible_tuxifier__distribution:
   name: 'rhel'
   arch: 'x86_64'
   version: '8'
@@ -9,21 +9,21 @@ distribution:
   efi_entry_regex: 'HD\([^)]*\)/File\((.*)\)'
   grub_cfg: '/boot/grub2/grub.cfg'
   grub_cfg_full_on_esp: true
-  repo: "{{ installdistribution.repo | default({'type': 'baseurl', 'url': '<rhel mirror url>'}) }}"
+  repo: "{{ ansible_tuxifier__installdistribution.repo | default({'type': 'baseurl', 'url': '<rhel mirror url>'}) }}"
   minimalpackages:
     - '@Core'
     - 'util-linux'
     - 'coreutils'
-    - "{{ 'kernel-' ~ ansible_facts['kernel'] if (continue_install | default(false) | bool) else 'kernel' }}"
-    - "{{ 'grub2-efi-x64' if efi_booted else 'grub2-pc' }}"
-    - "{{ 'grub2-tools-efi' if efi_booted else '' }}"
-    - "{{ 'shim-x64' if efi_booted else '' }}"
+    - "{{ 'kernel-' ~ ansible_facts['kernel'] if (ansible_tuxifier__continue_install | default(false) | bool) else 'kernel' }}"
+    - "{{ 'grub2-efi-x64' if ansible_tuxifier__efi_booted else 'grub2-pc' }}"
+    - "{{ 'grub2-tools-efi' if ansible_tuxifier__efi_booted else '' }}"
+    - "{{ 'shim-x64' if ansible_tuxifier__efi_booted else '' }}"
     - 'lvm2'
     - 'cryptsetup'
     - 'mdadm'
-    - "{{ 'efibootmgr' if efi_booted else '' }}"
+    - "{{ 'efibootmgr' if ansible_tuxifier__efi_booted else '' }}"
     - 'sqlite'
     # Queues the python3.12 install of the first boot, see post_minimal_install.yml.
     - 'at'
 
-gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+ansible_tuxifier__gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release

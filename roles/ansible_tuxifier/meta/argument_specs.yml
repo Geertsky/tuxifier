@@ -9,35 +9,33 @@ argument_specs:
     author:
       - "Geert Geurts"
     options:
-      tuxifier_reinstall:
+      ansible_tuxifier__reinstall:
         type: bool
         default: false
         description:
-          - "Wipe the signatures of all disks in O(installdisk) before the storage layout is created."
+          - "Wipe the signatures of all disks in O(ansible_tuxifier__installdisk) before the storage layout is created."
           - "By default the layout is only made to match, so re-running the role changes nothing."
-          - "Intended to be passed on the command line, for example V(-e tuxifier_reinstall=true)."
-      tuxifier_crypttab_options:
+          - "Intended to be passed on the command line, for example V(-e ansible_tuxifier__reinstall=true)."
+      ansible_tuxifier__crypttab_options:
         type: str
         default: luks
         description:
-          - "The options field of the /etc/crypttab entries that are written for the LUKS devices of O(installdisk)."
+          - "The options field of the /etc/crypttab entries that are written for the LUKS devices of O(ansible_tuxifier__installdisk)."
           - "The key field is none, so the passphrase is asked at boot."
-      installdisk_boot_disk:
+      ansible_tuxifier__installdisk_boot_disk:
         type: str
         description:
           - "The disk to install the boot loader on."
           - "Optional. Defaults to the disk of the partition pool with the volume mounted at /boot, or else at /boot/efi."
           - "The disk needs a partition pool, because the ESP or BIOS boot partition has to be a partition."
-      installdisk:
+      ansible_tuxifier__installdisk:
         type: list
         elements: dict
         required: true
         description:
           - "The storage of the installation target, as a list of storage_pools of the linux-system-roles.storage role."
           - "Only pools of type partition and lvm are supported; the disks of a pool can be partitions or whole disks."
-          - "Every disk in O(installdisk) is wiped when O(tuxifier_reinstall) is true."
-          - "The pools are created in the order listed and mounted parent first (sorted by mount point), independent of the pool order."
-          - "mount_point is given as seen from the installed system, for example /, /boot or /boot/efi. The storage role is called without mount_point; tuxifier mounts the filesystems below /tuxifier-sysroot and writes the fstab of the installed system."
+          - "Every disk in O(ansible_tuxifier__installdisk) is wiped when O(ansible_tuxifier__reinstall) is true."
           - "WARNING: Existing storage on the specified disks is removed without confirmation."
         options:
           name:
@@ -87,7 +85,7 @@ argument_specs:
             description:
               - "Volumes of the pool, as described for the storage role."
 
-      installdistribution:
+      ansible_tuxifier__installdistribution:
         type: dict
         required: true
         description:
@@ -125,7 +123,7 @@ argument_specs:
                 description:
                   - "URL of the metalink, mirrorlist or baseurl."
 
-      rootpw:
+      ansible_tuxifier__rootpw:
         type: str
         required: true
         no_log: true
@@ -133,20 +131,20 @@ argument_specs:
           - "Root password for the installed operating system."
           - "Store this value in Ansible Vault."
 
-      root_authorized_keys:
+      ansible_tuxifier__root_authorized_keys:
         type: list
         elements: str
         description:
           - "SSH public keys added to the root user's authorized_keys file."
           - "These keys are added to the keys installed in the initramfs by dracut-sshd."
 
-      strict_selinux:
+      ansible_tuxifier__strict_selinux:
         type: bool
         description:
           - "Whether SELinux is enabled for the installed system."
           - "Some distributions may require the first boot to use permissive mode."
 
-      continue_install:
+      ansible_tuxifier__continue_install:
         type: bool
         description:
           - "Whether dracut continues its normal boot flow after the minimal installation."

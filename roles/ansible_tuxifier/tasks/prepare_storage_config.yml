@@ -15,32 +15,32 @@
 # An md array has the links md-name-<host>:<name> and md-uuid-<uuid>, one of each per array.
 - name: Find the LUKS devices and md RAID arrays of the install layout
   ansible.builtin.set_fact:
-    _luks_ids: "{{ _device_ids | select('match', 'dm-uuid-CRYPT-LUKS') | list }}"
-    _md_names: "{{ _device_ids | select('match', 'md-name-') | list }}"
-    _md_uuids: "{{ _device_ids | select('match', 'md-uuid-') | list }}"
+    __luks_ids: "{{ __device_ids | select('match', 'dm-uuid-CRYPT-LUKS') | list }}"
+    __md_names: "{{ __device_ids | select('match', 'md-name-') | list }}"
+    __md_uuids: "{{ __device_ids | select('match', 'md-uuid-') | list }}"
   vars:
-    _device_ids: "{{ ansible_facts['devices'].values() | map(attribute='links.ids') | flatten }}"
+    __device_ids: "{{ ansible_facts['devices'].values() | map(attribute='links.ids') | flatten }}"
 
 - name: Write the crypttab of the installed system
-  when: _luks_ids | length > 0
+  when: __luks_ids | length > 0
   notify: Relabel sysroot
   ansible.builtin.copy:
     dest: /tuxifier-sysroot/etc/crypttab
     content: |
-      {% for id in _luks_ids %}
-      {{ id | regex_replace(_luks_regex, '\6') }} UUID={{ id | regex_replace(_luks_regex, '\1-\2-\3-\4-\5') }} none {{ tuxifier_crypttab_options }}
+      {% for id in __luks_ids %}
+      {{ id | regex_replace(__luks_regex, '\6') }} UUID={{ id | regex_replace(__luks_regex, '\1-\2-\3-\4-\5') }} none {{ ansible_tuxifier__crypttab_options }}
       {% endfor %}
     mode: '0600'
   vars:
-    _luks_regex: '^dm-uuid-CRYPT-LUKS\d-([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})-(.*)$'
+    __luks_regex: '^dm-uuid-CRYPT-LUKS\d-([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})-(.*)$'
 
 - name: Write the mdadm.conf of the installed system
-  when: _md_names | length > 0
+  when: __md_names | length > 0
   notify: Relabel sysroot
   ansible.builtin.copy:
     dest: /tuxifier-sysroot/etc/mdadm.conf
     content: |
-      {% for name, uuid in _md_names | zip(_md_uuids) %}
+      {% for name, uuid in __md_names | zip(__md_uuids) %}
       ARRAY /dev/md/{{ name | regex_replace('^md-name-[^:]*:', '') }} UUID={{ uuid | regex_replace('^md-uuid-', '') }}
       {% endfor %}
     mode: '0644'

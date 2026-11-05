@@ -2,7 +2,7 @@
 
 # Both ways let the initramfs continue its boot with /tmp/ansible-finished. Powering off needs its hook first.
 - name: Shutdown
-  when: not _boot_installed_system
+  when: not __boot_installed_system
   ansible.builtin.copy:
     dest: /usr/lib/dracut/hooks/pre-pivot/999-shutdown.sh
     mode: "0755"
@@ -19,9 +19,9 @@
   changed_when: false
 
 - name: End play
-  when: not _boot_installed_system
+  when: not __boot_installed_system
   ansible.builtin.meta: end_host
 
 - name: Clear gathered facts from all currently targeted hosts
-  when: _boot_installed_system
+  when: __boot_installed_system
   ansible.builtin.meta: clear_facts

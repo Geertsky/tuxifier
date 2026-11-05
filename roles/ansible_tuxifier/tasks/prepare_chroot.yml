@@ -19,23 +19,23 @@
 - name: Read the fstab written by the storage role
   ansible.builtin.slurp:
     src: /etc/fstab
-  register: _fstab
+  register: __fstab
 
 - name: Write the fstab of the installed system
   notify: Relabel sysroot
   ansible.builtin.copy:
     dest: /tuxifier-sysroot/etc/fstab
-    content: "{{ _fstab.content | b64decode | regex_replace('(?m)^(\\S+\\s+)/tuxifier-sysroot/?(\\S*)', '\\1/\\2') }}"
+    content: "{{ __fstab.content | b64decode | regex_replace('(?m)^(\\S+\\s+)/tuxifier-sysroot/?(\\S*)', '\\1/\\2') }}"
     mode: '0644'
 
 - name: Stat resolv.conf
   ansible.builtin.stat:
     path: /tuxifier-sysroot/etc/resolv.conf
-  register: _etc_resolv_conf
+  register: __etc_resolv_conf
 
 - name: Copy resolv.conf to chroot
   notify: Relabel sysroot
-  when: not _etc_resolv_conf.stat.exists
+  when: not __etc_resolv_conf.stat.exists
   ansible.builtin.copy:
     remote_src: true
     src: /etc/resolv.conf

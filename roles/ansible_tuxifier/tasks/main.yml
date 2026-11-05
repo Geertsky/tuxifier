@@ -6,11 +6,11 @@
 - name: See if we're boot with efi
   ansible.builtin.stat:
     path: /sys/firmware/efi
-  register: _efi
+  register: __efi
 
-- name: Set_fact efi_booted
+- name: Set_fact ansible_tuxifier__efi_booted
   ansible.builtin.set_fact:
-    efi_booted: "{{ _efi.stat.exists }}"
+    ansible_tuxifier__efi_booted: "{{ __efi.stat.exists }}"
 
 - name: Create message file
   ansible.builtin.file:
@@ -20,11 +20,11 @@
   changed_when: false
 
 - name: Set the install distribution vars
-  ansible.builtin.include_vars: "{{ installdistribution['name'] ~ installdistribution['version'] }}.yml"
+  ansible.builtin.include_vars: "{{ ansible_tuxifier__installdistribution['name'] ~ ansible_tuxifier__installdistribution['version'] }}.yml"
 
 - name: Clear install disk
   ansible.builtin.import_tasks: clear_disk.yml
-  when: tuxifier_reinstall | bool
+  when: ansible_tuxifier__reinstall | bool
 
 - name: Deploy namespaced ansible_shell_wrapper
   ansible.builtin.copy:

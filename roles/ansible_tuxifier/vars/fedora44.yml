@@ -1,5 +1,5 @@
 ---
-distribution:
+ansible_tuxifier__distribution:
   name: 'fedora'
   arch: 'x86_64'
   version: '44'
@@ -12,4 +12,4 @@ distribution:
     type: 'metalink'
     url: 'https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch'
 
-gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-44-primary
+ansible_tuxifier__gpg_key: etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-44-primary

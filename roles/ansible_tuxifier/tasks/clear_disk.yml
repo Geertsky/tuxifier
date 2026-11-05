@@ -3,11 +3,11 @@
 # The disks of the partition pools first, then the other disks that are not a partition of one of those.
 - name: Set the install disks
   ansible.builtin.set_fact:
-    installdisk_disks: >-
-      {{ _partition_disks + (installdisk | map(attribute='disks') | flatten | reject('match', _partition_regex) | unique | list) }}
+    ansible_tuxifier__installdisk_disks: >-
+      {{ __partition_disks + (ansible_tuxifier__installdisk | map(attribute='disks') | flatten | reject('match', __partition_regex) | unique | list) }}
   vars:
-    _partition_disks: "{{ installdisk | selectattr('type', 'equalto', 'partition') | map(attribute='disks') | flatten | unique }}"
-    _partition_regex: '({{ _partition_disks | map("regex_escape") | join("|") }})(p?[0-9]+|-part[0-9]+)?$'
+    __partition_disks: "{{ ansible_tuxifier__installdisk | selectattr('type', 'equalto', 'partition') | map(attribute='disks') | flatten | unique }}"
+    __partition_regex: '({{ __partition_disks | map("regex_escape") | join("|") }})(p?[0-9]+|-part[0-9]+)?$'
 
 # Layers can be stacked in any order (LUKS on a logical volume, a volume group on LUKS or on md RAID),
 # so peel them off until nothing changes anymore.
@@ -23,24 +23,24 @@
       mdadm --stop --scan
     done
     exit 0
-  register: clean_installdisk__vgscript
+  register: __clean_installdisk_vgscript
   changed_when: false
 
-- name: Zero MBR
+- name: Zero MBR  # noqa: no-changed-when
   ansible.builtin.command:
     argv:
       - wipefs
       - -af
       - "{{ item }}"
-  loop: "{{ installdisk_disks }}"
+  loop: "{{ ansible_tuxifier__installdisk_disks }}"
 
-- name: Reload partitions
+- name: Reload partitions  # noqa: no-changed-when
   ansible.builtin.command:
     argv:
       - blockdev
       - --rereadpt
       - "{{ item }}"
-  loop: "{{ installdisk_disks }}"
+  loop: "{{ ansible_tuxifier__installdisk_disks }}"
 
 - name: Update message
   ansible.builtin.copy:
