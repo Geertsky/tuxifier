@@ -1,0 +1,29 @@
+---
+objects:
+  role:
+    ansible_tuxifier:
+      description: Partition disks and install a server from a dracut initramfs
+      name: ansible_tuxifier
+      version_added: null
+plugins:
+  become: {}
+  cache: {}
+  callback: {}
+  cliconf: {}
+  connection: {}
+  filter: {}
+  httpapi: {}
+  inventory: {}
+  lookup: {}
+  module:
+    generate_minimal_install_info:
+      description: Resolve the RPM packages for a minimal distribution installation
+      name: generate_minimal_install_info
+      namespace: ''
+      version_added: 1.0.0
+  netconf: {}
+  shell: {}
+  strategy: {}
+  test: {}
+  vars: {}
+version: 0.1.0

@@ -1,0 +1,12 @@
+ancestor: null
+releases:
+  0.1.0:
+    changes:
+      release_summary: 'Initial public release of the geertsky.tuxifier
+
+        Ansible collection for automated Linux system installation.
+
+        '
+    fragments:
+      - 0.1.0.yml
+    release_date: '2026-11-05'
